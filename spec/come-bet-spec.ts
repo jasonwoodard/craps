@@ -22,7 +22,7 @@ describe('ComeBet', () => {
     expect(comeBet.point).toBeUndefined();
   });
 
-  it('should indicate okToPlace only when the point is off', () =>{
+  it('should indicate okToPlace only when the point is on', () =>{
     let table = TableMaker.getTable().withPoint(10).value();
     expect(ComeBet.isOkayToPlace(table)).toBe(true);
 
