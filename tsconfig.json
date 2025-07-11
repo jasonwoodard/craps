@@ -2,7 +2,6 @@
     "compilerOptions": {
         "target": "esnext",
         "alwaysStrict": true,
-        "watch": true,
         "module": "commonjs",
         "outDir": "bin"
     }
