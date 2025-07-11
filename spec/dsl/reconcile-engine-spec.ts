@@ -4,10 +4,14 @@ import { GameState } from '../../src/dsl/game-state';
 import { PassLineAndPlace68 } from '../../src/dsl/strategies';
 import { Dice } from '../../src/dice/dice';
 
-class StubDice implements Dice {
-  rollHistory: number[] = [];
-  constructor(private values: number[]) {}
-  roll() { return this.values.shift()!; }
+class StubDice extends Dice {
+  constructor(private values: number[]) {
+    super();
+  }
+
+  protected doRoll(): number {
+    return this.values.shift()!;
+  }
 }
 
 describe('ReconcileEngine', () => {

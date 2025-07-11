@@ -1,13 +1,13 @@
 import { GameState } from '../../src/dsl/game-state';
 import { Dice } from '../../src/dice/dice';
 
-class StubDice implements Dice {
-  rollHistory: number[] = [];
-  constructor(private values: number[]) {}
-  roll() {
-    const v = this.values.shift()!;
-    this.rollHistory.push(v);
-    return v;
+class StubDice extends Dice {
+  constructor(private values: number[]) {
+    super();
+  }
+
+  protected doRoll(): number {
+    return this.values.shift()!;
   }
 }
 
