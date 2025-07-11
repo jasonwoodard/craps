@@ -23,8 +23,8 @@ export class LiveDice extends Dice {
 
   doRoll() :number {
     let dValue1 = this.rollD6();
-    let dVvalue2 = this.rollD6();
-    return dValue1 + dVvalue2;;
+    let dValue2 = this.rollD6();
+    return dValue1 + dValue2;
   };
 
   private rollD6() : number {
