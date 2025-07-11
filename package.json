@@ -5,7 +5,10 @@
     "jasmine-ts": "^0.3.0",
     "lodash": "^4.17.15"
   },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
+  },
   "scripts": {
-    "test": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json"
+    "test": "ts-node node_modules/jasmine/bin/jasmine --config=spec/support/jasmine.json"
   }
 }
