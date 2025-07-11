@@ -6,7 +6,7 @@ This is the backlog for what will get done.
 
 1. Add Place bets
 1. Add Don't Pass line bets
-1. Add Dont' Come bets
+1. Add Don't Come bets
 1. Add Field bet?
 
 ## Strategy
