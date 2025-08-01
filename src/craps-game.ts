@@ -12,7 +12,6 @@ export class CrapsGame {
   }
 
   registerPlayers(newPlayers: Player[]) {
-    let self = this;
     newPlayers.forEach(player => {
       this.table.onPlaceBets(player.placeBets);
       this.players.push(player);

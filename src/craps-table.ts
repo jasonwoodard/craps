@@ -7,8 +7,6 @@ export class CrapsTable {
 
   public dice: Dice;
 
-  private _isPointOn: boolean = false;
-
   private _bets: BaseBet[] = [];
   bettors: ((table: CrapsTable) => void)[];
 
