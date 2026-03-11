@@ -1,6 +1,7 @@
-import { SimpleBetReconciler, BetReconciler, BetCommand, diffBets } from './bet-reconciler';
+import { SimpleBetReconciler, BetReconciler, BetCommand, diffBets, tableBetToDesired } from './bet-reconciler';
 import { PlayerState } from './player-state';
 import { GameState } from './game-state';
+import { CrapsTable } from '../craps-table';
 
 export type StrategyDefinition = (ctx: StrategyContext) => void;
 
@@ -12,7 +13,11 @@ export interface StrategyContext {
 export class ReconcileEngine {
   private trackers = new Map<string, any>();
 
-  constructor(private player: PlayerState, private game: GameState) {}
+  constructor(
+    private table: CrapsTable,
+    private playerId: string,
+    private game: GameState,
+  ) {}
 
   reconcile(strategy: StrategyDefinition): BetCommand[] {
     const reconciler = new SimpleBetReconciler();
@@ -24,7 +29,7 @@ export class ReconcileEngine {
       },
     };
     strategy(ctx);
-    const current: any[] = [];
+    const current = this.table.getPlayerBets(this.playerId).map(tableBetToDesired);
     return diffBets(current, reconciler.desired);
   }
 }

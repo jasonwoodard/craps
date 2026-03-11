@@ -1,4 +1,6 @@
-import { BaseBet, OddsBet, ComeBet } from './player-state';
+import { BaseBet as DslBaseBet, OddsBet, ComeBet } from './player-state';
+import { BaseBet as TableBaseBet, BetTypes } from '../bets/base-bet';
+import { PassLineBet } from '../bets/pass-line-bet';
 
 export interface BetWithOdds {
   withOdds(amount: number): void;
@@ -14,11 +16,30 @@ export interface BetReconciler {
   remove(type: string, point?: number): void;
 }
 
-interface DesiredBet {
+export interface DesiredBet {
   type: string;
   amount: number;
   point?: number;
   odds?: number;
+}
+
+const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
+  [BetTypes.UNKNOWN]: 'unknown',
+  [BetTypes.PASS_LINE]: 'passLine',
+  [BetTypes.COME]: 'come',
+  [BetTypes.PLACE]: 'place',
+};
+
+export function tableBetToDesired(bet: TableBaseBet): DesiredBet {
+  const type = BET_TYPE_TO_STRING[bet.betType] ?? 'unknown';
+  const desired: DesiredBet = { type, amount: bet.amount };
+  if (bet.point != null) {
+    desired.point = bet.point;
+  }
+  if (bet instanceof PassLineBet && bet.oddsAmount > 0) {
+    desired.odds = bet.oddsAmount;
+  }
+  return desired;
 }
 
 export class SimpleBetReconciler implements BetReconciler {
