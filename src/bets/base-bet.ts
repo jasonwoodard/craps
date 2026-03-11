@@ -3,7 +3,8 @@ import { CrapsTable } from "../craps-table";
 export enum BetTypes {
   UNKNOWN,
   PASS_LINE,
-  COME
+  COME,
+  PLACE
 }
 
 export abstract class BaseBet {

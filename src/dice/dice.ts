@@ -27,8 +27,14 @@ export class LiveDice extends Dice {
     return dValue1 + dValue2;
   };
 
-  private rollD6() : number {
-    let die = Math.round(this.twister.random() * 10000);
-    return (die % 6) + 1
-  };
+  private rollD6(): number {
+    // Rejection sampling: discard values >= LIMIT so the remaining
+    // range is exactly divisible by 6, eliminating modulo bias.
+    const LIMIT = Math.floor(0x100000000 / 6) * 6; // 4294967290
+    let n: number;
+    do {
+      n = this.twister.genrand_int32();
+    } while (n >= LIMIT);
+    return (n % 6) + 1;
+  }
 }
