@@ -8,27 +8,36 @@
 
 ## What's Here
 
-A TypeScript craps simulator designed for **strategy testing and analysis**. The core game loop is correct and functional: dice roll, bets resolve, bankrolls update. Pass line and come bets are fully implemented with accurate odds payouts (6:5 on 6/8, 3:2 on 5/9, 2:1 on 4/10). The test suite is solid — 13 spec files, 50+ cases, deterministic "rigged dice" for reliable assertions.
+A TypeScript craps simulator designed for **strategy testing and analysis**. The core game loop is correct and functional: dice roll, bets resolve, bankrolls update. Pass line, come bets, and place bets are fully implemented with accurate odds payouts. The test suite is solid — 13 spec files, 50+ cases, deterministic "rigged dice" for reliable assertions.
 
-The project has been through at least one meaningful architectural pivot. There's an older imperative approach (`src/craps-game.ts`, `src/player.ts`, `src/bets/`) and a newer DSL approach (`src/dsl/`) that defines strategies as declarative functions reconciled against current table state. Both exist simultaneously; the DSL is the more interesting direction but isn't fully wired in.
+The project has completed a meaningful architectural pivot. There is an older imperative approach (`src/craps-game.ts`, `src/player.ts`) and a newer DSL approach (`src/dsl/`) where strategies are pure declarative functions reconciled against current table state. The direction is decided: the DSL approach is the target, and the functional requirements, DSL spec, CUJ, and tech plan all describe that world. The remaining work is closing the gap between the two.
 
 ---
 
 ## Architecture Snapshot
 
+**Current (transitional):**
 ```
 CrapsGame (orchestrator)
   └── CrapsTable (state: point, bets, dice)
-        └── Player (bankroll, strategy)
-              └── Strategy → places bets on table
+        └── Player (bankroll, imperative strategy)
 
-src/dsl/ (newer layer, not yet integrated)
+src/dsl/ (newer layer — not yet wired into game loop)
   └── ReconcileEngine
         └── StrategyDefinition (pure function)
-              └── BetReconciler → desired bets → diffed → BetCommands
+              └── BetReconciler → desired bets → diffed → BetCommand[]
 ```
 
-The DSL layer is the conceptually cleaner approach: strategies are pure functions that declare what bets *should* exist, and the engine diffs that against the current table to produce add/remove commands. The old layer has players imperatively placing bets each hand.
+**Target (per tech-plan.md):**
+```
+CLI (run-sim.ts)
+  └── CrapsEngine / SharedTable (orchestration)
+        └── ReconcileEngine (per-strategy DSL runner)
+              ├── BetReconciler + diffBets → BetCommand[]
+              └── track() read/write (engine-owned write path)
+        └── CrapsTable + Bets + MersenneTwister (game mechanics)
+        └── RunLogger (JSONL output)
+```
 
 ---
 
@@ -36,83 +45,132 @@ The DSL layer is the conceptually cleaner approach: strategies are pure function
 
 - **Correct craps mechanics.** Point establishment, naturals/craps on come-out, seven-out, come bet travel to points — all implemented correctly.
 - **Test infrastructure.** `RiggedDice` and `TableMaker` builder make tests expressive and deterministic. This is the right foundation for a simulation tool.
-- **Mersenne Twister.** Better statistical properties than `Math.random()` for long-run simulations. Good call.
-- **DSL strategy design.** `PassLineAnd2Comes`, `PassLineAndPlace68`, `SixIn8Progressive` are readable and show the potential of the declarative approach.
+- **Mersenne Twister.** Better statistical properties than `Math.random()` for long-run simulations.
+- **DSL strategy design.** `ThreePointMolly`, `Place6And8`, `SixIn8Progressive` and others are readable, declarative, and show the potential of the approach. The spec is solid.
 - **The bet self-evaluation pattern.** Bets know how to resolve themselves, keeping resolution logic localized.
+- **Comprehensive documentation.** Functional requirements, DSL spec, logging spec, CUJs, and this tech plan together provide a clear and unambiguous implementation target.
 
 ---
 
-## Findings and Recommendations
+## Active Considerations
 
-### 1. Two architectures, one codebase
+### 1. DSL–engine gap: ReconcileEngine not yet wired in
 
-The DSL (`src/dsl/`) and the original game engine (`src/craps-game.ts`) don't talk to each other. `ReconcileEngine` exists and has tests, but it's not connected to `CrapsTable` or `CrapsGame`. Strategies defined in `src/dsl/strategies.ts` can't actually run a simulation.
+The DSL layer (`src/dsl/`) and the original game engine (`src/craps-game.ts`) don't talk to each other. `ReconcileEngine` exists and has tests, but it's not connected to `CrapsTable` or `CrapsGame`. Strategies defined in `src/dsl/strategies.ts` cannot run a simulation end-to-end today.
 
-**If what you're going for is a strategy simulator where you can plug in different betting systems and compare results, then you should commit to the DSL approach and retire the old strategy system.** Wire `ReconcileEngine` into `CrapsGame` so that a `StrategyDefinition` function is all you need to define to run a full simulation.
+**Decision made (per FRs and tech-plan.md):** Commit to the DSL approach. Build `CrapsEngine` as the unified orchestrator that drives the game loop using `ReconcileEngine` for bet placement. Retire the old `CrapsGame` + `Player` approach once `CrapsEngine` is validated.
+
+**Remaining work:**
+- Wire `ReconcileEngine.reconcile()` to pass actual current table state (not `[]`) into `diffBets`
+- Build `CrapsEngine` (new game loop)
+- Build `SharedTable` (multi-strategy comparison, FR4)
+- Delete `src/craps-game.ts`, `src/player.ts`, `src/strategy.ts`, `src/main.ts` once replaced
 
 ---
 
-### 2. Place bets are stubbed in the DSL but don't exist in the bet engine
+### 2. `track()` write path is not implemented
 
-`strategies.ts` calls `bets.place(6, 12)` and `bets.place(8, 12)`, and `BetReconciler` defines the interface — but there's no `PlaceBet` class in `src/bets/`. The `PassLineAndPlace68` strategy can't actually execute.
+`ReconcileEngine` holds the `trackers` map for read access but has no `postRoll()` method. The engine never writes to tracked values. As a result, `SixIn8Progressive` and any other progression-based strategy compile but cannot work as intended — `wins` will always be `0`.
 
-**If what you're going for is realistic craps simulation, then place bets (especially 6 and 8) need to be the next thing you implement** — they're the most common bets in any craps strategy and the ones your DSL strategies are already referencing. Don't pass and don't come can wait; place bets can't.
+**Decision made (per FR6):** The write path is engine-owned. After each roll's outcomes are resolved, `ReconcileEngine.postRoll(outcomes)` increments tracked counters based on resolved bet outcomes. Strategy functions never write directly.
+
+**Remaining work:**
+- Implement `ReconcileEngine.postRoll(outcomes: Outcome[])`
+- Define the mapping from outcome events to tracked key updates
+- Test with `SixIn8Progressive` to confirm progression works
 
 ---
 
 ### 3. `run-sim.ts` is a hardcoded demo, not a tool
 
-The simulation runner is wired to a single bet scenario and prints raw object dumps. It's not useful for comparing strategies or doing analysis runs.
+`src/main.ts` is wired to a single hardcoded player and prints raw object dumps. It is not useful for comparing strategies, running analysis, or any of the CUJ 1.x / 2.x journeys.
 
-**If what you're going for is the ability to test and compare strategies (which seems to be the whole point), then `run-sim.ts` should become a proper CLI tool** — accept a strategy name as an argument, run N simulations, and output structured results (bankroll over time, win rate, table load). Even a simple `--strategy PassLineAndPlace68 --rolls 100 --sims 1000` would make this genuinely useful.
+**Decision made (per FR8 and CUJs):** Replace with a proper CLI. Strategy selection via `--strategy <name>` (built-in registry) and `--strategy-file <path>` (custom DSL file, no engine edits required). Comparison runs via `--compare`. Output formats: summary, verbose, JSON.
 
----
-
-### 4. Analysis features are the unrealized upside
-
-The `todolist.md` mentions per-player table load stats, bankroll logging over time, and win-probability computation before each roll. None of these exist yet. These are what would make this tool meaningfully different from a generic craps reference implementation.
-
-**If what you're going for is insight into whether a strategy is worth playing, then the bankroll-over-time chart is the most important thing to build next** — it immediately shows you whether a strategy bleeds slowly or crashes hard, and when. Table load (total dollars at risk) alongside bankroll would give you the risk profile at a glance.
+**Remaining work:**
+- Build `src/cli/strategy-registry.ts`
+- Build `src/cli/strategy-loader.ts` (dynamic `require()` for custom `.ts` files)
+- Build `src/cli/run-sim.ts` (arg parsing, wiring, output formatting)
 
 ---
 
-### 5. The `track` primitive in the DSL is underused
+### 4. Structured logging not yet built
 
-`SixIn8Progressive` uses `track('wins', 0)` to maintain state across rolls. This is a genuinely good idea — it lets strategies have memory without introducing class-based complexity. But `ReconcileEngine.reconcile()` always initializes `current` as an empty array, so the diff always sees all bets as new. The tracker also has no write path, so `wins` can never be incremented.
+The simulation produces no structured output today — `main.ts` dumps raw object state to console. The logging schema (JSONL, per-roll records, session summary) is fully specified in `docs/strategy-logging-spec.md` but not implemented.
 
-**If what you're going for is progressive strategies that react to outcomes (pressing after wins, regressing after losses), then the `track` system needs a write path and the reconciler needs to see actual current table state**, not an empty array. Right now `SixIn8Progressive` compiles but can't work as intended.
+**Decision made (per FR7 and strategy-logging-spec.md):** Implement `RunLogger` as a side-effect of the game loop in `CrapsEngine`. Each roll emits a structured record. The session ends with a summary. Output can be written to stdout (piped to a file) or to a named `.jsonl` file. Individual die values (`die1`, `die2`) must be captured alongside the sum — this requires a small change to the dice roll return value.
 
----
-
-### 6. Minor: Mersenne Twister die scaling
-
-In `mersenne-twister.ts`, random integers scaled to 10000 are reduced with `(die % 6) + 1`. Modulo on a large range produces slightly biased results (10000 isn't evenly divisible by 6). For a simulator where you're running tens of thousands of hands, this is the kind of thing that can skew results subtly.
-
-**If what you're going for is statistically clean simulation, then replace the modulo with rejection sampling** — generate until you get a value in the usable range, then scale cleanly. It's a small fix with a meaningful impact on simulation integrity.
+**Remaining work:**
+- Build `src/logger/run-logger.ts`
+- Update `CrapsTable.rollDice()` to return `{ die1, die2, sum }` instead of just `sum`
+- Integrate logger into `CrapsEngine` at the four capture points defined in the spec
 
 ---
 
-## Priority Order (given apparent goals)
+### 5. Mersenne Twister die scaling bias
 
-| Priority | What | Why |
-|----------|------|-----|
-| 1 | Implement `PlaceBet` (6, 8) | DSL strategies already depend on it; unblocks everything |
-| 2 | Wire DSL into `CrapsGame` | Makes strategies runnable end-to-end |
-| 3 | Fix `track` write path + reconciler current-state diff | Enables progressive strategies |
-| 4 | Build bankroll/table-load logging | Core analysis output |
-| 5 | Make `run-sim.ts` a real CLI | Makes the tool usable for actual strategy testing |
-| 6 | Fix MT die bias | Statistical correctness for long runs |
+In `mersenne-twister.ts`, die faces are produced with `(value % 6) + 1`. Modulo on a range not evenly divisible by 6 introduces a small but measurable bias. For a simulator running tens of thousands of rolls, this can skew results for rare combinations.
+
+**Decision made (per FR2):** Replace modulo with rejection sampling. Generate a random integer; if it falls outside the clean range for 6 faces, discard and generate again. The expected number of extra draws is tiny (~2.8% of rolls), and the statistical correctness gain is meaningful for long-run comparisons.
+
+**Remaining work:**
+- Update `MersenneTwister` die method to use rejection sampling
+- Add a unit test asserting die face distribution is not statistically biased (chi-squared or frequency check over a large sample)
+
+---
+
+## Implementation Sequence
+
+See `docs/tech-plan.md` for the full dependency-ordered build plan. Short version:
+
+| Step | What | Status |
+|------|------|--------|
+| 1 | Fix MT rejection sampling | Pending |
+| 2 | Wire ReconcileEngine to real table state | Pending |
+| 3 | Implement track() write path (postRoll) | Pending |
+| 4 | Build CrapsEngine (new game loop) | Pending |
+| 5 | Build RunLogger | Pending |
+| 6 | Build SharedTable (comparison) | Pending |
+| 7 | Build CLI (registry, file loader, run-sim.ts) | Pending |
 
 ---
 
 ## What to Leave Alone (for now)
 
-- **Don't pass / Don't come bets** — correct call to defer these; they add complexity without changing the simulator's usefulness for the common strategies
-- **Field bets** — same; low priority
+- **Don't Pass / Don't Come bets** — deferred per FR10; they add complexity without changing usefulness for common strategies
+- **Field, Hardways, Proposition bets** — same; deferred
 - **The test suite** — it's in good shape; extend it as features land, don't refactor it
 
 ---
 
-## Bottom Line
+## Addressed Considerations
 
-The foundation is solid. The game logic is correct, the test infrastructure is good, and the DSL design points at the right destination. The project is stalled at the gap between "the strategy system I want to build" and "the game engine I've already built" — they haven't been connected yet. Closing that gap (DSL integration + place bets) would turn this from a correct but limited craps model into a functional strategy simulator, which is clearly what it's meant to be.
+*Items from earlier assessment drafts that are now fully resolved. Archived here for continuity.*
+
+---
+
+### ~~Finding 2: Place bets are stubbed in the DSL but don't exist in the bet engine~~
+
+**Original concern:** `strategies.ts` calls `bets.place(6, 12)` and `bets.place(8, 12)`, but there was no `PlaceBet` class in `src/bets/`. `PassLineAndPlace68` could not execute.
+
+**Resolved:** `src/bets/place-bet.ts` is fully implemented. `PlaceBet` correctly handles:
+- Valid points: 4, 5, 6, 8, 9, 10
+- Come-out behavior: no action when point is OFF (returns immediately if `!table.isPointOn`)
+- Win condition: number hit → payout at correct odds (9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8)
+- Loss condition: 7-out
+- Fractional chip handling: `Math.floor()` on all payout calculations, matching casino behavior
+
+Place bets are no longer blocking DSL strategies. The remaining blocker for `PassLineAndPlace68` to run end-to-end is the DSL–engine wiring gap (Active Consideration 1 above).
+
+---
+
+### ~~Finding: No formal specifications for behavior, strategy API, or output format~~
+
+**Original concern:** The project had working code but no written specification for what the strategy API should look like, what the output format should be, or what the acceptance criteria were for core behaviors.
+
+**Resolved:** Full documentation suite now in place:
+- `docs/functional-requirements.md` — what the simulator must and must not do
+- `docs/craps-dsl-spec.md` — complete strategy DSL API with examples
+- `docs/strategy-logging-spec.md` — JSONL output schema, per-roll and summary records
+- `docs/critical-user-journeys.md` — numbered use cases mapped to FRs
+- `docs/tech-plan.md` — target architecture, package layout, implementation sequence
