@@ -2,6 +2,7 @@
   "dependencies": {
     "@types/jasmine": "^3.4.0",
     "@types/lodash": "^4.14.138",
+    "jasmine": "^3.99.0",
     "jasmine-ts": "^0.3.0",
     "lodash": "^4.17.15"
   },
@@ -9,6 +10,6 @@
     "ts-node": "^10.9.2"
   },
   "scripts": {
-    "test": "ts-node node_modules/jasmine/bin/jasmine --config=spec/support/jasmine.json"
+    "test": "jasmine-ts --config=spec/support/jasmine.json"
   }
 }
