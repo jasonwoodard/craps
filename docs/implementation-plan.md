@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** Draft v1
+**Status:** In Progress — M1.1 and M1.2 complete
 
 ---
 
@@ -27,7 +27,7 @@ Three milestones, each building on the last. Each ends with a structured review 
 
 ---
 
-### M1.1 — Fix Mersenne Twister rejection sampling
+### M1.1 — Fix Mersenne Twister rejection sampling [DONE]
 
 **File:** `src/dice/mersenne-twister.ts`
 
@@ -41,7 +41,7 @@ Replace `(value % 6) + 1` with rejection sampling: generate a random integer, di
 
 ---
 
-### M1.2 — Wire `ReconcileEngine` to real table state
+### M1.2 — Wire `ReconcileEngine` to real table state [DONE]
 
 **File:** `src/dsl/strategy.ts` (ReconcileEngine)
 
