@@ -2,6 +2,7 @@ import { SimpleBetReconciler, BetReconciler, BetCommand, diffBets, tableBetToDes
 import { PlayerState } from './player-state';
 import { GameState } from './game-state';
 import { CrapsTable } from '../craps-table';
+import { Outcome } from './outcome';
 
 export type StrategyDefinition = (ctx: StrategyContext) => void;
 
@@ -31,5 +32,17 @@ export class ReconcileEngine {
     strategy(ctx);
     const current = this.table.getPlayerBets(this.playerId).map(tableBetToDesired);
     return diffBets(current, reconciler.desired);
+  }
+
+  postRoll(outcomes: Outcome[]): void {
+    for (const outcome of outcomes) {
+      if (outcome.result === 'win') {
+        const current = this.trackers.get('wins') ?? 0;
+        this.trackers.set('wins', current + 1);
+      } else if (outcome.result === 'loss') {
+        const current = this.trackers.get('losses') ?? 0;
+        this.trackers.set('losses', current + 1);
+      }
+    }
   }
 }
