@@ -1,10 +1,12 @@
 import { ReconcileEngine } from '../../src/dsl/strategy';
 import { GameState } from '../../src/dsl/game-state';
-import { PassLineAndPlace68 } from '../../src/dsl/strategies';
+import { PassLineAndPlace68, SixIn8Progressive } from '../../src/dsl/strategies';
 import { CrapsTable } from '../../src/craps-table';
 import { RiggedDice } from '../dice/rigged-dice';
 import { PassLineBet } from '../../src/bets/pass-line-bet';
 import { PlaceBet } from '../../src/bets/place-bet';
+import { Outcome } from '../../src/dsl/outcome';
+import { BetTypes } from '../../src/bets/base-bet';
 
 describe('ReconcileEngine', () => {
   const PLAYER = 'test-player';
@@ -87,5 +89,110 @@ describe('ReconcileEngine', () => {
     // Should remove the place-5 bet
     expect(cmds.length).toBe(1);
     expect(cmds[0]).toEqual({ type: 'remove', betType: 'place', point: 5 });
+  });
+
+  describe('postRoll', () => {
+    function winOutcome(point?: number): Outcome {
+      return { result: 'win', betType: BetTypes.PLACE, point, amount: 12, payout: 14 };
+    }
+
+    function lossOutcome(point?: number): Outcome {
+      return { result: 'loss', betType: BetTypes.PLACE, point, amount: 12, payout: 0 };
+    }
+
+    it('increments wins tracker after a winning outcome', () => {
+      const { engine } = makeEngine();
+
+      // First reconcile to initialize tracker with SixIn8Progressive
+      engine.reconcile(SixIn8Progressive);
+
+      // Simulate a win
+      engine.postRoll([winOutcome(6)]);
+
+      // Reconcile again — SixIn8Progressive reads track('wins', 0)
+      // After 1 win, it should try to place at $24 (the progressive bet)
+      const cmds = engine.reconcile(SixIn8Progressive);
+      // The strategy should see wins === 1 and produce a remove + place(6,24)
+      const placeCmd = cmds.find(c => c.type === 'place' && 'amount' in c);
+      expect(placeCmd).toBeDefined();
+      expect((placeCmd as any).amount).toBe(24);
+    });
+
+    it('increments losses tracker after a losing outcome', () => {
+      const { engine } = makeEngine();
+
+      engine.reconcile(SixIn8Progressive);
+      engine.postRoll([lossOutcome(6)]);
+
+      // Verify the loss was tracked by reading it through a custom strategy
+      let trackedLosses = -1;
+      engine.reconcile(({ track }) => {
+        trackedLosses = track<number>('losses', 0);
+      });
+      expect(trackedLosses).toBe(1);
+    });
+
+    it('does not increment trackers when there are no outcomes', () => {
+      const { engine } = makeEngine();
+
+      engine.reconcile(SixIn8Progressive);
+      engine.postRoll([]);
+
+      let trackedWins = -1;
+      let trackedLosses = -1;
+      engine.reconcile(({ track }) => {
+        trackedWins = track<number>('wins', 0);
+        trackedLosses = track<number>('losses', 0);
+      });
+      expect(trackedWins).toBe(0);
+      expect(trackedLosses).toBe(0);
+    });
+
+    it('accumulates multiple wins across rolls', () => {
+      const { engine } = makeEngine();
+
+      engine.reconcile(SixIn8Progressive);
+      engine.postRoll([winOutcome(6)]);
+      engine.postRoll([winOutcome(6)]);
+
+      // After 2 wins, SixIn8Progressive should revert to base bet ($12)
+      let trackedWins = -1;
+      engine.reconcile(({ track }) => {
+        trackedWins = track<number>('wins', 0);
+      });
+      expect(trackedWins).toBe(2);
+    });
+
+    it('tracks wins and losses independently', () => {
+      const { engine } = makeEngine();
+
+      engine.reconcile(SixIn8Progressive);
+      engine.postRoll([winOutcome(6)]);
+      engine.postRoll([lossOutcome(6)]);
+      engine.postRoll([winOutcome(6)]);
+
+      let trackedWins = -1;
+      let trackedLosses = -1;
+      engine.reconcile(({ track }) => {
+        trackedWins = track<number>('wins', 0);
+        trackedLosses = track<number>('losses', 0);
+      });
+      expect(trackedWins).toBe(2);
+      expect(trackedLosses).toBe(1);
+    });
+
+    it('handles multiple outcomes in a single roll', () => {
+      const { engine } = makeEngine();
+
+      engine.reconcile(SixIn8Progressive);
+      // Two bets resolve on the same roll
+      engine.postRoll([winOutcome(6), winOutcome(8)]);
+
+      let trackedWins = -1;
+      engine.reconcile(({ track }) => {
+        trackedWins = track<number>('wins', 0);
+      });
+      expect(trackedWins).toBe(2);
+    });
   });
 });

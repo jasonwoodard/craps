@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1.1 and M1.2 complete
+**Status:** In Progress — M1.1, M1.2, and M1.3 complete
 
 ---
 
@@ -55,7 +55,7 @@ Replace `(value % 6) + 1` with rejection sampling: generate a random integer, di
 
 ---
 
-### M1.3 — Implement `ReconcileEngine.postRoll()` (track write path)
+### M1.3 — Implement `ReconcileEngine.postRoll()` (track write path) [DONE]
 
 **File:** `src/dsl/strategy.ts` (ReconcileEngine)
 
