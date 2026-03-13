@@ -1,19 +1,9 @@
 import { GameState } from '../../src/dsl/game-state';
-import { Dice } from '../../src/dice/dice';
-
-class StubDice extends Dice {
-  constructor(private values: number[]) {
-    super();
-  }
-
-  protected doRoll(): number {
-    return this.values.shift()!;
-  }
-}
+import { RiggedDice } from '../dice/rigged-dice';
 
 describe('GameState', () => {
   it('establishes and clears the point with events', () => {
-    const dice = new StubDice([4, 7]);
+    const dice = new RiggedDice([4, 7]);
     const game = new GameState(dice);
     let established = 0;
     let cleared = 0;

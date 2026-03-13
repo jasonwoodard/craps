@@ -27,6 +27,11 @@ export class CrapsTable {
     this._bets.push(bet);
   }
 
+  removeBet(bet: BaseBet): void {
+    const idx = this._bets.indexOf(bet);
+    if (idx >= 0) this._bets.splice(idx, 1);
+  }
+
   get bets(): BaseBet[] {
     return this._bets;
   }

@@ -1,10 +1,10 @@
 import { CrapsTable } from '../craps-table';
 import { ReconcileEngine, StrategyDefinition } from '../dsl/strategy';
 import { GameState } from '../dsl/game-state';
-import { BetCommand } from '../dsl/bet-reconciler';
+import { BetCommand, stringToBetType, betTypeToString } from '../dsl/bet-reconciler';
 import { Outcome } from '../dsl/outcome';
 import { Dice, LiveDice } from '../dice/dice';
-import { BaseBet, BetTypes } from '../bets/base-bet';
+import { BaseBet } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
@@ -155,17 +155,14 @@ export class CrapsEngine {
   }
 
   private applyRemoveCommand(cmd: BetCommand & { type: 'remove' }): void {
-    const betType = this.stringToBetType(cmd.betType);
+    const betType = stringToBetType(cmd.betType);
     if (betType === undefined) return;
 
     const playerBets = this.table.getPlayerBets(this.playerId);
     for (const bet of playerBets) {
       if (bet.betType === betType && (cmd.point == null || bet.point === cmd.point)) {
-        // Refund the bet amount to bankroll
         this.bankroll += bet.totalAmount;
-        // Remove from table
-        const idx = this.table.bets.indexOf(bet);
-        if (idx >= 0) this.table.bets.splice(idx, 1);
+        this.table.removeBet(bet);
         break;
       }
     }
@@ -175,7 +172,7 @@ export class CrapsEngine {
     const playerBets = this.table.getPlayerBets(this.playerId);
     for (const bet of playerBets) {
       if (bet instanceof PassLineBet || bet instanceof ComeBet) {
-        const typeStr = bet.betType === BetTypes.PASS_LINE ? 'passLine' : 'come';
+        const typeStr = betTypeToString(bet.betType);
         if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
           const oldOdds = bet.oddsAmount;
           const newOdds = cmd.amount;
@@ -204,15 +201,6 @@ export class CrapsEngine {
         return new PlaceBet(amount, point, this.playerId);
       default:
         return null;
-    }
-  }
-
-  private stringToBetType(type: string): BetTypes | undefined {
-    switch (type) {
-      case 'passLine': return BetTypes.PASS_LINE;
-      case 'come': return BetTypes.COME;
-      case 'place': return BetTypes.PLACE;
-      default: return undefined;
     }
   }
 
@@ -267,8 +255,7 @@ export class CrapsEngine {
         bet.amount = 0;
         if (bet instanceof PassLineBet) bet.oddsAmount = 0;
 
-        const idx = this.table.bets.indexOf(bet);
-        if (idx >= 0) this.table.bets.splice(idx, 1);
+        this.table.removeBet(bet);
       }
       // Lost bets: already removed by resolveBets, bankroll was deducted at placement
     }

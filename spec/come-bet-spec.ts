@@ -1,16 +1,14 @@
 import { ComeBet } from '../src/bets/come-bet';
-import { Player } from '../src/player';
 import { CrapsTable } from '../src/craps-table';
 import { TableMaker } from './table-maker/table-maker';
 
 describe('ComeBet', () => {
   let comeBet: ComeBet;
-  let player: Player;
+  const playerId = 'test-player';
   let betAmount: number = 10;
 
   beforeEach(() => {
-    player = new Player();
-    comeBet = new ComeBet(betAmount, player.playerId);
+    comeBet = new ComeBet(betAmount, playerId);
   });
 
   it('should not set the ComeBet point unless the table point is on', () => {
