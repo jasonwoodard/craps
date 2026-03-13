@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1.1, M1.2, and M1.3 complete
+**Status:** In Progress — M1.1, M1.2, M1.3, and M1.4 complete
 
 ---
 
@@ -70,7 +70,7 @@ Replace `(value % 6) + 1` with rejection sampling: generate a random integer, di
 
 ---
 
-### M1.4 — Build `CrapsEngine` (single-strategy game loop)
+### M1.4 — Build `CrapsEngine` (single-strategy game loop) [DONE]
 
 **New file:** `src/engine/craps-engine.ts`
 

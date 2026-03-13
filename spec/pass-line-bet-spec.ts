@@ -35,7 +35,6 @@ describe("PassLineBet", () => {
         .withPoint(point)
         .value();
       bet.oddsAmount = oddsAmount;
-      bet.point = point;
       expect(PassLineBet.computeOddsPayout(bet, table)).toBe(payOut);
     };
 
@@ -107,13 +106,12 @@ describe("PassLineBet", () => {
     expect(bet.oddsAmount).toBe(0);
   });
 
-  it("should NOT payout odds if there is no point", () => {
+  it("should NOT payout odds on a comeout win (point is off)", () => {
     let bet = new PassLineBet(10, "player1");
-    let table = TableMaker.getTable()
-      .withPoint(10)
-      .value();
+    let table = TableMaker.getTable().value();
     bet.oddsAmount = 20;
     bet.win(table);
+    // Point is OFF on comeout, so odds don't pay
     expect(bet.payOut).toBe(10);
   });
 

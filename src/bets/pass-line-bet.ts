@@ -75,7 +75,7 @@ export class PassLineBet extends BaseBet {
   //Pays: 2:1 on 4, 10; 3:2 on 5, 9; 6:5 on 6,8
   win(table: CrapsTable) {
     this.payOut = this.amount;
-    if (this.point) {
+    if (table.isPointOn) {
       this.payOut += PassLineBet.computeOddsPayout(this, table);
     }
   }
@@ -84,7 +84,8 @@ export class PassLineBet extends BaseBet {
     if (!bet.oddsAmount) {
       return 0;
     }
-    switch (bet.point) {
+    const point = table.currentPoint;
+    switch (point) {
       case 4:
       case 10:
         return bet.oddsAmount * 2;
