@@ -2,6 +2,8 @@ import { Dice, LiveDice } from '../dice/dice';
 
 export type RollListener = (roll: number) => void;
 
+const POINT_NUMBERS = new Set([4, 5, 6, 8, 9, 10]);
+
 export class GameState {
   point: number | null = null;
   dice: Dice;
@@ -18,7 +20,7 @@ export class GameState {
     const value = this.dice.roll();
     this.rollListeners.forEach(l => l(value));
     if (this.point === null) {
-      if ([4,5,6,8,9,10].includes(value)) {
+      if (POINT_NUMBERS.has(value)) {
         this.point = value;
         this.pointEstablishedListeners.forEach(l => l(value));
       }

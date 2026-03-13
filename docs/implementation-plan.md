@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1.1, M1.2, M1.3, and M1.4 complete
+**Status:** In Progress — Milestone 1 complete (M1.1–M1.6)
 
 ---
 
@@ -102,7 +102,7 @@ new CrapsEngine({
 
 ---
 
-### M1.5 — Retire the old imperative layer
+### M1.5 — Retire the old imperative layer [DONE]
 
 Once `CrapsEngine` integration tests pass:
 
@@ -117,7 +117,7 @@ Once `CrapsEngine` integration tests pass:
 
 ---
 
-### M1.6 — Milestone 1 Review
+### M1.6 — Milestone 1 Review [DONE]
 
 Run the `/simplify` skill across all files introduced or modified in M1:
 
@@ -131,6 +131,13 @@ Review checklist:
 - Are all error paths (invalid bet placement, bankroll exhaustion) handled or explicitly deferred?
 - Does test coverage include at least: come-out phase, point phase, seven-out, place bet payout on each valid number?
 - Is the `Outcome` type consistent across all consumers?
+
+Review findings addressed:
+- Consolidated `stringToBetType`/`betTypeToString` into shared functions in `bet-reconciler.ts` (eliminated duplicate mapping in `craps-engine.ts`)
+- Added `CrapsTable.removeBet()` method to encapsulate bet removal (eliminated direct `bets.splice` in engine)
+- Replaced `StubDice` with existing `RiggedDice` in `game-state-spec.ts`
+- Hoisted point-number array to `Set` constant in `game-state.ts`
+- Removed unused `player-state.ts` imports from `bet-reconciler.ts`
 
 ---
 

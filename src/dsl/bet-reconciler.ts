@@ -1,4 +1,3 @@
-import { BaseBet as DslBaseBet, OddsBet, ComeBet } from './player-state';
 import { BaseBet as TableBaseBet, BetTypes } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
 
@@ -29,6 +28,18 @@ const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
   [BetTypes.COME]: 'come',
   [BetTypes.PLACE]: 'place',
 };
+
+const STRING_TO_BET_TYPE = new Map<string, BetTypes>(
+  Object.entries(BET_TYPE_TO_STRING).map(([k, v]) => [v, Number(k) as BetTypes]),
+);
+
+export function stringToBetType(type: string): BetTypes | undefined {
+  return STRING_TO_BET_TYPE.get(type);
+}
+
+export function betTypeToString(betType: BetTypes): string {
+  return BET_TYPE_TO_STRING[betType] ?? 'unknown';
+}
 
 export function tableBetToDesired(bet: TableBaseBet): DesiredBet {
   const type = BET_TYPE_TO_STRING[bet.betType] ?? 'unknown';
