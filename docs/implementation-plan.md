@@ -7,17 +7,25 @@
 
 ## Overview
 
-Three milestones, each building on the last. Each ends with a structured review pass.
+Three milestones, each building on the last. Each ends with a structured review pass followed by a demo that exercises the milestone's primary CUJ(s).
 
-| Milestone | Theme | Primary CUJs |
-|-----------|-------|--------------|
-| M1 | Core engine — DSL wired end-to-end | 4.0 |
-| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 |
+| Milestone | Theme | Primary CUJs | Status |
+|-----------|-------|--------------|--------|
+| M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
+| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
+
+### Demo Convention
+
+Each milestone concludes with a demo file in the `demo/` folder. Demos are:
+- **Free-standing**: runnable with `npx ts-node demo/<file>.ts` — no CLI or external setup required
+- **Instructional**: heavily commented so a new user can learn the relevant API by reading the file
+- **Self-verifying**: include assertions that fail loudly if behavior regresses
+- **Cumulative**: all prior demos must remain functional as development continues (they serve as end-to-end smoke tests)
 
 ---
 
-## Milestone 1 — Core Engine (MVP)
+## Milestone 1 — Core Engine (MVP) [DONE]
 
 **Goal:** A strategy can run end-to-end through the DSL. `ThreePointMolly` produces correct results on a known roll sequence. The old imperative layer is gone.
 
@@ -138,6 +146,23 @@ Review findings addressed:
 - Replaced `StubDice` with existing `RiggedDice` in `game-state-spec.ts`
 - Hoisted point-number array to `Set` constant in `game-state.ts`
 - Removed unused `player-state.ts` imports from `bet-reconciler.ts`
+
+---
+
+### M1.7 — Milestone 1 Demo [DONE]
+
+**New file:** `demo/verify-strategy-on-known-rolls.ts`
+
+**CUJ exercised:** 4.0 — Verify a strategy behaves correctly on a known roll sequence.
+
+Demonstrates the complete M1 API surface in a single runnable file:
+- Defining a strategy with the DSL (`passLine`, `place`, `withOdds`)
+- Injecting a scripted dice sequence via `RiggedDice`
+- Running `CrapsEngine` with deterministic dice
+- Inspecting `RollRecord` outcomes, point transitions, and bankroll changes
+- Programmatic assertions for each roll
+
+Run: `npx ts-node demo/verify-strategy-on-known-rolls.ts`
 
 ---
 
@@ -286,6 +311,14 @@ Review checklist:
 
 ---
 
+### M2.7 — Milestone 2 Demo
+
+**New file:** `demo/<tbd-m2-demo>.ts`
+
+Write a demo exercising the primary M2 CUJs (1.0, 2.0 — running built-in and custom strategies). The demo should be free-standing and self-verifying. Ensure all prior demos (`demo/verify-strategy-on-known-rolls.ts`) still pass.
+
+---
+
 ## Milestone 3 — Comparison and Advanced CUJs
 
 **Goal:** Two or more strategies can be compared on identical dice, either via CLI or programmatically. Custom strategy files can be compared against built-ins. All major CUJs are supported.
@@ -407,6 +440,14 @@ Review checklist:
 
 ---
 
+### M3.6 — Milestone 3 Demo
+
+**New file:** `demo/<tbd-m3-demo>.ts`
+
+Write a demo exercising the primary M3 CUJs (1.1, 3.0, 3.1 — multi-strategy comparison, library usage). The demo should be free-standing and self-verifying. Ensure all prior demos still pass.
+
+---
+
 ## CUJ Coverage Summary
 
 | CUJ | Description | Milestone |
@@ -437,21 +478,24 @@ M1.1 (MT bias fix)
               └─► M1.4 (CrapsEngine)
                     └─► M1.5 (retire old layer)
                           └─► M1.6 (M1 review)
+                                └─► M1.7 (M1 demo)
 
-M1.4 (CrapsEngine)
+M1.7 (M1 demo)
   └─► M2.1 (die1/die2 return type)
         └─► M2.2 (RunLogger)
               └─► M2.3 (StrategyRegistry)
                     └─► M2.4 (CLI single strategy)
                           └─► M2.5 (StrategyFileLoader)
                                 └─► M2.6 (M2 review)
+                                      └─► M2.7 (M2 demo)
 
-M2.4 (CLI) + M2.2 (RunLogger)
+M2.7 (M2 demo)
   └─► M3.1 (SharedTable)
         └─► M3.2 (--compare CLI flag)
               └─► M3.3 (--compare-files / mixed)
                     └─► M3.4 (integration tests)
                           └─► M3.5 (M3 review)
+                                └─► M3.6 (M3 demo)
 ```
 
 ---
@@ -470,6 +514,7 @@ M2.4 (CLI) + M2.2 (RunLogger)
 | File | Milestone |
 |------|-----------|
 | `src/engine/craps-engine.ts` | M1 |
+| `demo/verify-strategy-on-known-rolls.ts` | M1 |
 | `src/logger/run-logger.ts` | M2 |
 | `src/cli/strategy-registry.ts` | M2 |
 | `src/cli/strategy-loader.ts` | M2 |
