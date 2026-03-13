@@ -16,9 +16,9 @@ export class LiveDice extends Dice {
 
   private twister: MersenneTwister;
   
-  constructor() {
+  constructor(seed?: number) {
     super();
-    this.twister = new MersenneTwister();
+    this.twister = new MersenneTwister(seed);
   };
 
   doRoll() :number {
