@@ -4,25 +4,29 @@
  *
  * Usage:
  *   npx ts-node src/cli/run-sim.ts --strategy <name> [options]
+ *   npx ts-node src/cli/run-sim.ts --strategy-file <path> [options]
  *
  * Flags:
- *   --strategy <name>            Required. Built-in strategy name.
- *   --rolls <n>                  Number of rolls to simulate (default: 10000).
- *   --bankroll <n>               Starting bankroll (default: 500).
- *   --seed <n>                   RNG seed for reproducible runs (optional).
+ *   --strategy <name>              Built-in strategy name (mutually exclusive with --strategy-file).
+ *   --strategy-file <path>         Path to a .ts strategy file (mutually exclusive with --strategy).
+ *   --rolls <n>                    Number of rolls to simulate (default: 10000).
+ *   --bankroll <n>                 Starting bankroll (default: 500).
+ *   --seed <n>                     RNG seed for reproducible runs (optional).
  *   --output summary|verbose|json  Output format (default: summary).
  */
 
 import { CrapsEngine } from '../engine/craps-engine';
 import { RunLogger } from '../logger/run-logger';
 import { lookupStrategy } from './strategy-registry';
+import { loadStrategyFile } from './strategy-loader';
 
 // ---------------------------------------------------------------------------
 // Argument parsing
 // ---------------------------------------------------------------------------
 
 export interface CliArgs {
-  strategy: string;
+  strategy?: string;
+  strategyFile?: string;
   rolls: number;
   bankroll: number;
   seed?: number;
@@ -45,8 +49,12 @@ export function parseArgs(argv: string[]): CliArgs {
     }
   }
 
-  if (!args['strategy']) {
-    throw new Error('Missing required flag: --strategy <name>');
+  if (!args['strategy'] && !args['strategy-file']) {
+    throw new Error('Missing required flag: --strategy <name> or --strategy-file <path>');
+  }
+
+  if (args['strategy'] && args['strategy-file']) {
+    throw new Error('--strategy and --strategy-file are mutually exclusive. Provide only one.');
   }
 
   const rolls = parsePositiveInt(args['rolls'], 'rolls', 10000);
@@ -68,6 +76,7 @@ export function parseArgs(argv: string[]): CliArgs {
 
   return {
     strategy: args['strategy'],
+    strategyFile: args['strategy-file'],
     rolls,
     bankroll,
     seed,
@@ -89,10 +98,19 @@ function parsePositiveInt(raw: string | undefined, name: string, defaultValue: n
 // ---------------------------------------------------------------------------
 
 export function runSim(args: CliArgs): void {
-  const strategy = lookupStrategy(args.strategy);
+  let strategyName: string;
+  let strategy;
+
+  if (args.strategyFile) {
+    strategy = loadStrategyFile(args.strategyFile);
+    strategyName = args.strategyFile;
+  } else {
+    strategyName = args.strategy!;
+    strategy = lookupStrategy(strategyName);
+  }
 
   const logger = new RunLogger({
-    strategyName: args.strategy,
+    strategyName,
     playerId: 'player1',
     initialBankroll: args.bankroll,
     seed: args.seed,

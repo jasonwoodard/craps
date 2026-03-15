@@ -59,6 +59,17 @@ describe('parseArgs', () => {
     expect(() => parseArgs([])).toThrowError(/Missing required flag: --strategy/);
   });
 
+  it('parses --strategy-file', () => {
+    const args = parseArgs(['--strategy-file', './my-strategy.ts']);
+    expect(args.strategyFile).toBe('./my-strategy.ts');
+    expect(args.strategy).toBeUndefined();
+  });
+
+  it('throws when both --strategy and --strategy-file are provided', () => {
+    expect(() => parseArgs(['--strategy', 'PassLineOnly', '--strategy-file', './my.ts']))
+      .toThrowError(/mutually exclusive/);
+  });
+
   it('throws for invalid --rolls value', () => {
     expect(() => parseArgs(['--strategy', 'PassLineOnly', '--rolls', 'abc']))
       .toThrowError(/Invalid value for --rolls/);
@@ -151,5 +162,18 @@ describe('runSim', () => {
   it('throws for an unknown strategy name', () => {
     expect(() => runSim({ strategy: 'Fake', rolls: 10, bankroll: 500, output: 'summary' }))
       .toThrowError(/Unknown strategy "Fake"/);
+  });
+
+  it('runs a simulation from a strategy file without throwing', () => {
+    const fixturePath = require('path').join(__dirname, 'fixtures', 'minimal-strategy.ts');
+    expect(() => runSim({ strategyFile: fixturePath, rolls: 20, bankroll: 500, output: 'summary' }))
+      .not.toThrow();
+  });
+
+  it('produces summary output when run from a strategy file', () => {
+    const fixturePath = require('path').join(__dirname, 'fixtures', 'minimal-strategy.ts');
+    runSim({ strategyFile: fixturePath, rolls: 20, bankroll: 500, output: 'summary' });
+    const joined = outputLines.join('\n');
+    expect(joined).toContain('Simulation Summary');
   });
 });
