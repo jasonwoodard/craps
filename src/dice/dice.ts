@@ -1,30 +1,36 @@
 import { MersenneTwister } from '../dice/mersenne-twister';
 
-export abstract class Dice {
-  rollHistory : number[] = [];
+export interface DiceRoll {
+  die1: number;
+  die2: number;
+  sum: number;
+}
 
-  roll(): number {
-    let rollValue = this.doRoll()
-    this.rollHistory.push(rollValue);
-    return rollValue;
+export abstract class Dice {
+  rollHistory: DiceRoll[] = [];
+
+  roll(): DiceRoll {
+    const result = this.doRoll();
+    this.rollHistory.push(result);
+    return result;
   }
 
-  protected abstract doRoll() : number;
+  protected abstract doRoll(): DiceRoll;
 }
 
 export class LiveDice extends Dice {
 
   private twister: MersenneTwister;
-  
+
   constructor(seed?: number) {
     super();
     this.twister = new MersenneTwister(seed);
   };
 
-  doRoll() :number {
-    let dValue1 = this.rollD6();
-    let dValue2 = this.rollD6();
-    return dValue1 + dValue2;
+  doRoll(): DiceRoll {
+    const die1 = this.rollD6();
+    const die2 = this.rollD6();
+    return { die1, die2, sum: die1 + die2 };
   };
 
   private rollD6(): number {

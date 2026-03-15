@@ -34,24 +34,24 @@ describe('Dice', ():void => {
     beforeEach(() => {
       d = new LiveDice();
      });
-   
+
      it('should be between 2 and 12', () => {
        let roll = d.roll();
-       expect(roll).toBeLessThanOrEqual(12);
-       expect(roll).toBeGreaterThanOrEqual(2);
+       expect(roll.sum).toBeLessThanOrEqual(12);
+       expect(roll.sum).toBeGreaterThanOrEqual(2);
      });
-   
+
      it('should roll all numbers 2 to 12', () => {
        let rolls = getRollHash();
        let totalRolls = 1000000;
        let i = 0
        while(i < totalRolls ){
          let roll = d.roll();
-         let value = rolls.get(roll);
-         rolls.set(roll, value + 1);
+         let value = rolls.get(roll.sum);
+         rolls.set(roll.sum, value + 1);
          i++
        }
-   
+
        for (let key of rolls.keys()) {
          let rollCount = rolls.get(key);
          // Outputs roll counts and %
@@ -70,7 +70,7 @@ describe('Dice', ():void => {
 
        for (let i = 0; i < totalRolls; i++) {
          const r = d.roll();
-         sumCounts.set(r, sumCounts.get(r) + 1);
+         sumCounts.set(r.sum, sumCounts.get(r.sum) + 1);
        }
 
        // Theoretical 2d6 probabilities: 2:1/36 ... 7:6/36 ... 12:1/36
@@ -85,6 +85,17 @@ describe('Dice', ():void => {
          expect(Math.abs(observed - expectedProb))
            .toBeLessThan(tolerance,
              `Sum ${key}: observed ${observed.toFixed(4)} vs expected ${expectedProb.toFixed(4)}`);
+       }
+     });
+
+     it('should produce valid die1 and die2 values (1–6 each)', () => {
+       for (let i = 0; i < 1000; i++) {
+         const r = d.roll();
+         expect(r.die1).toBeGreaterThanOrEqual(1);
+         expect(r.die1).toBeLessThanOrEqual(6);
+         expect(r.die2).toBeGreaterThanOrEqual(1);
+         expect(r.die2).toBeLessThanOrEqual(6);
+         expect(r.die1 + r.die2).toBe(r.sum);
        }
      });
   });

@@ -1,4 +1,4 @@
-import { Dice, LiveDice } from "./dice/dice";
+import { Dice, DiceRoll, LiveDice } from "./dice/dice";
 import * as _ from "lodash";
 import { BaseBet } from "./bets/base-bet";
 
@@ -19,8 +19,8 @@ export class CrapsTable {
     return !(this.currentPoint == undefined);
   }
 
-  getLastRoll(): number {
-    return _.last(this.dice.rollHistory);
+  getLastRoll(): number | undefined {
+    return _.last(this.dice.rollHistory)?.sum;
   }
 
   placeBet(bet: BaseBet): void {
@@ -47,29 +47,27 @@ export class CrapsTable {
     return _.clone(playerBets);
   }
 
-  rollDice(): void {
-    // TODO: Add player table load logging right before dice roll.
-    // How much each player has on the table (# of bets and total amount)
+  rollDice(): DiceRoll {
+    const diceRoll = this.dice.roll();
 
-    // Roll dice and resolve bets.
-    let rollvalue = this.dice.roll();
-
-    // Resolve the bets
-    this.resolveBets(rollvalue);
+    // Resolve the bets using the sum
+    this.resolveBets(diceRoll.sum);
 
     // 'Handle' the on/off puck table state.
     if (this.isPointOn) {
-      if (this.currentPoint === rollvalue || rollvalue === 7) {
+      if (this.currentPoint === diceRoll.sum || diceRoll.sum === 7) {
         this.currentPoint = undefined;
       }
     } else {
       if (
-        (rollvalue >= 4 && rollvalue <= 6) ||
-        (rollvalue >= 8 && rollvalue <= 10)
+        (diceRoll.sum >= 4 && diceRoll.sum <= 6) ||
+        (diceRoll.sum >= 8 && diceRoll.sum <= 10)
       ) {
-        this.currentPoint = rollvalue;
+        this.currentPoint = diceRoll.sum;
       }
     }
+
+    return diceRoll;
   }
 
   resolveBets(rollValue: number) {
