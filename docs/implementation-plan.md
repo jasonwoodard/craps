@@ -12,7 +12,7 @@ Three milestones, each building on the last. Each ends with a structured review 
 | Milestone | Theme | Primary CUJs | Status |
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
-| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2, M2.3, M2.4 DONE |
+| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2, M2.3, M2.4, M2.5 DONE |
 | M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
 
 ### Demo Convention
@@ -296,7 +296,7 @@ Implementation notes:
 
 ---
 
-### M2.5 — Build `StrategyFileLoader`
+### M2.5 — Build `StrategyFileLoader` [DONE]
 
 **New file:** `src/cli/strategy-loader.ts`
 
@@ -315,6 +315,14 @@ Add `--strategy-file <path>` flag to `run-sim.ts` as an alternative to `--strate
 
 **FR:** 8 (`--strategy-file`); CUJ 2.0
 **Risk:** Low-medium. `ts-node` dynamic require has known quirks; test with a real `.ts` fixture file.
+
+Implementation notes:
+- `loadStrategyFile(filePath)` resolves to an absolute path via `path.resolve()`, then `require()`s it. Returns the first exported value where `typeof value === 'function'`. Throws descriptive errors for load failures (syntax/missing import) and for files with no function export.
+- `CliArgs.strategy` changed from required `string` to optional `string?`; `CliArgs.strategyFile?: string` added. `parseArgs` requires exactly one of `--strategy` or `--strategy-file` and throws if both or neither is supplied.
+- `runSim` branches on `args.strategyFile`: if set, calls `loadStrategyFile`; otherwise calls `lookupStrategy`. Uses the file path as the strategy name in the logger.
+- Tests in `spec/cli/strategy-loader-spec.ts` cover: successful load, callable result, no-function-export error, nonexistent-file error.
+- Tests in `spec/cli/run-sim-spec.ts` extended: `--strategy-file` parses correctly, mutual exclusivity error, `runSim` with file path runs and produces summary output.
+- Fixture files in `spec/cli/fixtures/`: `minimal-strategy.ts` (valid), `no-function-export.ts` (invalid).
 
 ---
 
