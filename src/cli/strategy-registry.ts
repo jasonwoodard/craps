@@ -1,6 +1,10 @@
 import { StrategyDefinition } from '../dsl/strategy';
 import {
-  ThreePointMolly,
+  ThreePointMolly1X,
+  ThreePointMolly2X,
+  ThreePointMolly3X,
+  ThreePointMolly4X,
+  ThreePointMolly5X,
   Place6And8,
   PlaceInside,
   PlaceAll,
@@ -9,7 +13,11 @@ import {
 } from '../dsl/strategies';
 
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
-  'ThreePointMolly':   ThreePointMolly,
+  'ThreePointMolly1X': ThreePointMolly1X,
+  'ThreePointMolly2X': ThreePointMolly2X,
+  'ThreePointMolly3X': ThreePointMolly3X,
+  'ThreePointMolly4X': ThreePointMolly4X,
+  'ThreePointMolly5X': ThreePointMolly5X,
   'Place6And8':        Place6And8,
   'PlaceInside':       PlaceInside,
   'PlaceAll':          PlaceAll,

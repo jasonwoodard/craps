@@ -27,10 +27,36 @@ export const PlaceAll: StrategyDefinition = ({ bets }) => {
   bets.place(10, 10);
 };
 
-export const ThreePointMolly: StrategyDefinition = ({ bets }) => {
+// Three-Point Molly: pass line + 2 come bets, always trying to keep 3 numbers
+// working. The [1-5]X suffix denotes the odds multiplier on a $10 flat bet.
+export const ThreePointMolly1X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(10);
+  bets.come(10).withOdds(10);
+  bets.come(10).withOdds(10);
+};
+
+export const ThreePointMolly2X: StrategyDefinition = ({ bets }) => {
   bets.passLine(10).withOdds(20);
   bets.come(10).withOdds(20);
   bets.come(10).withOdds(20);
+};
+
+export const ThreePointMolly3X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(30);
+  bets.come(10).withOdds(30);
+  bets.come(10).withOdds(30);
+};
+
+export const ThreePointMolly4X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(40);
+  bets.come(10).withOdds(40);
+  bets.come(10).withOdds(40);
+};
+
+export const ThreePointMolly5X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(50);
+  bets.come(10).withOdds(50);
+  bets.come(10).withOdds(50);
 };
 
 export const SixIn8Progressive: StrategyDefinition = ({ bets, track }) => {
@@ -50,13 +76,10 @@ export const SixIn8Progressive: StrategyDefinition = ({ bets, track }) => {
   }
 };
 
-// --- Legacy aliases (kept for backwards compatibility) ---
+// --- Legacy aliases ---
 
-export const PassLineAnd2Comes: StrategyDefinition = ({ bets }) => {
-  bets.passLine(10).withOdds(50);
-  bets.come(10).withOdds(50);
-  bets.come(10).withOdds(50);
-};
+/** @deprecated Use ThreePointMolly5X */
+export const PassLineAnd2Comes = ThreePointMolly5X;
 
 export const PassLineAndPlace68: StrategyDefinition = ({ bets }) => {
   bets.passLine(10).withOdds(50);

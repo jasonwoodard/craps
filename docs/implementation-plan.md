@@ -258,9 +258,9 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
 **Risk:** Low.
 
 Implementation notes:
-- Canonical strategy definitions (`PassLineOnly`, `Place6And8`, `PlaceInside`, `PlaceAll`, `ThreePointMolly`, `SixIn8Progressive`) added to `src/dsl/strategies.ts`; legacy aliases (`PassLineAnd2Comes`, `PassLineAndPlace68`) kept for backwards compatibility.
+- Canonical strategy definitions added to `src/dsl/strategies.ts`: `PassLineOnly`, `Place6And8`, `PlaceInside`, `PlaceAll`, `SixIn8Progressive`, and five `ThreePointMolly[1-5]X` variants (odds multiplier on a $10 flat bet). `PassLineAnd2Comes` is a deprecated alias for `ThreePointMolly5X`; `PassLineAndPlace68` is kept as-is.
 - `lookupStrategy(name)` throws a descriptive error listing all available names if the name is unknown.
-- Tests in `spec/cli/strategy-registry-spec.ts` verify all six names resolve and unknown names throw.
+- Tests in `spec/cli/strategy-registry-spec.ts` verify all ten names resolve, five ThreePointMolly variants are distinct, and unknown names throw.
 
 ---
 

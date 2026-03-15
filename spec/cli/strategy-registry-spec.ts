@@ -2,7 +2,11 @@ import { BUILT_IN_STRATEGIES, lookupStrategy } from '../../src/cli/strategy-regi
 
 describe('BUILT_IN_STRATEGIES', () => {
   const expectedNames = [
-    'ThreePointMolly',
+    'ThreePointMolly1X',
+    'ThreePointMolly2X',
+    'ThreePointMolly3X',
+    'ThreePointMolly4X',
+    'ThreePointMolly5X',
     'Place6And8',
     'PlaceInside',
     'PlaceAll',
@@ -15,6 +19,15 @@ describe('BUILT_IN_STRATEGIES', () => {
       expect(typeof BUILT_IN_STRATEGIES[name]).toBe('function');
     });
   }
+
+  it('registers five distinct ThreePointMolly variants', () => {
+    const variants = [1, 2, 3, 4, 5].map(n => BUILT_IN_STRATEGIES[`ThreePointMolly${n}X`]);
+    // All are functions
+    variants.forEach(v => expect(typeof v).toBe('function'));
+    // All are distinct strategy instances
+    const unique = new Set(variants);
+    expect(unique.size).toBe(5);
+  });
 });
 
 describe('lookupStrategy', () => {
@@ -23,9 +36,9 @@ describe('lookupStrategy', () => {
     expect(typeof strategy).toBe('function');
   });
 
-  it('returns different strategies for different names', () => {
-    const a = lookupStrategy('Place6And8');
-    const b = lookupStrategy('ThreePointMolly');
+  it('returns different strategies for different ThreePointMolly variants', () => {
+    const a = lookupStrategy('ThreePointMolly1X');
+    const b = lookupStrategy('ThreePointMolly5X');
     expect(a).not.toBe(b);
   });
 
@@ -34,6 +47,6 @@ describe('lookupStrategy', () => {
   });
 
   it('error message lists available strategies', () => {
-    expect(() => lookupStrategy('Nope')).toThrowError(/ThreePointMolly/);
+    expect(() => lookupStrategy('Nope')).toThrowError(/ThreePointMolly1X/);
   });
 });
