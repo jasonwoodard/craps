@@ -12,7 +12,7 @@ Three milestones, each building on the last. Each ends with a structured review 
 | Milestone | Theme | Primary CUJs | Status |
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
-| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2 DONE |
+| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2, M2.3, M2.4 DONE |
 | M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
 
 ### Demo Convention
@@ -234,7 +234,7 @@ Implementation notes:
 
 ---
 
-### M2.3 — Build `StrategyRegistry`
+### M2.3 — Build `StrategyRegistry` [DONE]
 
 **New file:** `src/cli/strategy-registry.ts`
 
@@ -257,9 +257,14 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
 **FR:** 8 — CLI must select strategies by name
 **Risk:** Low.
 
+Implementation notes:
+- Canonical strategy definitions (`PassLineOnly`, `Place6And8`, `PlaceInside`, `PlaceAll`, `ThreePointMolly`, `SixIn8Progressive`) added to `src/dsl/strategies.ts`; legacy aliases (`PassLineAnd2Comes`, `PassLineAndPlace68`) kept for backwards compatibility.
+- `lookupStrategy(name)` throws a descriptive error listing all available names if the name is unknown.
+- Tests in `spec/cli/strategy-registry-spec.ts` verify all six names resolve and unknown names throw.
+
 ---
 
-### M2.4 — Build `run-sim.ts` CLI (single strategy)
+### M2.4 — Build `run-sim.ts` CLI (single strategy) [DONE]
 
 **New file:** `src/cli/run-sim.ts`
 
@@ -282,6 +287,12 @@ Exit with a clear error message for unknown strategy name, missing required flag
 
 **FR:** 8 — CLI runner
 **Risk:** Low.
+
+Implementation notes:
+- `parseArgs(argv)` handles all five flags; throws descriptive errors for missing/invalid values.
+- `runSim(args)` wires `lookupStrategy` → `CrapsEngine` → `RunLogger.flush(mode)`.
+- `require.main === module` guard keeps the file importable in tests without running the CLI.
+- Tests in `spec/cli/run-sim-spec.ts` cover argument parsing, output modes (summary/verbose/json), seed reproducibility (dice-roll identity across runs), and unknown strategy error.
 
 ---
 
