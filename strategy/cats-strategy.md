@@ -1,7 +1,9 @@
 # CATS: Craps Alpha-Transition Strategy
 
 **Version:** 1.0  : Copyright 2026 Jason Woodard
+
 **Table Basis:** $10 / $15 minimum, 5× odds  
+
 **Status:** Complete — BATS deferred to separate paper
 
 ---
