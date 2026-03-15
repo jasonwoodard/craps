@@ -59,21 +59,14 @@ export const ThreePointMolly5X: StrategyDefinition = ({ bets }) => {
   bets.come(10).withOdds(50);
 };
 
+// Place 6 & 8 progressive: flat $12 on win 1, then press $6 per subsequent win.
+// Cap at wins=3 ($24) — covers 90% of sessions (P(≥3 wins) = (5/11)^3 ≈ 9.4%).
 export const SixIn8Progressive: StrategyDefinition = ({ bets, track }) => {
   const wins = track<number>('wins', 0);
-  bets.place(6, 12);
-  bets.place(8, 12);
-  if (wins === 1) {
-    bets.remove('place', 6);
-    bets.place(6, 24);
-    bets.remove('place', 8);
-    bets.place(8, 24);
-  } else if (wins > 1) {
-    bets.remove('place', 6);
-    bets.place(6, 12);
-    bets.remove('place', 8);
-    bets.place(8, 12);
-  }
+  // wins=0,1 → $12; wins=2 → $18; wins≥3 → $24 (cap)
+  const amount = wins <= 1 ? 12 : Math.min(12 + (wins - 1) * 6, 24);
+  bets.place(6, amount);
+  bets.place(8, amount);
 };
 
 // --- Legacy aliases ---
