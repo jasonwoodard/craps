@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CATS Wallet Cards</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f5f5f0;
+    padding: 32px;
+    color: #1a1a1a;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
+  .instructions {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .face-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .cards-row {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  /* Width matches 2.5" at 96dpi. Height is content-driven — no clipping. */
+  .card {
+    width: 240px;
+    min-height: 336px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    overflow: visible;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .card-header {
+    padding: 5px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 0.5px solid #e0e0e0;
+    background: #fafafa;
+    flex-shrink: 0;
+  }
+
+  .card-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+  .card-face { font-size: 9px; color: #999; }
+
+  .section {
+    border-bottom: 0.5px solid #e8e8e8;
+    padding: 5px 8px;
+    flex-shrink: 0;
+  }
+
+  .section:last-child { border-bottom: none; flex: 1; }
+
+  .sec-label {
+    font-size: 8px;
+    font-weight: 700;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 4px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  td, th { padding: 2px 2px; vertical-align: middle; line-height: 1.3; }
+  th { font-size: 8px; font-weight: 600; color: #999; text-align: left; padding-bottom: 3px; }
+
+  .pill {
+    display: inline-block;
+    font-size: 8px;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .s1  { background: #EAF3DE; color: #27500A; }
+  .s2  { background: #E1F5EE; color: #085041; }
+  .s3t { background: #E6F1FB; color: #0C447C; }
+  .s3l { background: #B5D4F4; color: #042C53; }
+  .s4  { background: #EEEDFE; color: #3C3489; }
+  .s5  { background: #FAEEDA; color: #633806; }
+
+  .odds-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3px;
+    margin-bottom: 3px;
+  }
+
+  .odds-cell {
+    text-align: center;
+    padding: 3px 2px;
+    border-radius: 3px;
+    border: 0.5px solid #e0e0e0;
+  }
+
+  .odds-num { font-size: 12px; font-weight: 600; }
+  .odds-label { font-size: 8px; color: #888; }
+
+  .note { font-size: 8.5px; color: #888; line-height: 1.3; margin-top: 2px; }
+
+  .when-do {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 7px;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+
+  .when {
+    font-size: 8.5px;
+    font-weight: 600;
+    color: #888;
+    padding-top: 1px;
+    white-space: nowrap;
+  }
+
+  .do { color: #1a1a1a; }
+
+  .vig-box {
+    background: #FFF8E6;
+    border: 0.5px solid #F0C060;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 9px;
+    line-height: 1.4;
+    color: #7A5000;
+    margin-top: 2px;
+  }
+
+  .step-down-rules {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 7px;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .sd-when { font-size: 8.5px; font-weight: 600; color: #888; white-space: nowrap; padding-top: 1px; }
+  .sd-do { color: #1a1a1a; }
+
+  @media print {
+    body { background: white; padding: 16px; }
+    .card { box-shadow: none; border: 0.5px solid #bbb; }
+    .no-print { display: none; }
+
+    /* Force each card pair onto its own page if needed */
+    .page-break { page-break-before: always; }
+  }
+</style>
+</head>
+<body>
+
+<h1>CATS Strategy — Wallet Cards</h1>
+<p class="instructions">
+  Print this page · Trim each card to 2.5" × 3.5" · Laminate · The rail gets wet.<br>
+  Use the $10 card at $10 minimum tables, $15 card at $15 minimum tables. 5× odds assumed throughout.
+</p>
+
+<div class="face-label">Front face — active game reference</div>
+<div class="cards-row">
+
+  <!-- $10 FRONT -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">CATS — $10 table · 5× odds</span>
+      <span class="card-face">front</span>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Stage ladder</div>
+      <table>
+        <tr><th>Stage</th><th>Load</th><th>HE</th><th>Step up / shift when</th></tr>
+        <tr><td><span class="pill s1">1 Accumulator</span></td><td>$36→$24</td><td>1.52%</td><td>Profit ≥ +$70</td></tr>
+        <tr><td><span class="pill s2">2 Little Molly</span></td><td>$60</td><td>0.47%</td><td>Profit ≥ +$150</td></tr>
+        <tr><td><span class="pill s3t">3 Molly Tight</span></td><td>$90</td><td>0.47%</td><td>Shift Loose at +$200, live shooter</td></tr>
+        <tr><td><span class="pill s3l">3 Molly Loose</span></td><td>$180</td><td>0.24%</td><td>Step up at profit ≥ +$250</td></tr>
+        <tr><td><span class="pill s4">4 Exp. Alpha</span></td><td>$220</td><td>0.50%</td><td>Profit ≥ +$400</td></tr>
+        <tr><td><span class="pill s5">5 Max Alpha</span></td><td>$260</td><td>0.73%</td><td>The long roll</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Tier odds (Stages 3–5)</div>
+      <div class="odds-grid">
+        <div class="odds-cell"><div class="odds-num" style="color:#0C447C">3×</div><div class="odds-label">6 or 8</div></div>
+        <div class="odds-cell"><div class="odds-num" style="color:#085041">2×</div><div class="odds-label">5 or 9</div></div>
+        <div class="odds-cell"><div class="odds-num" style="color:#444">1×</div><div class="odds-label">4 or 10</div></div>
+      </div>
+      <p class="note">Rough (no 6/8 working): 1× all &nbsp;·&nbsp; Loose: 5× all</p>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Step-down rules</div>
+      <div class="step-down-rules">
+        <span class="sd-when">Profit drops:</span><span class="sd-do">Below entry threshold → step down one stage</span>
+        <span class="sd-when">2× 7-outs:</span><span class="sd-do">Consecutive in any Molly → step down</span>
+        <span class="sd-when">Hard reset:</span><span class="sd-do">Profit &lt; +$20 → back to Accumulator</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- $15 FRONT -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">CATS — $15 table · 5× odds</span>
+      <span class="card-face">front</span>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Stage ladder</div>
+      <table>
+        <tr><th>Stage</th><th>Load</th><th>HE</th><th>Step up / shift when</th></tr>
+        <tr><td><span class="pill s1">1 Accumulator</span></td><td>$48→$36</td><td>1.52%</td><td>Profit ≥ +$105</td></tr>
+        <tr><td><span class="pill s2">2 Little Molly</span></td><td>$90</td><td>0.47%</td><td>Profit ≥ +$225</td></tr>
+        <tr><td><span class="pill s3t">3 Molly Tight</span></td><td>$135</td><td>0.47%</td><td>Shift Loose at +$300, live shooter</td></tr>
+        <tr><td><span class="pill s3l">3 Molly Loose</span></td><td>$270</td><td>0.24%</td><td>Step up at profit ≥ +$375</td></tr>
+        <tr><td><span class="pill s4">4 Exp. Alpha</span></td><td>$330</td><td>0.50%</td><td>Profit ≥ +$600</td></tr>
+        <tr><td><span class="pill s5">5 Max Alpha</span></td><td>$390</td><td>0.73%</td><td>The long roll</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Tier odds (Stages 3–5)</div>
+      <div class="odds-grid">
+        <div class="odds-cell"><div class="odds-num" style="color:#0C447C">3×</div><div class="odds-label">6 or 8</div></div>
+        <div class="odds-cell"><div class="odds-num" style="color:#085041">2×</div><div class="odds-label">5 or 9</div></div>
+        <div class="odds-cell"><div class="odds-num" style="color:#444">1×</div><div class="odds-label">4 or 10</div></div>
+      </div>
+      <p class="note">Rough (no 6/8 working): 1× all &nbsp;·&nbsp; Loose: 5× all</p>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Step-down rules</div>
+      <div class="step-down-rules">
+        <span class="sd-when">Profit drops:</span><span class="sd-do">Below entry threshold → step down one stage</span>
+        <span class="sd-when">2× 7-outs:</span><span class="sd-do">Consecutive in any Molly → step down</span>
+        <span class="sd-when">Hard reset:</span><span class="sd-do">Profit &lt; +$20 → back to Accumulator</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="face-label">Back face — execution reference</div>
+<div class="cards-row">
+
+  <!-- $10 BACK -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">CATS — $10 table · 5× odds</span>
+      <span class="card-face">back</span>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">When / do</div>
+      <div class="when-do">
+        <span class="when">Accum first hit:</span><span class="do">Regress Place 6/8 to $12 each</span>
+        <span class="when">Turbo first hit:</span><span class="do">Pull all bets except 6 and 8</span>
+        <span class="when">→ Little Molly:</span><span class="do">Pull Place bets. Pass $10 + Come $10 + $20 odds each</span>
+        <span class="when">→ Tight:</span><span class="do">Add second Come. Tier odds. Shift Loose at +$200</span>
+        <span class="when">→ Exp. Alpha:</span><span class="do">Add Buy 4 + Buy 10 at $20 each (win-vig only)</span>
+        <span class="when">→ Max Alpha:</span><span class="do">Add Buy 5 + Buy 9 at $20 each (win-vig only)</span>
+        <span class="when">Come on Buy #:</span><span class="do">Pull the Buy — take odds on Come instead</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Exact amounts</div>
+      <table>
+        <tr><th>Stage</th><th>Flat</th><th>Odds</th><th>Load</th></tr>
+        <tr><td><span class="pill s1">Accum</span></td><td>$18 ea</td><td>—</td><td>$36</td></tr>
+        <tr><td><span class="pill s2">Little M</span></td><td>$10 ea</td><td>$20 ea</td><td>$60</td></tr>
+        <tr><td><span class="pill s3t">Tight</span></td><td>$10 ea</td><td>3×/2×/1×</td><td>~$90</td></tr>
+        <tr><td><span class="pill s3l">Loose</span></td><td>$10 ea</td><td>$50 ea</td><td>$180</td></tr>
+        <tr><td><span class="pill s4">Exp α</span></td><td>+Buy</td><td>$20 ea</td><td>$220</td></tr>
+        <tr><td><span class="pill s5">Max α</span></td><td>+Buy</td><td>$20 ea</td><td>$260</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="vig-box">Before any Buy bet: "Vig on winning bets only?" — if no, skip Buy bets.</div>
+    </div>
+  </div>
+
+  <!-- $15 BACK -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">CATS — $15 table · 5× odds</span>
+      <span class="card-face">back</span>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">When / do</div>
+      <div class="when-do">
+        <span class="when">Accum first hit:</span><span class="do">Regress Place 6/8 to $18 each</span>
+        <span class="when">Turbo first hit:</span><span class="do">Pull all bets except 6 and 8</span>
+        <span class="when">→ Little Molly:</span><span class="do">Pull Place bets. Pass $15 + Come $15 + $30 odds each</span>
+        <span class="when">→ Tight:</span><span class="do">Add second Come. Tier odds. Shift Loose at +$300</span>
+        <span class="when">→ Exp. Alpha:</span><span class="do">Add Buy 4 + Buy 10 at $30 each (win-vig only)</span>
+        <span class="when">→ Max Alpha:</span><span class="do">Add Buy 5 + Buy 9 at $30 each (win-vig only)</span>
+        <span class="when">Come on Buy #:</span><span class="do">Pull the Buy — take odds on Come instead</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Exact amounts</div>
+      <table>
+        <tr><th>Stage</th><th>Flat</th><th>Odds</th><th>Load</th></tr>
+        <tr><td><span class="pill s1">Accum</span></td><td>$24 ea</td><td>—</td><td>$48</td></tr>
+        <tr><td><span class="pill s2">Little M</span></td><td>$15 ea</td><td>$30 ea</td><td>$90</td></tr>
+        <tr><td><span class="pill s3t">Tight</span></td><td>$15 ea</td><td>3×/2×/1×</td><td>~$135</td></tr>
+        <tr><td><span class="pill s3l">Loose</span></td><td>$15 ea</td><td>$75 ea</td><td>$270</td></tr>
+        <tr><td><span class="pill s4">Exp α</span></td><td>+Buy</td><td>$30 ea</td><td>$330</td></tr>
+        <tr><td><span class="pill s5">Max α</span></td><td>+Buy</td><td>$30 ea</td><td>$390</td></tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="vig-box">Before any Buy bet: "Vig on winning bets only?" — if no, skip Buy bets.</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="instructions no-print" style="margin-top:8px">
+  Tip: File → Print → set paper size to Letter, scale to fit. Or open in Chrome and use Print to PDF for clean edges before trimming.
+</p>
+
+</body>
+</html>
