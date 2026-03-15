@@ -139,7 +139,10 @@ if (require.main === module) {
     runSim(args);
   } catch (err: any) {
     console.error(`Error: ${err.message}`);
-    console.error('Usage: npx ts-node src/cli/run-sim.ts --strategy <name> [--rolls <n>] [--bankroll <n>] [--seed <n>] [--output summary|verbose|json]');
+    console.error('Usage:');
+    console.error('  npx ts-node src/cli/run-sim.ts --strategy <name> [options]');
+    console.error('  npx ts-node src/cli/run-sim.ts --strategy-file <path> [options]');
+    console.error('Options: --rolls <n>  --bankroll <n>  --seed <n>  --output summary|verbose|json');
     process.exit(1);
   }
 }

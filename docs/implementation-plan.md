@@ -12,7 +12,7 @@ Three milestones, each building on the last. Each ends with a structured review 
 | Milestone | Theme | Primary CUJs | Status |
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
-| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2, M2.3, M2.4, M2.5 DONE |
+| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
 | M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
 
 ### Demo Convention
@@ -326,7 +326,7 @@ Implementation notes:
 
 ---
 
-### M2.6 — Milestone 2 Review
+### M2.6 — Milestone 2 Review [DONE]
 
 Run the `/simplify` skill across all files introduced or modified in M2:
 
@@ -335,19 +335,33 @@ Run the `/simplify` skill across all files introduced or modified in M2:
 - `src/cli/strategy-registry.ts`, `src/cli/strategy-loader.ts`, `src/cli/run-sim.ts`
 
 Review checklist:
-- Does the logger's `tableLoad` calculation match the spec definition (`sum of bet.amount + bet.oddsAmount`)?
-- Does `--output json` produce line-by-line parseable JSONL (not a JSON array)?
-- Are all CLI error messages clear enough for a non-technical user?
-- Does the strategy file loader handle the case where the user's file has a compile error?
-- Is test coverage present for the summary statistics fields?
+- Does the logger's `tableLoad` calculation match the spec definition (`sum of bet.amount + bet.oddsAmount`)? ✓ Yes — `tableLoadBefore` uses snapshot `amount + oddsAmount`; `tableLoadAfter` uses `bet.totalAmount` which is `amount + oddsAmount` for PassLineBet/ComeBet and `amount` for PlaceBet (no odds). Both are correct.
+- Does `--output json` produce line-by-line parseable JSONL (not a JSON array)? ✓ Yes — each entry is a separate `JSON.stringify()` call.
+- Are all CLI error messages clear enough for a non-technical user? ✓ Fixed — updated usage string to show both `--strategy` and `--strategy-file` patterns.
+- Does the strategy file loader handle the case where the user's file has a compile error? ✓ Yes — `try/catch` around `require()` surfaces the compile error in a descriptive message.
+- Is test coverage present for the summary statistics fields? ✓ Added — four new `tableLoad` tests in `spec/logger/run-logger-spec.ts` covering avg, max, min=0 edge case, and avgWhenActive.
+
+Review findings addressed:
+- Updated `run-sim.ts` error handler to show both CLI usage patterns (`--strategy` and `--strategy-file`)
+- Added `tableLoad` stats unit tests (`avg`, `max`, `min`, `avgWhenActive`) to `spec/logger/run-logger-spec.ts`
 
 ---
 
-### M2.7 — Milestone 2 Demo
+### M2.7 — Milestone 2 Demo [DONE]
 
-**New file:** `demo/<tbd-m2-demo>.ts`
+**New files:**
+- `demo/run-and-log-strategies.ts` — M2 demo (CUJs 1.0, 1.2, 1.3, 2.0)
+- `demo/conservative-place-strategy.ts` — example custom strategy file for CUJ 2.0
 
-Write a demo exercising the primary M2 CUJs (1.0, 2.0 — running built-in and custom strategies). The demo should be free-standing and self-verifying. Ensure all prior demos (`demo/verify-strategy-on-known-rolls.ts`) still pass.
+Exercises all primary M2 CUJs in a single runnable, self-verifying file:
+- **CUJ 1.0**: Runs `PassLineOnly` via `lookupStrategy` + `CrapsEngine` + `RunLogger`
+- **CUJ 1.2**: Runs `ThreePointMolly3X` twice with `seed: 42` and asserts identical final bankroll, win counts, and dice distribution
+- **CUJ 1.3**: Demonstrates `getRollEntries()` for programmatic inspection and `flush('verbose')` for human-readable per-roll output
+- **CUJ 2.0**: Loads `demo/conservative-place-strategy.ts` via `loadStrategyFile`, runs it, and asserts it places bets and executes correctly; also asserts that loading a nonexistent file throws a descriptive error
+
+Run: `npx ts-node demo/run-and-log-strategies.ts`
+
+All prior demos (`demo/verify-strategy-on-known-rolls.ts`) still pass.
 
 ---
 
@@ -551,4 +565,6 @@ M2.7 (M2 demo)
 | `src/cli/strategy-registry.ts` | M2 |
 | `src/cli/strategy-loader.ts` | M2 |
 | `src/cli/run-sim.ts` | M2 |
+| `demo/run-and-log-strategies.ts` | M2 |
+| `demo/conservative-place-strategy.ts` | M2 |
 | `src/engine/shared-table.ts` | M3 |

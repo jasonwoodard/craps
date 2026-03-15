@@ -186,6 +186,45 @@ describe('RunLogger', () => {
     });
   });
 
+  describe('tableLoad stats in buildSummary', () => {
+    it('should compute avg tableLoad across all rolls', () => {
+      const logger = new RunLogger(makeConfig());
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 20 }));
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 40 }));
+
+      const summary = logger.buildSummary();
+      expect(summary.tableLoad.avg).toBe(30);
+    });
+
+    it('should compute max tableLoad', () => {
+      const logger = new RunLogger(makeConfig());
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 10 }));
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 50 }));
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 30 }));
+
+      const summary = logger.buildSummary();
+      expect(summary.tableLoad.max).toBe(50);
+    });
+
+    it('should report min tableLoad as 0 when no rolls have active bets', () => {
+      const logger = new RunLogger(makeConfig());
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 0 }));
+
+      const summary = logger.buildSummary();
+      expect(summary.tableLoad.min).toBe(0);
+    });
+
+    it('should compute avgWhenActive excluding zero-load rolls', () => {
+      const logger = new RunLogger(makeConfig());
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 0 }));   // no bets
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 30 }));  // active
+      logger.onRoll(makeRollRecord({ tableLoadBefore: 50 }));  // active
+
+      const summary = logger.buildSummary();
+      expect(summary.tableLoad.avgWhenActive).toBe(40);
+    });
+  });
+
   describe('JSONL output via flush', () => {
     it('should produce parseable JSONL for each roll plus a summary line', () => {
       const logger = new RunLogger(makeConfig());
