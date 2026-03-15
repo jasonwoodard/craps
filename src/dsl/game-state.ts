@@ -17,7 +17,8 @@ export class GameState {
   }
 
   roll(): number {
-    const value = this.dice.roll();
+    const diceRoll = this.dice.roll();
+    const value = diceRoll.sum;
     this.rollListeners.forEach(l => l(value));
     if (this.point === null) {
       if (POINT_NUMBERS.has(value)) {

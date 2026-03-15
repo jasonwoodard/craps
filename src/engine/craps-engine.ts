@@ -2,12 +2,16 @@ import { CrapsTable } from '../craps-table';
 import { ReconcileEngine, StrategyDefinition } from '../dsl/strategy';
 import { GameState } from '../dsl/game-state';
 import { BetCommand, stringToBetType, betTypeToString } from '../dsl/bet-reconciler';
-import { Outcome } from '../dsl/outcome';
 import { Dice, LiveDice } from '../dice/dice';
 import { BaseBet } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
+import { RunLogger } from '../logger/run-logger';
+import { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
+import { Outcome } from '../dsl/outcome';
+
+export { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
 
 export interface CrapsEngineConfig {
   strategy: StrategyDefinition;
@@ -15,23 +19,7 @@ export interface CrapsEngineConfig {
   rolls: number;
   seed?: number;
   dice?: Dice;
-}
-
-export interface RollRecord {
-  rollNumber: number;
-  rollValue: number;
-  pointBefore: number | undefined;
-  pointAfter: number | undefined;
-  outcomes: Outcome[];
-  bankrollBefore: number;
-  bankrollAfter: number;
-}
-
-export interface EngineResult {
-  finalBankroll: number;
-  initialBankroll: number;
-  rollsPlayed: number;
-  rolls: RollRecord[];
+  logger?: RunLogger;
 }
 
 interface BetSnapshot {
@@ -47,6 +35,7 @@ export class CrapsEngine {
   private bankroll: number;
   private initialBankroll: number;
   private maxRolls: number;
+  private logger?: RunLogger;
   private playerId = 'engine-player';
 
   constructor(config: CrapsEngineConfig) {
@@ -54,6 +43,7 @@ export class CrapsEngine {
     this.bankroll = config.bankroll;
     this.initialBankroll = config.bankroll;
     this.maxRolls = config.rolls;
+    this.logger = config.logger;
 
     this.table = new CrapsTable();
     if (config.dice) {
@@ -73,6 +63,9 @@ export class CrapsEngine {
     while (this.shouldContinue(rollNumber)) {
       const record = this.playRoll(rollNumber + 1);
       rolls.push(record);
+      if (this.logger) {
+        this.logger.onRoll(record);
+      }
       rollNumber++;
     }
 
@@ -98,32 +91,50 @@ export class CrapsEngine {
     const commands = this.reconcileEngine.reconcile(this.strategy);
     this.applyCommands(commands);
 
-    // 2. Snapshot state before roll
+    // 2. Snapshot state before roll (capture point 1: activeBets, tableLoad.before)
     const pointBefore = this.table.currentPoint;
     const betsSnapshot = this.snapshotBets();
+    const activeBets = this.buildActiveBetInfo(betsSnapshot);
+    const tableLoadBefore = betsSnapshot.reduce((sum, s) => sum + s.amount + s.oddsAmount, 0);
 
-    // 3. Roll dice (resolves bets and updates point)
-    this.table.rollDice();
-    const rollValue = this.table.getLastRoll();
-
+    // 3. Roll dice (capture point 2: die1/die2/sum, pointBefore/After)
+    const diceRoll = this.table.rollDice();
     const pointAfter = this.table.currentPoint;
 
-    // 4. Collect outcomes and settle bankroll
+    // 4. Collect outcomes (capture point 3: outcomes[])
     const outcomes = this.collectOutcomes(betsSnapshot);
     this.settleBets(betsSnapshot);
 
-    // 6. Post-roll: update strategy trackers
+    // Capture point 4: bankroll.after, tableLoad.after
+    const tableLoadAfter = this.table.getPlayerBets(this.playerId)
+      .reduce((sum, bet) => sum + bet.totalAmount, 0);
+
+    // 5. Post-roll: update strategy trackers
     this.reconcileEngine.postRoll(outcomes);
 
     return {
       rollNumber,
-      rollValue,
+      die1: diceRoll.die1,
+      die2: diceRoll.die2,
+      rollValue: diceRoll.sum,
       pointBefore,
       pointAfter,
       outcomes,
       bankrollBefore,
       bankrollAfter: this.bankroll,
+      activeBets,
+      tableLoadBefore,
+      tableLoadAfter,
     };
+  }
+
+  private buildActiveBetInfo(snapshots: BetSnapshot[]): ActiveBetInfo[] {
+    return snapshots.map(({ bet, amount, oddsAmount }) => ({
+      type: betTypeToString(bet.betType),
+      point: bet.point ?? null,
+      amount,
+      odds: oddsAmount,
+    }));
   }
 
   private applyCommands(commands: BetCommand[]): void {

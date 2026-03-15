@@ -12,7 +12,7 @@ Three milestones, each building on the last. Each ends with a structured review 
 | Milestone | Theme | Primary CUJs | Status |
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
-| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | |
+| M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | IN PROGRESS — M2.1, M2.2 DONE |
 | M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
 
 ### Demo Convention
@@ -176,7 +176,7 @@ Run: `npx ts-node demo/verify-strategy-on-known-rolls.ts`
 
 ---
 
-### M2.1 — Update dice roll return to carry die1 and die2
+### M2.1 — Update dice roll return to carry die1 and die2 [DONE]
 
 **File:** `src/dice/dice.ts`, `src/craps-table.ts`
 
@@ -190,9 +190,14 @@ The logging spec requires individual die values. Currently `rollDice()` returns 
 **FR:** 7 — logging requires individual die values
 **Risk:** Low. Type change propagates through a small number of files.
 
+Implementation notes:
+- `RiggedDice` uses sum-only inputs with `die1=0, die2=sum` as a documented test-mode fallback. Game mechanics only use the sum; `RunLogger` skips `die1=0` when accumulating `byDieFace` distribution.
+- Shared types (`RollRecord`, `ActiveBetInfo`, `EngineResult`) extracted to `src/engine/roll-record.ts` to avoid circular dependency between `craps-engine.ts` and `run-logger.ts`.
+- `RollRecord` extended with `die1`, `die2`, `activeBets`, `tableLoadBefore`, `tableLoadAfter` to carry all logger capture-point data.
+
 ---
 
-### M2.2 — Build `RunLogger`
+### M2.2 — Build `RunLogger` [DONE]
 
 **New file:** `src/logger/run-logger.ts`
 
@@ -218,6 +223,14 @@ Unit tests:
 
 **FR:** 7 — structured output and logging
 **Risk:** Medium. Schema is fully specified; complexity is in capturing state at the right points in the game loop.
+
+Implementation notes:
+- `RunLogger` accepts a `LoggerConfig` (strategyName, playerId, initialBankroll, seed) at construction.
+- `onRoll(record: RollRecord)` accumulates roll data and updates running stats inline.
+- `buildSummary()` computes the full `SummaryRecord` from accumulated stats (peak, trough, maxDrawdown, dice distribution, activity counts, tableLoad stats).
+- `flush(mode)` writes JSONL (`json`), human-readable per-roll + summary (`verbose`), or summary-only (`summary`).
+- Testing accessor methods (`getRollCount()`, `getFinalBankroll()`, `getPeakBankroll()`, etc.) allow white-box unit testing without stdout capture.
+- `CrapsEngineConfig` accepts optional `logger?: RunLogger`; engine calls `logger.onRoll(record)` after each roll.
 
 ---
 

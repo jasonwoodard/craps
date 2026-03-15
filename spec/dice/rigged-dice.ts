@@ -1,4 +1,4 @@
-import { Dice } from "../../src/dice/dice";
+import { Dice, DiceRoll } from "../../src/dice/dice";
 
 export class RiggedDice extends Dice {
   rollQueue: number[];
@@ -8,11 +8,15 @@ export class RiggedDice extends Dice {
     this.rollQueue = [].concat(rollQueue || []);
   }
 
-  doRoll(): number {
+  // Returns a DiceRoll where die1=0, die2=sum is a documented test-mode
+  // fallback. Game mechanics only use the sum; die1/die2 are zero because
+  // RiggedDice accepts sums, not individual die values.
+  doRoll(): DiceRoll {
     if (this.rollQueue.length == 0) {
       throw new RangeError("Exceeded RiggedDice roll queue.");
     }
-    return this.rollQueue.shift();
+    const sum = this.rollQueue.shift();
+    return { die1: 0, die2: sum, sum };
   }
 
   addToQueue(numbersToAdd: number | number[]): void {

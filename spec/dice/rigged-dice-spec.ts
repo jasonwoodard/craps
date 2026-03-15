@@ -10,7 +10,7 @@ describe("RiggedDice", () => {
     let rolls: number[] = [];
 
     for (let i: number = 0; i < stackedValues.length; i++) {
-      rolls.push(dice.roll());
+      rolls.push(dice.roll().sum);
     }
 
     expect(rolls).toEqual(stackedValues);
@@ -22,13 +22,13 @@ describe("RiggedDice", () => {
 
     let desiredRoll = 6;
     dice.addToQueue(desiredRoll);
-    expect(dice.roll()).toBe(desiredRoll);
+    expect(dice.roll().sum).toBe(desiredRoll);
 
     let theOneAfter = 7;
     dice.addToQueue([desiredRoll, theOneAfter]);
 
-    expect(dice.roll()).toBe(desiredRoll);
-    expect(dice.roll()).toBe(theOneAfter);
+    expect(dice.roll().sum).toBe(desiredRoll);
+    expect(dice.roll().sum).toBe(theOneAfter);
   });
 
   it("should throw an error if you overrun the queue", () => {
@@ -37,6 +37,14 @@ describe("RiggedDice", () => {
     dice.roll();
     dice.roll();
     expect(dice.rollQueue.length).toBe(0);
-    expect(dice.roll).toThrowError();
+    expect(dice.roll.bind(dice)).toThrowError();
+  });
+
+  it("should set die1=0 and die2=sum as test-mode fallback", () => {
+    dice = new RiggedDice([7]);
+    const result = dice.roll();
+    expect(result.die1).toBe(0);
+    expect(result.die2).toBe(7);
+    expect(result.sum).toBe(7);
   });
 });
