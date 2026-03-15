@@ -78,9 +78,6 @@ export const SixIn8Progressive: StrategyDefinition = ({ bets, track }) => {
 
 // --- Legacy aliases ---
 
-/** @deprecated Use ThreePointMolly5X */
-export const PassLineAnd2Comes = ThreePointMolly5X;
-
 export const PassLineAndPlace68: StrategyDefinition = ({ bets }) => {
   bets.passLine(10).withOdds(50);
   bets.place(6, 12);
