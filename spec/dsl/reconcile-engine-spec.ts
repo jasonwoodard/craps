@@ -106,16 +106,19 @@ describe('ReconcileEngine', () => {
       // First reconcile to initialize tracker with SixIn8Progressive
       engine.reconcile(SixIn8Progressive);
 
-      // Simulate a win
+      // Win 1: bet stays flat at $12 (collect profit, no press yet)
       engine.postRoll([winOutcome(6)]);
+      const cmds1 = engine.reconcile(SixIn8Progressive);
+      const place1 = cmds1.find(c => c.type === 'place' && 'amount' in c);
+      expect(place1).toBeDefined();
+      expect((place1 as any).amount).toBe(12);
 
-      // Reconcile again — SixIn8Progressive reads track('wins', 0)
-      // After 1 win, it should try to place at $24 (the progressive bet)
-      const cmds = engine.reconcile(SixIn8Progressive);
-      // The strategy should see wins === 1 and produce a remove + place(6,24)
-      const placeCmd = cmds.find(c => c.type === 'place' && 'amount' in c);
-      expect(placeCmd).toBeDefined();
-      expect((placeCmd as any).amount).toBe(24);
+      // Win 2: press by $6 → $18
+      engine.postRoll([winOutcome(6)]);
+      const cmds2 = engine.reconcile(SixIn8Progressive);
+      const place2 = cmds2.find(c => c.type === 'place' && 'amount' in c);
+      expect(place2).toBeDefined();
+      expect((place2 as any).amount).toBe(18);
     });
 
     it('increments losses tracker after a losing outcome', () => {
