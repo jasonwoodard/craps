@@ -1,10 +1,8 @@
 # CATS: Craps Alpha-Transition Strategy
 
-**Version:** 1.0  : Copyright 2026 Jason Woodard
-
+**Version:** 1.1  
 **Table Basis:** $10 / $15 minimum, 5× odds  
-
-**Status:** Complete — BATS deferred to separate paper
+**Status:** Complete — Appendix removed; survival matrix integrated into §5.4
 
 ---
 
@@ -536,91 +534,7 @@ The Come + odds at 0.37% blended replaces the Buy at 1.67%. You improve your edg
 
 ---
 
-# Appendix A: Reference Tables
 
-## A.1 Worst-Case Survival Matrix
-
-*Consecutive maximum-load 7-outs before reaching $0, at each stage.*
-
-| Buy-in | Accumulator | Little Molly | 3-Point Molly (Loose) | Expanded Alpha |
-|---|---|---|---|---|
-| $300 | ~12 | ~5 | ~1–2 | ~1 |
-| $500 | ~20 | ~8 | ~3 | ~2 |
-| $700 | ~29 | ~11 | ~4–5 | ~3 |
-
-*$10 table, 5× odds, regressed Accumulator load $24, Little Molly $60, Loose Molly $180.*
-
-## A.2 Wallet Cards
-
-Two cards — one per table minimum. Print at 2.5" × 3.5" (playing card size). Laminate. The rail gets wet.
-
-**$10 table card — front**
-
-| Stage | Load | HE | Step up / shift when |
-|---|---|---|---|
-| 1 Accumulator | $36→$24 | 1.52% | Profit ≥ +$70 |
-| 2 Little Molly | $60 | 0.47% | Profit ≥ +$150 |
-| 3 Molly Tight | $90 | 0.47% | Shift Loose at +$200, live shooter |
-| 3 Molly Loose | $180 | 0.24% | Step up at profit ≥ +$250 |
-| 4 Exp. Alpha | $220 | 0.50% | Profit ≥ +$400 |
-| 5 Max Alpha | $260 | 0.73% | The long roll |
-
-Tier odds: 6/8 → 3× · 5/9 → 2× · 4/10 → 1× · Rough (no 6/8): 1× all · Loose: 5× all
-
-Step-down: Profit below entry threshold → step down one stage · 2× consecutive 7-outs in any Molly → step down · Profit < +$20 → back to Accumulator
-
----
-
-**$10 table card — back**
-
-| When | Do |
-|---|---|
-| Accum first hit | Regress Place 6/8 to $12 each |
-| Turbo first hit | Pull all bets except 6 and 8 |
-| → Little Molly | Pull Place bets. Pass $10 + Come $10 + $20 odds each |
-| → Tight | Add second Come. Tier odds. Shift Loose at +$200 |
-| → Exp. Alpha | Add Buy 4 + Buy 10 at $20 each (win-vig only) |
-| → Max Alpha | Add Buy 5 + Buy 9 at $20 each (win-vig only) |
-| Come on Buy # | Pull the Buy — take odds on Come instead |
-
-Exact amounts: Accum $18 ea / Little M $10 + $20 odds / Tight $10 + tier / Loose $10 + $50 / Exp α +$20 Buy / Max α +$20 Buy
-
-Before any Buy bet: *"Vig on winning bets only?"* — if no, skip Buy bets.
-
----
-
-**$15 table card — front**
-
-| Stage | Load | HE | Step up / shift when |
-|---|---|---|---|
-| 1 Accumulator | $48→$36 | 1.52% | Profit ≥ +$105 |
-| 2 Little Molly | $90 | 0.47% | Profit ≥ +$225 |
-| 3 Molly Tight | $135 | 0.47% | Shift Loose at +$300, live shooter |
-| 3 Molly Loose | $270 | 0.24% | Step up at profit ≥ +$375 |
-| 4 Exp. Alpha | $330 | 0.50% | Profit ≥ +$600 |
-| 5 Max Alpha | $390 | 0.73% | The long roll |
-
-Tier odds: 6/8 → 3× · 5/9 → 2× · 4/10 → 1× · Rough (no 6/8): 1× all · Loose: 5× all
-
-Step-down: Profit below entry threshold → step down one stage · 2× consecutive 7-outs in any Molly → step down · Profit < +$20 → back to Accumulator
-
----
-
-**$15 table card — back**
-
-| When | Do |
-|---|---|
-| Accum first hit | Regress Place 6/8 to $18 each |
-| Turbo first hit | Pull all bets except 6 and 8 |
-| → Little Molly | Pull Place bets. Pass $15 + Come $15 + $30 odds each |
-| → Tight | Add second Come. Tier odds. Shift Loose at +$300 |
-| → Exp. Alpha | Add Buy 4 + Buy 10 at $30 each (win-vig only) |
-| → Max Alpha | Add Buy 5 + Buy 9 at $30 each (win-vig only) |
-| Come on Buy # | Pull the Buy — take odds on Come instead |
-
-Exact amounts: Accum $24 ea / Little M $15 + $30 odds / Tight $15 + tier / Loose $15 + $75 / Exp α +$30 Buy / Max α +$30 Buy
-
-Before any Buy bet: *"Vig on winning bets only?"* — if no, skip Buy bets.
 
 ---
 
@@ -643,6 +557,8 @@ This reframe matters because it changes how you feel about pressing. When a shoo
 The regress-after-first-hit rule exists precisely to resist this instinct. It is not conservative — it is a priority decision. The 6 and 8 are employees with one job: generate the licensing fee for the Molly stages. You do not give them a raise before the business can afford its infrastructure.
 
 Once you internalize the capital lifecycle, the Accumulator stops feeling slow. It is not slow — it is *sequenced*. You are building the cushion that makes the fat-tail hunt possible without existential risk to your session.
+
+> The survival matrix in §5.4 puts exact numbers on this runway — how many consecutive 7-outs each buy-in can absorb at each stage. Worth reading before you decide on a session buy-in.
 
 ---
 
@@ -735,6 +651,20 @@ The $300 buy-in is not a limitation — it is a feature. It constrains early var
 The $600 direct entry skips the grind and starts where the math is best — 0.235% edge from the first roll. The cost: all $600 is your own money from the start. A bad run in Stage 3 hurts differently when the cushion is buy-in rather than accumulated profit. The variance is identical. The psychological frame is not.
 
 **The multi-session path** is the natural synthesis. Run $300 grind sessions first. Bank any profit. If Sessions 1 and 2 go well, Session 3 becomes the Power Session — enter at Stage 3 with a larger buy-in funded partly by earlier winnings. You get the direct entry *and* a casino-funded cushion. This is the Alpha-Transition logic applied across a trip rather than within a single session.
+
+### Survival matrix: consecutive maximum-load 7-outs before reaching $0
+
+*$10 table, 5× odds. Assumes you advance stages as thresholds are met.*
+
+| Buy-in | Accumulator | Little Molly | Molly Loose | Expanded Alpha |
+|---|---|---|---|---|
+| $300 | ~12 shooters | ~5 | ~1–2 | ~1 |
+| $500 | ~20 shooters | ~8 | ~3 | ~2 |
+| $700 | ~29 shooters | ~11 | ~4–5 | ~3 |
+
+What this table is really showing: the Accumulator is the most forgiving stage by a large margin. A $300 buy-in survives roughly 12 consecutive bad shooters there. The same $300 buy-in — now partially depleted by the time it funds the Molly — survives 1–2 fully loaded Loose Molly 7-outs. This asymmetry is the numerical argument for the capital lifecycle framing in §5.1. The Molly stages are fragile by design; the Accumulator exists to make that fragility survivable.
+
+The $500 buy-in doubles Molly runway without changing the stage structure. If variance tolerance matters more than grinding from scratch, that is the lever to pull.
 
 ---
 
