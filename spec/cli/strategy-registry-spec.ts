@@ -12,6 +12,7 @@ describe('BUILT_IN_STRATEGIES', () => {
     'PlaceAll',
     'PassLineOnly',
     'SixIn8Progressive',
+    'CATS',
   ];
 
   for (const name of expectedNames) {
