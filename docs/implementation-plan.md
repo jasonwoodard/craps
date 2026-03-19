@@ -1,19 +1,20 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — Milestone 1 complete (M1.1–M1.6)
+**Status:** In Progress — M1 and M2 complete; M3 in progress; M4 implemented (pre-M3)
 
 ---
 
 ## Overview
 
-Three milestones, each building on the last. Each ends with a structured review pass followed by a demo that exercises the milestone's primary CUJ(s).
+Four milestones, each building on the last. Each ends with a structured review pass followed by a demo that exercises the milestone's primary CUJ(s).
 
 | Milestone | Theme | Primary CUJs | Status |
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
 | M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress |
+| M4 | Stage Machine — CATS-class strategy support | 5.0, 5.1, 5.2 | DONE |
 
 ### Demo Convention
 
@@ -494,6 +495,148 @@ Write a demo exercising the primary M3 CUJs (1.1, 3.0, 3.1 — multi-strategy co
 
 ---
 
+## Milestone 4 — Stage Machine [DONE]
+
+**Goal:** A CATS-class multi-stage strategy is expressible, runnable, and comparable against simple strategies on identical dice. The Stage Machine API is documented and tested well enough that a strategy author can write a novel multi-stage strategy without reading the implementation.
+
+**Unlocks:** CUJ 5.0 (run CATS as a named strategy), CUJ 5.1 (compare CATS variants on identical dice), CUJ 5.2 (write a novel multi-stage strategy).
+
+**Design reference:** `docs/stage-machine-design.md` — full architecture, interfaces, CATS sketch, and implementation notes.
+
+**Note on sequencing:** M4 was implemented before M3 completed. The M4.8 demo works around the missing `SharedTable` (M3) by using two independent `CrapsEngine` runs with the same seed; it will be updated to use `SharedTable` once M3 is complete.
+
+---
+
+### M4.1 — Type definitions and interfaces [DONE]
+
+**New file:** `src/dsl/stage-machine-types.ts`
+
+All public interfaces with full TSDoc: `StageMachineBuilder`, `StageConfig`, `StageContext`, `SessionState`, `TableReadView`, `CrapsEventName`, `CrapsEventPayload<K>`, `CrapsEventHandlers`. Types only — no implementation.
+
+**Spec file:** `spec/dsl/stage-machine-types-spec.ts` — type-level contract tests verifying API shape.
+
+**FR:** Stage Machine API contract. **Risk:** Low.
+
+---
+
+### M4.2 — `StageMachineBuilder` and `stageMachine()` entry point [DONE]
+
+**New file:** `src/dsl/stage-machine.ts`
+
+Fluent builder API. `stageMachine(name)` returns a `StageMachineBuilder`. `build()` compiles to a `StrategyDefinition` by constructing a `StageMachineRuntime` and wrapping it. Validates that the starting stage exists and has a board function.
+
+**Spec file:** `spec/dsl/stage-machine-builder-spec.ts` — builder validation, structural error cases, output type.
+
+**FR:** Stage Machine builder. **Risk:** Medium.
+
+---
+
+### M4.3 — `StageMachineRuntime` [DONE]
+
+**New file:** `src/dsl/stage-machine-state.ts`
+
+The stateful runtime. Tracks current stage name, per-stage `track()` maps, `SessionState`, retreat evaluation, event dispatch, `advanceTo()` implementation, and `TableReadView` construction.
+
+**Spec file:** `spec/dsl/stage-machine-runtime-spec.ts` — written before implementation (TDD). Covers stage identity, step-up and step-down transitions, transition sequencing, `track()` isolation, `SessionState` computation, `TableReadView` derivation, event dispatch, and full roll sequences with `RiggedDice`.
+
+**FR:** Stage Machine runtime behavior. **Risk:** High — most complex piece of M4.
+
+---
+
+### M4.4 — `TableReadView` construction [DONE]
+
+**Location:** Private method on `StageMachineRuntime` in `src/dsl/stage-machine-state.ts`.
+
+Derived from the player's active bets at `board()` call time. Distinguishes traveled Come bets (have a `point` value) from in-transit Come bets (no `point`). `hasSixOrEight` is pre-computed. `coverage` includes Pass Line and Come bet points only — not Place bet numbers.
+
+**Spec:** Covered by `spec/dsl/stage-machine-runtime-spec.ts` `TableReadView` section.
+
+**FR:** Accurate coverage state. **Risk:** Low.
+
+---
+
+### M4.5 — CATS strategy implementation [DONE]
+
+**New file:** `src/dsl/strategies-staged.ts`
+
+CATS implemented via the Stage Machine API. Stages implemented through `threePtMollyLoose` (ExpandedAlpha and MaxAlpha require Buy bet support, deferred per FR10):
+
+- `accumulatorFull` — Place 6/8 at $18; transitions to `accumulatorRegressed` on first 6/8 hit
+- `accumulatorRegressed` — Place 6/8 at $12; advances to `littleMolly` at profit ≥ +$70
+- `littleMolly` — Pass + 1 Come + 2× odds; advances at +$150; retreats at profit < +$70 or 2× 7-outs
+- `threePtMollyTight` — Pass + 2 Come + tiered odds; shifts to Loose at +$200 with 6/8; retreats at +$150 or 2× 7-outs
+- `threePtMollyLoose` — Pass + 2 Come + 5× odds; retreats at +$150 or 2× 7-outs
+
+`CATS` is a factory function (not a constant) so each engine run gets a fresh runtime with no shared state.
+
+**Spec file:** `spec/dsl/cats-strategy-spec.ts` — per-stage behavior and full roll sequence integration tests.
+
+**FR:** CATS expressible in Stage Machine. **Risk:** Medium.
+
+---
+
+### M4.6 — Register CATS in StrategyRegistry [DONE]
+
+**File:** `src/cli/strategy-registry.ts`
+
+Added `'CATS': CATS()` to `BUILT_IN_STRATEGIES`. CLI immediately supports `--strategy CATS` and `--compare CATS ThreePointMolly3X`.
+
+**Spec:** `spec/cli/strategy-registry-spec.ts` extended to assert `'CATS'` resolves.
+
+**Risk:** Low.
+
+---
+
+### M4.7 — Milestone 4 Review [DONE]
+
+Run the `/simplify` skill across all new M4 files:
+- `src/dsl/stage-machine-types.ts`
+- `src/dsl/stage-machine.ts`
+- `src/dsl/stage-machine-state.ts`
+- `src/dsl/strategies-staged.ts`
+- All new spec files
+
+Review checklist:
+- Does the CATS strategy read like CATS? (A craps player can follow the stage progression without knowing TypeScript.) ✓
+- Is `StageMachineRuntime` testable without `CrapsEngine`? (Yes — `RiggedDice` and a stub table.) ✓
+- Are all transition edge cases covered in the spec? (Simultaneous retreat+advance, re-entering a stage, transitioning to current stage.) ✓
+- Does `consecutiveSevenOuts` reset correctly? (Resets on win, not no-action roll.) ✓
+- Is the existing strategy test suite still green? ✓
+
+Implementation notes (deviations from `stage-machine-design.md` resolved during M4):
+
+1. **Symbol-based runtime detection** (`src/dsl/strategy.ts:19`) — `ReconcileEngine` detects a `Symbol('stageMachineRuntime')` tag on the strategy function rather than an optional `sessionContext` parameter. Keeps the public API surface unchanged for simple strategies.
+2. **Lazy initial bankroll capture** (`src/dsl/stage-machine-state.ts:67–74`) — `initialBankroll` is captured on the first `setTableContext()` call since the runtime is created at `build()` time before any engine exists.
+3. **`PostRollContext` options object** (`src/dsl/strategy.ts:22–27`, `src/engine/craps-engine.ts:113–118`) — A `PostRollContext` interface (`bankroll`, `pointBefore`, `pointAfter`, `rollValue`) is threaded from `CrapsEngine` through `ReconcileEngine` to the runtime. This required modifying `craps-engine.ts`, contradicting the design doc's "no changes required" claim for that file.
+4. **Event handlers receive a no-op BetReconciler** (`src/dsl/stage-machine-state.ts:32–39`) — Since events fire during `postRoll()` (after bets resolved, before next reconcile), there is no live reconciler. Bet changes from events take effect indirectly via stage transitions reflected in the next `board()` call.
+5. **`advanceTo()` differs between board() and event handlers** (`src/dsl/stage-machine-state.ts:246–253`, `263–268`) — In `board()`, `advanceTo()` queues a pending transition applied after `board()` completes. In event handlers, it calls `transitionTo()` immediately.
+6. **Guard bypass when `canAdvanceTo` is absent** (`src/dsl/stage-machine-state.ts:249–251`) — No guard = no gate. `advanceTo()` is allowed unconditionally when the stage has no `canAdvanceTo`.
+7. **`CATS()` is a factory function, not a constant** (`src/dsl/strategies-staged.ts:22`) — Prevents shared mutable state when CATS is used in multiple engine runs.
+8. **`accumulatorFull` has an explicit `canAdvanceTo: () => true`** (`src/dsl/strategies-staged.ts:33`) — Redundant per note 6 but documents intent. Could be removed.
+9. **Coverage excludes Place bets** (`src/dsl/stage-machine-state.ts:289–303`) — `TableReadView.coverage` includes only Pass Line and Come bet points. `hasSixOrEight` is false during Accumulator stages (Place-only), becoming true only when Come/Pass bets land on 6 or 8 in Molly stages.
+10. **`sevenOut` payload uses placeholder `rollNumber: 0`** (`src/dsl/stage-machine-state.ts:171`) — Runtime doesn't track global roll number. No current strategy reads this field.
+11. **`consecutiveSevenOuts` resets on seven-out with concurrent win** (`src/dsl/stage-machine-state.ts:139–142`) — A seven-out can co-occur with a come bet win (7 is natural for in-transit come bets); the counter resets in that case.
+12. **Cached runtime reference** (`src/dsl/strategy.ts:31`) — `ReconcileEngine` caches the `StageMachineRuntime` reference after the first Symbol lookup to avoid repeated lookups on every `postRoll()` call.
+13. **Demo uses separate CrapsEngine runs, not SharedTable** (`demo/cats-vs-molly.ts:43–76`) — SharedTable (M3) not yet built. Two independent `CrapsEngine` runs with the same seed. Dice sequences match because strategy decisions don't consume RNG. Demo documents this distinction.
+14. **Builder does not validate guard target stage names** (`src/dsl/stage-machine.ts:48–93`) — Only validates that the starting stage exists and has a board function. Guard target validation would require parsing runtime function return values at build time, which is not possible.
+15. **`_machineName` constructor parameter is unused** (`src/dsl/stage-machine-state.ts:54`) — Retained in constructor for potential future diagnostic use.
+
+---
+
+### M4.8 — Milestone 4 Demo [DONE]
+
+**New file:** `demo/cats-vs-molly.ts`
+
+**CUJ exercised:** 5.0 (Run CATS as a named strategy), 5.1 (compare CATS vs ThreePointMolly on identical dice).
+
+Demonstrates CATS running as a built-in strategy and compared against `ThreePointMolly3X`. Uses two independent `CrapsEngine` runs with the same seed (SharedTable workaround — see note 13 above). Asserts CATS completes 10,000 rolls without error and reports per-stage transition counts.
+
+Run: `npx ts-node demo/cats-vs-molly.ts`
+
+All prior demos still pass.
+
+---
+
 ## CUJ Coverage Summary
 
 | CUJ | Description | Milestone |
@@ -512,6 +655,9 @@ Write a demo exercising the primary M3 CUJs (1.1, 3.0, 3.1 — multi-strategy co
 | 3.2 | Export results as JSON | M3 |
 | 4.1 | Verify shared-table dice identity | M3 |
 | 4.2 | Reproduce and inspect a production run | M3 |
+| 5.0 | Run CATS as a named strategy | M4 |
+| 5.1 | Compare CATS variants on identical dice | M4 |
+| 5.2 | Write a novel multi-stage strategy | M4 |
 
 ---
 
@@ -542,6 +688,14 @@ M2.7 (M2 demo)
                     └─► M3.4 (integration tests)
                           └─► M3.5 (M3 review)
                                 └─► M3.6 (M3 demo)
+                                      └─► M4.1 (type definitions)
+                                            └─► M4.2 (StageMachineBuilder)
+                                                  └─► M4.3 (StageMachineRuntime — TDD: spec first)
+                                                        └─► M4.4 (TableReadView — bundled in M4.3)
+                                                              └─► M4.5 (CATS implementation)
+                                                                    └─► M4.6 (StrategyRegistry entry)
+                                                                          └─► M4.7 (M4 review)
+                                                                                └─► M4.8 (M4 demo)
 ```
 
 ---
@@ -568,3 +722,14 @@ M2.7 (M2 demo)
 | `demo/run-and-log-strategies.ts` | M2 |
 | `demo/conservative-place-strategy.ts` | M2 |
 | `src/engine/shared-table.ts` | M3 |
+| `src/dsl/stage-machine-types.ts` | M4 |
+| `src/dsl/stage-machine.ts` | M4 |
+| `src/dsl/stage-machine-state.ts` | M4 |
+| `src/dsl/strategies-staged.ts` | M4 |
+| `spec/dsl/stage-machine-types-spec.ts` | M4 |
+| `spec/dsl/stage-machine-builder-spec.ts` | M4 |
+| `spec/dsl/stage-machine-runtime-spec.ts` | M4 |
+| `spec/dsl/cats-strategy-spec.ts` | M4 |
+| `spec/dsl/fixtures/minimal-stage-machine.ts` | M4 |
+| `spec/dsl/fixtures/cats-stages.ts` | M4 |
+| `demo/cats-vs-molly.ts` | M4 |
