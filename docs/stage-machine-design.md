@@ -876,3 +876,99 @@ The spec files above are written as descriptions rather than implementations —
 This is the correct TDD cycle for this codebase. The existing test infrastructure (`RiggedDice`, `TableMaker`, Jasmine) is already well-suited to it. The Stage Machine runtime is deterministic and has no I/O — unit tests are fast, hermetic, and complete coverage is achievable.
 
 The `cats-strategy-spec.ts` integration tests are a secondary loop: they test CATS behavior at the strategy level using known dice sequences. These should pass immediately after M4.5 if M4.3 is implemented correctly — they are regression guards, not TDD drivers.
+
+---
+
+## Part 5: Implementation Notes — Decisions Not Explicitly Specified
+
+The following decisions were made during M4 implementation where the design doc was silent or where runtime constraints required deviation.
+
+### 5.1 Symbol-Based Runtime Detection
+
+**Location:** `src/dsl/strategy.ts:19`
+
+The design doc proposed threading an optional `sessionContext?: SessionState` parameter through `ReconcileEngine.reconcile()`. The implementation instead uses a `Symbol('stageMachineRuntime')` tag attached to the strategy function at `build()` time. `ReconcileEngine` detects this tag and injects table context without changing the `StrategyDefinition` signature. This keeps the public API surface unchanged for simple strategies — they never see the Symbol.
+
+### 5.2 Lazy Initial Bankroll Capture
+
+**Location:** `src/dsl/stage-machine-state.ts:67–74`
+
+The design doc specifies that the `StageMachineRuntime` constructor receives `initialBankroll`. However, the runtime is created at `build()` time, before any engine exists. The implementation captures `initialBankroll` lazily on the first `setTableContext()` call during reconcile, when the engine's bankroll is first available.
+
+### 5.3 `PostRollContext` Options Object
+
+**Location:** `src/dsl/strategy.ts:22–27`, `src/engine/craps-engine.ts:113–118`
+
+The design doc says `postRoll()` updates session state from outcomes but doesn't specify what additional data the runtime needs. The implementation introduces a `PostRollContext` interface (`bankroll`, `pointBefore`, `pointAfter`, `rollValue`) threaded from `CrapsEngine` through `ReconcileEngine` to the runtime. This required modifying `craps-engine.ts` — contradicting the design doc's "No changes required" statement for that file.
+
+### 5.4 Event Handlers Receive a No-Op BetReconciler
+
+**Location:** `src/dsl/stage-machine-state.ts:32–39`
+
+The design doc says event handlers "call into `bets` (the `BetReconciler`) to declare adjustments." Since events fire during `postRoll()` (after bets have resolved, before the next reconcile), there is no live reconciler to collect declarations. Event handlers receive a no-op `BetReconciler`. Bet changes from events take effect indirectly: the handler calls `advanceTo()` to change stage, and the next `board()` call declares the new stage's bets.
+
+### 5.5 `advanceTo()` Behavior Differs Between board() and Event Handlers
+
+**Location:** `src/dsl/stage-machine-state.ts:246–253` (board), `src/dsl/stage-machine-state.ts:263–268` (events)
+
+In `board()`, `advanceTo()` queues a pending transition applied after `board()` completes. In event handlers, `advanceTo()` calls `transitionTo()` immediately. The design doc doesn't distinguish these two code paths. The rationale: `board()` is declaring bets for the current stage and should complete before the transition fires; event handlers fire between rolls and have no pending bet declarations.
+
+### 5.6 Guard Bypass When `canAdvanceTo` Is Absent
+
+**Location:** `src/dsl/stage-machine-state.ts:249–251`
+
+When a stage has no `canAdvanceTo` guard, `advanceTo()` is allowed unconditionally. The design doc says `canAdvanceTo` "gates" `advanceTo()` but doesn't specify behavior when the guard is omitted. The chosen semantics: no guard = no gate.
+
+### 5.7 `CATS()` Is a Factory Function, Not a Constant
+
+**Location:** `src/dsl/strategies-staged.ts:22`
+
+The design doc sketch shows `export const CATS = stageMachine(...)`. The implementation uses `export function CATS()` so each call returns a fresh `StrategyDefinition` with its own runtime. This prevents shared mutable state if CATS is used in multiple engine runs. The registry calls `CATS()` at registration time.
+
+### 5.8 `accumulatorFull` Has an Explicit `canAdvanceTo: () => true`
+
+**Location:** `src/dsl/strategies-staged.ts:33`
+
+The design doc sketch omits `canAdvanceTo` on the accumulator stage, relying on the `numberHit` event handler's `advanceTo()` call. But per §5.6, `advanceTo()` is ungated when `canAdvanceTo` is absent — so the explicit `() => true` is redundant but documents intent. It was added for clarity during implementation and could be removed.
+
+### 5.9 Coverage Excludes Place Bets
+
+**Location:** `src/dsl/stage-machine-state.ts:289–303`
+
+`TableReadView.coverage` includes only Pass Line and Come bet points, not Place bet numbers. The design doc says coverage is "numbers currently working" which could include Place bets, but §3.6 specifies "point numbers of all active Pass Line and Come bets that have traveled to a number." This means `hasSixOrEight` is false during the Accumulator stages (which only use Place bets), and only becomes true when Come/Pass bets land on 6 or 8 in the Molly stages.
+
+### 5.10 `sevenOut` Event Payload Uses Placeholder `rollNumber: 0`
+
+**Location:** `src/dsl/stage-machine-state.ts:171`
+
+The `CrapsEventPayload<'sevenOut'>` type requires `{ rollNumber: number }`. The runtime doesn't track the global roll number (that's `CrapsEngine`'s responsibility). The implementation hardcodes `rollNumber: 0`. No current strategy code reads this field.
+
+### 5.11 `consecutiveSevenOuts` Resets on Seven-Out With Concurrent Win
+
+**Location:** `src/dsl/stage-machine-state.ts:139–142`
+
+A seven-out can co-occur with a come bet win (7 is a natural for in-transit come bets). The implementation resets the counter when a seven-out has any concurrent win. The design doc says "resets on any win" but doesn't address this overlap.
+
+### 5.12 Cached Runtime Reference
+
+**Location:** `src/dsl/strategy.ts:31`
+
+`ReconcileEngine` caches the `StageMachineRuntime` reference after the first Symbol lookup to avoid repeated lookups on every `postRoll()` call. This is a performance optimization not mentioned in the design doc.
+
+### 5.13 Demo Uses Separate CrapsEngine Runs, Not SharedTable
+
+**Location:** `demo/cats-vs-molly.ts:43–76`
+
+The design doc says M4.8 should use `SharedTable` for comparison. SharedTable is M3 (not yet built). The demo uses two independent `CrapsEngine` runs with the same seed. Dice sequences match because both engines consume RNG calls at the same rate and strategy decisions don't consume RNG. The demo documents this distinction.
+
+### 5.14 Builder Does Not Validate Guard Target Stage Names
+
+**Location:** `src/dsl/stage-machine.ts:48–93`
+
+The design doc spec suggests validation that `canAdvanceTo` and `mustRetreatTo` targets reference declared stages. The builder only validates that the starting stage exists and has a board function. Target stage validation in guards would require parsing function return values at build time, which isn't possible — guards are runtime functions that return stage names dynamically.
+
+### 5.15 `_machineName` Constructor Parameter Is Unused
+
+**Location:** `src/dsl/stage-machine-state.ts:54`
+
+The constructor accepts but ignores the machine name (prefixed with `_`). The design doc implies it's used for error messages. After M4.7 review cleanup, no runtime code references it. It's retained in the constructor signature for potential future use in diagnostics.

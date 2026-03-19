@@ -11,6 +11,7 @@ import {
   PassLineOnly,
   SixIn8Progressive,
 } from '../dsl/strategies';
+import { CATS } from '../dsl/strategies-staged';
 
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'ThreePointMolly1X': ThreePointMolly1X,
@@ -23,6 +24,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'PlaceAll':          PlaceAll,
   'PassLineOnly':      PassLineOnly,
   'SixIn8Progressive': SixIn8Progressive,
+  'CATS':              CATS(),
 };
 
 /**

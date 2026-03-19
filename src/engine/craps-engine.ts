@@ -88,7 +88,7 @@ export class CrapsEngine {
     const bankrollBefore = this.bankroll;
 
     // 1. Reconcile strategy → apply bet commands to table
-    const commands = this.reconcileEngine.reconcile(this.strategy);
+    const commands = this.reconcileEngine.reconcile(this.strategy, this.bankroll);
     this.applyCommands(commands);
 
     // 2. Snapshot state before roll (capture point 1: activeBets, tableLoad.before)
@@ -110,7 +110,12 @@ export class CrapsEngine {
       .reduce((sum, bet) => sum + bet.totalAmount, 0);
 
     // 5. Post-roll: update strategy trackers
-    this.reconcileEngine.postRoll(outcomes);
+    this.reconcileEngine.postRoll(outcomes, {
+      bankroll: this.bankroll,
+      pointBefore,
+      pointAfter,
+      rollValue: diceRoll.sum,
+    });
 
     return {
       rollNumber,
