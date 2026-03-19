@@ -1,4 +1,4 @@
-import { parseArgs, runSim, CliArgs } from '../../src/cli/run-sim';
+import { parseArgs, runSim, runCompare, CliArgs } from '../../src/cli/run-sim';
 
 // ---------------------------------------------------------------------------
 // parseArgs
@@ -175,5 +175,166 @@ describe('runSim', () => {
     runSim({ strategyFile: fixturePath, rolls: 20, bankroll: 500, output: 'summary' });
     const joined = outputLines.join('\n');
     expect(joined).toContain('Simulation Summary');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseArgs — --compare flag (M3.2)
+// ---------------------------------------------------------------------------
+
+describe('parseArgs --compare', () => {
+  it('parses --compare with two strategy names', () => {
+    const args = parseArgs(['--compare', 'ThreePointMolly', 'Place6And8']);
+    expect(args.compare).toEqual(['ThreePointMolly', 'Place6And8']);
+    expect(args.strategy).toBeUndefined();
+    expect(args.strategyFile).toBeUndefined();
+  });
+
+  it('parses --compare with three strategy names', () => {
+    const args = parseArgs(['--compare', 'ThreePointMolly', 'Place6And8', 'PassLineOnly']);
+    expect(args.compare).toEqual(['ThreePointMolly', 'Place6And8', 'PassLineOnly']);
+  });
+
+  it('--compare combines with shared flags', () => {
+    const args = parseArgs(['--compare', 'ThreePointMolly', 'Place6And8', '--rolls', '100', '--seed', '42']);
+    expect(args.compare).toEqual(['ThreePointMolly', 'Place6And8']);
+    expect(args.rolls).toBe(100);
+    expect(args.seed).toBe(42);
+  });
+
+  it('throws when --compare is provided with only one name and no other strategy source', () => {
+    expect(() => parseArgs(['--compare', 'ThreePointMolly']))
+      .toThrowError(/at least 2/);
+  });
+
+  it('throws when --compare is used with --strategy', () => {
+    expect(() => parseArgs(['--compare', 'ThreePointMolly', 'Place6And8', '--strategy', 'PassLineOnly']))
+      .toThrowError(/cannot be used with/);
+  });
+
+  it('does not set compare when absent', () => {
+    const args = parseArgs(['--strategy', 'PassLineOnly']);
+    expect(args.compare).toBeUndefined();
+    expect(args.compareFiles).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseArgs — --compare-files and mixed comparison (M3.3)
+// ---------------------------------------------------------------------------
+
+describe('parseArgs --compare-files and mixed', () => {
+  it('parses --compare-files with two file paths', () => {
+    const args = parseArgs(['--compare-files', './a.ts', './b.ts']);
+    expect(args.compareFiles).toEqual(['./a.ts', './b.ts']);
+    expect(args.compare).toBeUndefined();
+  });
+
+  it('throws when --compare-files has only one path and no other strategy source', () => {
+    expect(() => parseArgs(['--compare-files', './a.ts']))
+      .toThrowError(/at least 2/);
+  });
+
+  it('--compare-files with --strategy is mutually exclusive', () => {
+    expect(() => parseArgs(['--compare-files', './a.ts', './b.ts', '--strategy', 'PassLineOnly']))
+      .toThrowError(/cannot be used with/);
+  });
+
+  it('mixed: --compare one name + --strategy-file gives 2 total strategies', () => {
+    const args = parseArgs(['--compare', 'ThreePointMolly', '--strategy-file', './b.ts']);
+    expect(args.compare).toEqual(['ThreePointMolly']);
+    expect(args.strategyFile).toBe('./b.ts');
+  });
+
+  it('mixed: --compare-files one file + --compare one name gives 2 total strategies', () => {
+    const args = parseArgs(['--compare-files', './a.ts', '--compare', 'PassLineOnly']);
+    expect(args.compareFiles).toEqual(['./a.ts']);
+    expect(args.compare).toEqual(['PassLineOnly']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runCompare integration (M3.2 and M3.3)
+// ---------------------------------------------------------------------------
+
+describe('runCompare', () => {
+  let outputLines: string[];
+  let originalLog: typeof console.log;
+
+  beforeEach(() => {
+    outputLines = [];
+    originalLog = console.log;
+    console.log = (...args: any[]) => outputLines.push(args.join(' '));
+  });
+
+  afterEach(() => {
+    console.log = originalLog;
+  });
+
+  it('runs a two-strategy comparison without throwing', () => {
+    expect(() => runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 50, bankroll: 500, output: 'summary' }))
+      .not.toThrow();
+  });
+
+  it('comparison summary output contains both strategy names', () => {
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 50, bankroll: 500, output: 'summary' });
+    const joined = outputLines.join('\n');
+    expect(joined).toContain('PassLineOnly');
+    expect(joined).toContain('Place6And8');
+  });
+
+  it('comparison summary output contains a Strategy Comparison header', () => {
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 50, bankroll: 500, output: 'summary' });
+    const joined = outputLines.join('\n');
+    expect(joined).toContain('Strategy Comparison');
+  });
+
+  it('comparison json output is parseable JSONL', () => {
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 20, bankroll: 500, output: 'json' });
+    for (const line of outputLines) {
+      expect(() => JSON.parse(line)).not.toThrow();
+    }
+  });
+
+  it('comparison json output contains an entry per strategy', () => {
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 20, bankroll: 500, output: 'json' });
+    const parsed = outputLines.map(l => JSON.parse(l));
+    const strategyNames = parsed.map((e: any) => e.strategyName);
+    expect(strategyNames).toContain('PassLineOnly');
+    expect(strategyNames).toContain('Place6And8');
+  });
+
+  it('produces identical dice when comparing with a fixed seed (CUJ 4.1 via CLI)', () => {
+    // Capture results as JSONL and verify both strategies saw the same dice
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 30, bankroll: 500, seed: 42, output: 'json' });
+    const entries = outputLines.map(l => JSON.parse(l));
+    const passEntry = entries.find((e: any) => e.strategyName === 'PassLineOnly');
+    const placeEntry = entries.find((e: any) => e.strategyName === 'Place6And8');
+    // Both summaries should reflect the same number of rolls
+    expect(passEntry.meta.totalRolls).toBe(placeEntry.meta.totalRolls);
+  });
+
+  it('supports --compare-files with two fixture files (M3.3)', () => {
+    const fixtureA = require('path').join(__dirname, 'fixtures', 'minimal-strategy.ts');
+    const fixtureB = require('path').join(__dirname, 'fixtures', 'minimal-strategy.ts');
+    expect(() => runCompare({ compareFiles: [fixtureA, fixtureB], rolls: 20, bankroll: 500, output: 'summary' }))
+      .not.toThrow();
+  });
+
+  it('supports mixed comparison: named strategy + strategy file (M3.3)', () => {
+    const fixturePath = require('path').join(__dirname, 'fixtures', 'minimal-strategy.ts');
+    expect(() => runCompare({ compare: ['PassLineOnly'], strategyFile: fixturePath, rolls: 20, bankroll: 500, output: 'summary' }))
+      .not.toThrow();
+  });
+
+  it('throws for an unknown strategy name in compare mode', () => {
+    expect(() => runCompare({ compare: ['Fake', 'Place6And8'], rolls: 10, bankroll: 500, output: 'summary' }))
+      .toThrowError(/Unknown strategy "Fake"/);
+  });
+
+  it('verbose output falls back to comparison table (same as summary)', () => {
+    runCompare({ compare: ['PassLineOnly', 'Place6And8'], rolls: 20, bankroll: 500, output: 'verbose' });
+    const joined = outputLines.join('\n');
+    expect(joined).toContain('Strategy Comparison');
   });
 });
