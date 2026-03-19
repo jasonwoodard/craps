@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1 and M2 complete; M3 in progress; M4 implemented (pre-M3)
+**Status:** In Progress — M1 and M2 complete; M3.1–M3.3 done, M3.4–M3.6 remaining; M4 implemented (pre-M3)
 
 ---
 
@@ -13,7 +13,7 @@ Four milestones, each building on the last. Each ends with a structured review p
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
 | M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.3 done) |
 | M4 | Stage Machine — CATS-class strategy support | 5.0, 5.1, 5.2 | DONE |
 
 ### Demo Convention
@@ -415,7 +415,7 @@ Integration tests:
 
 ---
 
-### M3.2 — Add `--compare` CLI flag
+### M3.2 — Add `--compare` CLI flag [DONE]
 
 **File:** `src/cli/run-sim.ts`
 
@@ -429,14 +429,20 @@ Output: side-by-side summary table showing per-strategy `finalBankroll`, `netCha
 
 - `--compare` and `--strategy` are mutually exclusive; error clearly if both are provided
 - `--seed` applies to the shared table
-- `--output json` emits JSONL with per-strategy player entries in each roll record
+- `--output json` emits one JSONL line per strategy (full `SummaryRecord` + `strategyName` field)
+- `--output verbose` in comparison mode renders the same side-by-side table as `summary` — true per-roll verbose output across multiple strategies requires a unified roll log and is deferred to M3.5 (see below)
 
 **FR:** 4, 8 — comparison, CLI
 **Risk:** Low once SharedTable is built.
 
+Implementation notes:
+- `parseArgs` extended with greedy multi-value token consumption for `--compare` and `--compare-files` (consumes non-flag tokens until the next `--` flag)
+- `runCompare()` exported alongside `runSim()`; entry point dispatches based on whether `compare` or `compareFiles` is present
+- `--output json` emits per-strategy `SummaryRecord` lines (not per-roll); per-roll JSONL across strategies requires unified logging (deferred)
+
 ---
 
-### M3.3 — Add `--compare-files` and mixed comparison CLI flags
+### M3.3 — Add `--compare-files` and mixed comparison CLI flags [DONE]
 
 **File:** `src/cli/run-sim.ts`
 
@@ -446,6 +452,7 @@ Extend the CLI to allow comparing custom files against each other or against bui
 |-----------------|----------|
 | `--compare-files ./a.ts ./b.ts` | Compare two custom strategies |
 | `--compare ThreePointMolly --strategy-file ./my.ts` | Built-in vs custom |
+| `--compare-files ./a.ts --compare ThreePointMolly` | File + built-in (any order) |
 
 Use `StrategyFileLoader` to resolve file paths. Pass resulting `StrategyDefinition` functions to `SharedTable.addStrategy()`.
 
@@ -453,6 +460,10 @@ Use `StrategyFileLoader` to resolve file paths. Pass resulting `StrategyDefiniti
 
 **FR:** 4, 8 — comparison, CLI
 **Risk:** Low. Mostly argument parsing and routing; underlying mechanics already built.
+
+Implementation notes:
+- Validation: total strategies = `len(compare) + len(compareFiles) + (1 if strategyFile else 0)`; must be ≥ 2
+- `--strategy-file` is allowed alongside `--compare` / `--compare-files` (contributes one more strategy to the comparison); `--strategy` (named, single) is never allowed in comparison mode
 
 ---
 
@@ -484,6 +495,14 @@ Review checklist:
 - Are all integration tests in `spec/engine/` using `RiggedDice` or a fixed seed — no flaky real-RNG tests?
 - Is the `results[name]` API shape documented enough that a library user (CUJ 3.0) can use it without reading the source?
 - Are there any remaining references to the old `CrapsGame` / `Player` layer in comments, imports, or docs?
+- **Unified per-roll verbose log for comparison mode**: `--output verbose` in comparison mode currently renders the same table as `summary`. A proper verbose comparison output requires a roll-aligned unified log (one entry per roll with per-strategy player entries, matching the `RunLogger` JSONL schema). Decide here whether to implement it inline in M3.5 or defer to a dedicated task.
+
+**Deferred from M3.2/M3.3:** Unified per-roll JSONL for `--compare --output json` (currently emits one summary line per strategy). Full per-roll JSONL across strategies would require either a multi-player `RunLogger` or a shared roll-log built inside `SharedTable`. If the M3.5 review decides to implement this, the output format should be:
+```jsonl
+{"type":"roll","roll":{...},"gameState":{...},"players":[{"id":"player-A",...},{"id":"player-B",...}]}
+{"type":"summary","strategyName":"A",...}
+{"type":"summary","strategyName":"B",...}
+```
 
 ---
 
