@@ -5,3 +5,4 @@ package-lock.json
 
 *.js
 report.*.json
+craps-test-out.txt
