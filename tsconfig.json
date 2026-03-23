@@ -3,6 +3,7 @@
         "target": "esnext",
         "alwaysStrict": true,
         "module": "commonjs",
-        "outDir": "bin"
+        "outDir": "bin",
+        "types": ["jasmine", "node"]
     }
 }
