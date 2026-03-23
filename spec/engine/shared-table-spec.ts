@@ -1,6 +1,8 @@
 import { SharedTable } from '../../src/engine/shared-table';
+import { CrapsEngine } from '../../src/engine/craps-engine';
 import { StrategyDefinition } from '../../src/dsl/strategy';
 import { RiggedDice } from '../dice/rigged-dice';
+import { SixIn8Progressive, Place6And8 as Place6And8Strategy } from '../../src/dsl/strategies';
 
 // --- Strategy fixtures ---
 
@@ -181,6 +183,144 @@ describe('SharedTable', () => {
       expect(results['A'].log[0].rollValue).toBe(results['B'].log[0].rollValue);
       expect(results['B'].log[0].rollValue).toBe(results['C'].log[0].rollValue);
     });
+  });
+
+  // M3.4: Progressive strategy test (CUJ 2.1)
+  //
+  // Roll sequence rationale:
+  //   Roll 1 (4): come-out; point=4 established; place bets placed but OFF (no resolution).
+  //   Roll 2 (6): place 6 hits (wins=0→1). Both strategies pay at $12.
+  //   Roll 3 (8): place 8 hits (wins=1→2). Both strategies pay at $12.
+  //   Roll 4 (6): place 6 hits (wins=2→3). SixIn8Progressive still has place6@$12 on table
+  //               (updateOdds is a no-op for place bets; amount updates only take effect after
+  //               a bet is naturally removed and re-placed). Pays at $12.
+  //   Roll 5 (8): place 8 hits (wins=3→4). SixIn8Progressive re-placed place8@$18 before this
+  //               roll (after roll 3's win cleared it and wins=2 on reconcile), so it pays at $18
+  //               vs Place6And8's flat $12.
+  //   Roll 6 (7): seven-out; both remaining place bets lose; no credit.
+  //
+  // Expected final bankrolls (derived from hand-trace):
+  //   SixIn8Progressive: 515  (higher exposure from pressing bets)
+  //   Place6And8:        532  (flat $12 throughout — avoids the larger bets but misses upside)
+  describe('progressive strategy (CUJ 2.1)', () => {
+
+    it('SixIn8Progressive diverges from flat Place6And8 on identical dice (CUJ 2.1)', () => {
+      // [4, 6, 8, 6, 8, 7]: point established, four place-bet wins at escalating sizes, then seven-out
+      const rolls = [4, 6, 8, 6, 8, 7];
+      const dice = new RiggedDice(rolls);
+      const table = new SharedTable({ rolls: rolls.length, dice });
+
+      table.addStrategy('SixIn8Progressive', SixIn8Progressive, { bankroll: 500 });
+      table.addStrategy('Place6And8',        Place6And8Strategy, { bankroll: 500 });
+
+      const results = table.run();
+
+      // Both strategies see identical dice — the comparison is fair
+      for (let i = 0; i < rolls.length; i++) {
+        expect(results['SixIn8Progressive'].log[i].rollValue)
+          .toBe(results['Place6And8'].log[i].rollValue);
+      }
+
+      // Strategies produce different final bankrolls because bet sizes diverged after wins accumulated
+      expect(results['SixIn8Progressive'].finalBankroll).not.toBe(results['Place6And8'].finalBankroll);
+
+      // Exact values verified by hand-trace (see comment above)
+      expect(results['SixIn8Progressive'].finalBankroll).toBe(515);
+      expect(results['Place6And8'].finalBankroll).toBe(532);
+    });
+
+    it('SixIn8Progressive shows larger place bets than Place6And8 once wins accumulate', () => {
+      // After 2 wins (rolls 2 and 3 in the sequence), SixIn8Progressive re-places the cleared
+      // bet at $18 while Place6And8 re-places at $12.  We inspect activeBets (snapshotted after
+      // reconcile, before the dice roll) to verify the amounts directly.
+      const rolls = [4, 6, 8, 6, 8, 7];
+      const dice = new RiggedDice(rolls);
+      const table = new SharedTable({ rolls: rolls.length, dice });
+
+      table.addStrategy('SixIn8Progressive', SixIn8Progressive, { bankroll: 500 });
+      table.addStrategy('Place6And8',        Place6And8Strategy, { bankroll: 500 });
+
+      const results = table.run();
+
+      // Roll 5 (index 4): before this roll, reconcile ran with wins=3 (amount=24 for new bets).
+      // Place6 was removed after roll 4's win and re-placed at $24.
+      // Place8 survived from before roll 4, but was placed at $18 (wins=2 on that reconcile)
+      // and was not updated (updateOdds is a no-op for place bets).
+      const progressiveLog = results['SixIn8Progressive'].log;
+      const flatLog        = results['Place6And8'].log;
+
+      const progressiveBetsOnRoll5 = progressiveLog[4].activeBets;
+      const flatBetsOnRoll5        = flatLog[4].activeBets;
+
+      // SixIn8Progressive has at least one bet larger than $12 by roll 5
+      const progressiveAmounts = progressiveBetsOnRoll5.map(b => b.amount);
+      expect(progressiveAmounts.some(a => a > 12)).toBe(true);
+
+      // Place6And8 always bets exactly $12
+      const flatAmounts = flatBetsOnRoll5.map(b => b.amount);
+      expect(flatAmounts.every(a => a === 12)).toBe(true);
+    });
+
+  });
+
+  // M3.4: Seed reproducibility for SharedTable (CUJs 1.2, 2.3)
+  describe('seed reproducibility (CUJs 1.2, 2.3)', () => {
+
+    it('two SharedTable runs with the same seed produce identical dice sequences', () => {
+      const run1 = new SharedTable({ seed: 42, rolls: 200 });
+      run1.addStrategy('A', PassLineOnly, { bankroll: 500 });
+      const results1 = run1.run();
+
+      const run2 = new SharedTable({ seed: 42, rolls: 200 });
+      run2.addStrategy('A', PassLineOnly, { bankroll: 500 });
+      const results2 = run2.run();
+
+      expect(results1['A'].log.length).toBe(results2['A'].log.length);
+      for (let i = 0; i < results1['A'].log.length; i++) {
+        expect(results1['A'].log[i].die1).toBe(results2['A'].log[i].die1);
+        expect(results1['A'].log[i].die2).toBe(results2['A'].log[i].die2);
+        expect(results1['A'].log[i].rollValue).toBe(results2['A'].log[i].rollValue);
+      }
+    });
+
+    it('two SharedTable runs with the same seed produce identical final bankrolls', () => {
+      const run1 = new SharedTable({ seed: 99, rolls: 500 });
+      run1.addStrategy('PassLine', PassLineOnly, { bankroll: 500 });
+      run1.addStrategy('Place68',  Place6And8,  { bankroll: 500 });
+      const results1 = run1.run();
+
+      const run2 = new SharedTable({ seed: 99, rolls: 500 });
+      run2.addStrategy('PassLine', PassLineOnly, { bankroll: 500 });
+      run2.addStrategy('Place68',  Place6And8,  { bankroll: 500 });
+      const results2 = run2.run();
+
+      expect(results1['PassLine'].finalBankroll).toBe(results2['PassLine'].finalBankroll);
+      expect(results1['Place68'].finalBankroll).toBe(results2['Place68'].finalBankroll);
+    });
+
+    it('SharedTable and CrapsEngine with the same seed see the same dice (cross-engine reproducibility)', () => {
+      // A SharedTable single-strategy run and a CrapsEngine run on the same seed should
+      // see the same dice sequence, proving both engines share the same MT19937 implementation.
+      const sharedTable = new SharedTable({ seed: 7, rolls: 100 });
+      sharedTable.addStrategy('A', PassLineOnly, { bankroll: 500 });
+      const sharedResults = sharedTable.run();
+
+      const engineResult = new CrapsEngine({
+        strategy: PassLineOnly,
+        bankroll: 500,
+        rolls: 100,
+        seed: 7,
+      }).run();
+
+      const sharedRolls = sharedResults['A'].log.map(r => r.rollValue);
+      const engineRolls = engineResult.rolls.map(r => r.rollValue);
+
+      expect(sharedRolls.length).toBe(engineRolls.length);
+      for (let i = 0; i < sharedRolls.length; i++) {
+        expect(sharedRolls[i]).toBe(engineRolls[i]);
+      }
+    });
+
   });
 
 });
