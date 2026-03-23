@@ -41,6 +41,13 @@ interface PlayerSlot {
   playerId: string;
   log: RollRecord[];
   logger: RunLogger;
+  // Scratch space for pre-roll data; populated in phase 1, consumed in phase 2.
+  preRoll?: {
+    snapshots: BetSnapshot[];
+    activeBets: ActiveBetInfo[];
+    tableLoadBefore: number;
+    bankrollBefore: number;
+  };
 }
 
 export class SharedTable {
@@ -113,39 +120,28 @@ export class SharedTable {
   }
 
   private playRoll(rollNumber: number): void {
-    // Step 1: For each active strategy, reconcile + apply commands
-    for (const slot of this.players.values()) {
-      if (!this.isSlotActive(slot)) continue;
-      const commands = slot.reconcileEngine.reconcile(slot.strategy, slot.bankroll);
-      this.applyCommands(commands, slot);
-    }
-
-    // Step 2: Capture pre-roll state for all strategies
+    // Phase 1: reconcile bets, then capture pre-roll state (before dice roll).
     const pointBefore = this.table.currentPoint;
-    const preRollData = new Map<string, {
-      snapshots: BetSnapshot[];
-      activeBets: ActiveBetInfo[];
-      tableLoadBefore: number;
-      bankrollBefore: number;
-    }>();
-
-    for (const [name, slot] of this.players) {
+    for (const slot of this.players.values()) {
+      if (this.isSlotActive(slot)) {
+        const commands = slot.reconcileEngine.reconcile(slot.strategy, slot.bankroll);
+        this.applyCommands(commands, slot);
+      }
       const snapshots = this.snapshotBets(slot.playerId);
-      preRollData.set(name, {
+      slot.preRoll = {
         snapshots,
         activeBets: this.buildActiveBetInfo(snapshots),
         tableLoadBefore: snapshots.reduce((sum, s) => sum + s.amount + s.oddsAmount, 0),
         bankrollBefore: slot.bankroll,
-      });
+      };
     }
 
-    // Step 3: Roll dice ONCE
+    // Phase 2: Roll dice ONCE, then settle each strategy independently.
     const diceRoll = this.table.rollDice();
     const pointAfter = this.table.currentPoint;
 
-    // Step 4: For each strategy: collect outcomes, settle, postRoll, emit record
-    for (const [name, slot] of this.players) {
-      const pre = preRollData.get(name)!;
+    for (const slot of this.players.values()) {
+      const pre = slot.preRoll!;
       const outcomes = this.collectOutcomes(pre.snapshots);
       this.settleBets(pre.snapshots, slot);
 
