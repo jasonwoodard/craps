@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1 and M2 complete; M3.1–M3.3 done, M3.4–M3.6 remaining; M4 implemented (pre-M3)
+**Status:** In Progress — M1 and M2 complete; M3.1–M3.5 done, M3.6 remaining; M4 implemented (pre-M3)
 
 ---
 
@@ -13,7 +13,7 @@ Four milestones, each building on the last. Each ends with a structured review p
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
 | M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.3 done) |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.5 done) |
 | M4 | Stage Machine — CATS-class strategy support | 5.0, 5.1, 5.2 | DONE |
 
 ### Demo Convention
@@ -467,7 +467,7 @@ Implementation notes:
 
 ---
 
-### M3.4 — Integration tests for comparison correctness
+### M3.4 — Integration tests for comparison correctness [DONE]
 
 Comprehensive test coverage for `SharedTable` and comparison CLI:
 
@@ -481,7 +481,7 @@ Comprehensive test coverage for `SharedTable` and comparison CLI:
 
 ---
 
-### M3.5 — Milestone 3 Review
+### M3.5 — Milestone 3 Review [DONE]
 
 Run the `/simplify` skill across all files introduced or modified in M3:
 
@@ -490,14 +490,23 @@ Run the `/simplify` skill across all files introduced or modified in M3:
 - All new and modified spec files
 
 Review checklist:
-- Is the virtual bet set abstraction in `SharedTable` clean enough that adding a third strategy is a one-line change?
-- Does `--output json` in comparison mode produce a valid, parseable JSONL file that a Python notebook could consume directly (CUJ 3.2)?
-- Are all integration tests in `spec/engine/` using `RiggedDice` or a fixed seed — no flaky real-RNG tests?
-- Is the `results[name]` API shape documented enough that a library user (CUJ 3.0) can use it without reading the source?
-- Are there any remaining references to the old `CrapsGame` / `Player` layer in comments, imports, or docs?
-- **Unified per-roll verbose log for comparison mode**: `--output verbose` in comparison mode currently renders the same table as `summary`. A proper verbose comparison output requires a roll-aligned unified log (one entry per roll with per-strategy player entries, matching the `RunLogger` JSONL schema). Decide here whether to implement it inline in M3.5 or defer to a dedicated task.
+- Is the virtual bet set abstraction in `SharedTable` clean enough that adding a third strategy is a one-line change? ✓ Yes — `addStrategy()` is a single call; the three-strategy test confirms it.
+- Does `--output json` in comparison mode produce a valid, parseable JSONL file that a Python notebook could consume directly (CUJ 3.2)? ✓ Yes — `printComparisonJson` emits one `JSON.stringify(...)` per line; confirmed by `runCompare` spec. Note: emits per-strategy *summary* records only (not per-roll). Full per-roll JSONL deferred (see below).
+- Are all integration tests in `spec/engine/` using `RiggedDice` or a fixed seed — no flaky real-RNG tests? ✓ Yes — all `spec/engine/` and `spec/cli/` tests use `RiggedDice` or seeded `SharedTable`/`CrapsEngine`; only `spec/dice/dice-spec.ts` uses `LiveDice` (appropriate for dice-layer tests).
+- Is the `results[name]` API shape documented enough that a library user (CUJ 3.0) can use it without reading the source? ✓ Yes — `SharedTableResult` interface is exported and typed with `finalBankroll`, `netChange`, `log`, `summary`; field names are self-documenting.
+- Are there any remaining references to the old `CrapsGame` / `Player` layer in comments, imports, or docs? ✓ No live imports. `spec/craps-table-spec.ts` retains `describe('CrapsGame', ...)` as a historical description string (no import); acceptable.
+- **Unified per-roll verbose log for comparison mode**: Deferred. `--output verbose` in comparison mode falls back to the same side-by-side table as `summary`. Per-roll unified log requires a multi-player `RunLogger` extension and is deferred past M3.
 
-**Deferred from M3.2/M3.3:** Unified per-roll JSONL for `--compare --output json` (currently emits one summary line per strategy). Full per-roll JSONL across strategies would require either a multi-player `RunLogger` or a shared roll-log built inside `SharedTable`. If the M3.5 review decides to implement this, the output format should be:
+Review findings addressed:
+- Collapsed `playRoll` two-phase structure: eliminated the intermediate `preRollData: Map` by storing per-slot pre-roll scratch data directly on `PlayerSlot.preRoll`. Reduces one full-pass allocation per roll; both phases now iterate `this.players.values()` directly.
+
+Review findings noted but not addressed:
+- **Duplicated bet-handling methods** (`applyPlaceCommand`, `applyRemoveCommand`, `applyUpdateOddsCommand`, `createBet`, `snapshotBets`, `collectOutcomes`, `settleBets`, `buildActiveBetInfo`): identical logic exists in both `SharedTable` and `CrapsEngine`. Extracting to a shared utility requires parameterizing the bankroll source (`this.bankroll` in engine vs. `slot.bankroll` in shared-table). Deferred — too invasive for a review pass; no user-visible impact.
+- **`BetSnapshot` interface** is duplicated (private, `interface BetSnapshot`) in both `craps-engine.ts` and `shared-table.ts`. Since it is internal implementation detail, left in place.
+- **`--output json` comparison mode** emits per-strategy summary records, not per-roll JSONL. Full per-roll format deferred (see above).
+- **`ComeBet` odds in `snapshotBets`**: `ComeBet extends PassLineBet`, so `instanceof PassLineBet` correctly captures odds for both types. No bug.
+
+**Deferred from M3.2/M3.3:** Unified per-roll JSONL for `--compare --output json` (currently emits one summary line per strategy). Full per-roll JSONL across strategies would require either a multi-player `RunLogger` or a shared roll-log built inside `SharedTable`. If implemented, the output format should be:
 ```jsonl
 {"type":"roll","roll":{...},"gameState":{...},"players":[{"id":"player-A",...},{"id":"player-B",...}]}
 {"type":"summary","strategyName":"A",...}
