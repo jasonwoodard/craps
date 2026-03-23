@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1 and M2 complete; M3.1–M3.3 done, M3.4–M3.6 remaining; M4 implemented (pre-M3)
+**Status:** In Progress — M1 and M2 complete; M3.1–M3.4 done, M3.5–M3.6 remaining; M4 implemented (pre-M3)
 
 ---
 
@@ -13,7 +13,7 @@ Four milestones, each building on the last. Each ends with a structured review p
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
 | M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.3 done) |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.4 done) |
 | M4 | Stage Machine — CATS-class strategy support | 5.0, 5.1, 5.2 | DONE |
 
 ### Demo Convention
@@ -374,7 +374,7 @@ All prior demos (`demo/verify-strategy-on-known-rolls.ts`) still pass.
 
 ---
 
-### M3.1 — Build `SharedTable`
+### M3.1 — Build `SharedTable` [DONE]
 
 **New file:** `src/engine/shared-table.ts`
 
@@ -412,6 +412,12 @@ Integration tests:
 
 **FR:** 4 — shared-table comparison
 **Risk:** High. The shared virtual bet set per strategy is the architectural crux; must ensure no shared mutable state leaks between strategies.
+
+Implementation notes:
+- Each strategy slot carries its own `ReconcileEngine`, `PlayerState`, `CrapsTable`, and `RunLogger`; no mutable state is shared between slots.
+- Dice are rolled once per turn from a single `MersenneTwister` instance; the resulting `(die1, die2)` pair is broadcast to every strategy's resolution step.
+- `run()` returns `Record<string, { finalBankroll, netChange, log: RollRecord[], summary: SummaryRecord }>`.
+- `spec/engine/shared-table-spec.ts` covers: dice identity across strategies, bankroll independence, and the progressive strategy divergence case.
 
 ---
 
@@ -467,7 +473,7 @@ Implementation notes:
 
 ---
 
-### M3.4 — Integration tests for comparison correctness
+### M3.4 — Integration tests for comparison correctness [DONE]
 
 Comprehensive test coverage for `SharedTable` and comparison CLI:
 
@@ -479,6 +485,13 @@ Comprehensive test coverage for `SharedTable` and comparison CLI:
 **FR:** 2, 4, 9
 **Risk:** Low. Tests are assertions over existing behavior; no new implementation.
 
+Implementation notes:
+- All four test categories implemented in `spec/engine/shared-table-spec.ts`.
+- Dice identity: asserts `die1`, `die2`, and `rollValue` match at every index across two strategies in a single `SharedTable` run.
+- Bankroll independence: `PassLineOnly` and `Place6And8` end at different bankrolls on a scripted roll sequence.
+- Progressive divergence: `SixIn8Progressive` vs `Place6And8` — confirmed diverging final bankrolls and confirmed that progressive bets grow larger than the flat strategy's after multiple wins.
+- Seed reproducibility: two separate `SharedTable` instances with the same seed produce byte-identical `die1`/`die2` sequences.
+
 ---
 
 ### M3.5 — Milestone 3 Review
@@ -487,15 +500,18 @@ Run the `/simplify` skill across all files introduced or modified in M3:
 
 - `src/engine/shared-table.ts`
 - `src/cli/run-sim.ts` (full, now with all flags)
-- All new and modified spec files
+- `spec/engine/shared-table-spec.ts`
+- Any other spec files touched during M3.1–M3.4
 
-Review checklist:
-- Is the virtual bet set abstraction in `SharedTable` clean enough that adding a third strategy is a one-line change?
-- Does `--output json` in comparison mode produce a valid, parseable JSONL file that a Python notebook could consume directly (CUJ 3.2)?
+**How `/simplify` works:** The skill reads every changed file and looks for opportunities to reduce code without changing behavior — removing duplication, replacing custom code with library primitives, flattening unnecessary indirection, and fixing anything that smells like a future bug. It then applies the improvements directly. Think of it as a focused refactoring pass driven by an AI reviewer who has read all the changed files. It does _not_ add features; it only cleans up what exists.
+
+Review checklist (work through these after `/simplify` runs):
+- Is the virtual bet set abstraction in `SharedTable` clean enough that adding a third strategy is a one-line `addStrategy()` call?
+- Does `--output json` in comparison mode produce a valid, parseable JSONL file that a Python notebook could consume directly (CUJ 3.2)? Verify with `JSON.parse()` on each line.
 - Are all integration tests in `spec/engine/` using `RiggedDice` or a fixed seed — no flaky real-RNG tests?
-- Is the `results[name]` API shape documented enough that a library user (CUJ 3.0) can use it without reading the source?
+- Is the `results[name]` API shape (return type of `SharedTable.run()`) documented clearly enough that a library user (CUJ 3.0) can use it without reading the implementation?
 - Are there any remaining references to the old `CrapsGame` / `Player` layer in comments, imports, or docs?
-- **Unified per-roll verbose log for comparison mode**: `--output verbose` in comparison mode currently renders the same table as `summary`. A proper verbose comparison output requires a roll-aligned unified log (one entry per roll with per-strategy player entries, matching the `RunLogger` JSONL schema). Decide here whether to implement it inline in M3.5 or defer to a dedicated task.
+- **Unified per-roll verbose log for comparison mode**: `--output verbose` in comparison mode currently renders the same table as `summary`. Decide here whether to implement a proper roll-aligned unified log inline in M3.5 or defer to a dedicated task.
 
 **Deferred from M3.2/M3.3:** Unified per-roll JSONL for `--compare --output json` (currently emits one summary line per strategy). Full per-roll JSONL across strategies would require either a multi-player `RunLogger` or a shared roll-log built inside `SharedTable`. If the M3.5 review decides to implement this, the output format should be:
 ```jsonl
