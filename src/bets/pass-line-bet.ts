@@ -98,6 +98,8 @@ export class PassLineBet extends BaseBet {
       case 8:
         return Math.floor(bet.oddsAmount / 5) * 6;
         break;
+      default:
+        return 0;
     }
   }
 }

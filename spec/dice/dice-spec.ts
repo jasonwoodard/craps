@@ -47,7 +47,7 @@ describe('Dice', ():void => {
        let i = 0
        while(i < totalRolls ){
          let roll = d.roll();
-         let value = rolls.get(roll.sum);
+         let value = rolls.get(roll.sum)!;
          rolls.set(roll.sum, value + 1);
          i++
        }
@@ -70,7 +70,7 @@ describe('Dice', ():void => {
 
        for (let i = 0; i < totalRolls; i++) {
          const r = d.roll();
-         sumCounts.set(r.sum, sumCounts.get(r.sum) + 1);
+         sumCounts.set(r.sum, sumCounts.get(r.sum)! + 1);
        }
 
        // Theoretical 2d6 probabilities: 2:1/36 ... 7:6/36 ... 12:1/36
@@ -81,7 +81,7 @@ describe('Dice', ():void => {
        const tolerance = 0.005; // 0.5% absolute tolerance on proportion
 
        for (const [key, expectedProb] of Object.entries(expectedProbs)) {
-         const observed = sumCounts.get(Number(key)) / totalRolls;
+         const observed = sumCounts.get(Number(key))! / totalRolls;
          expect(Math.abs(observed - expectedProb))
            .toBeLessThan(tolerance,
              `Sum ${key}: observed ${observed.toFixed(4)} vs expected ${expectedProb.toFixed(4)}`);

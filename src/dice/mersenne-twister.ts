@@ -109,7 +109,7 @@ export class MersenneTwister{
   /* init_key is the array for initializing keys */
   /* key_length is its length */
   /* slight change for C++, 2004/2/26 */
-  init_by_array(init_key, key_length) {
+  init_by_array(init_key: number[], key_length: number) {
     var i, j, k;
     this.init_genrand(19650218);
     i=1; j=0;

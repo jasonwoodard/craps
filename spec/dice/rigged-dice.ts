@@ -5,7 +5,7 @@ export class RiggedDice extends Dice {
 
   constructor(rollQueue?: number[]) {
     super();
-    this.rollQueue = [].concat(rollQueue || []);
+    this.rollQueue = ([] as number[]).concat(rollQueue || []);
   }
 
   // Returns a DiceRoll where die1=0, die2=sum is a documented test-mode
@@ -15,13 +15,13 @@ export class RiggedDice extends Dice {
     if (this.rollQueue.length == 0) {
       throw new RangeError("Exceeded RiggedDice roll queue.");
     }
-    const sum = this.rollQueue.shift();
+    const sum = this.rollQueue.shift()!;
     return { die1: 0, die2: sum, sum };
   }
 
   addToQueue(numbersToAdd: number | number[]): void {
     if (Array.isArray(numbersToAdd)) {
-      this.rollQueue.push(...[].concat(numbersToAdd));
+      this.rollQueue.push(...([] as number[]).concat(numbersToAdd));
     } else {
       this.rollQueue.push(numbersToAdd);
     }

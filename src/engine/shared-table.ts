@@ -262,13 +262,13 @@ export class SharedTable {
   private collectOutcomes(snapshots: BetSnapshot[]): Outcome[] {
     const outcomes: Outcome[] = [];
     for (const { bet, amount } of snapshots) {
-      if (bet.payOut > 0) {
+      if ((bet.payOut ?? 0) > 0) {
         outcomes.push({
           result: 'win',
           betType: bet.betType,
           point: bet.point,
           amount,
-          payout: bet.payOut,
+          payout: bet.payOut ?? 0,
         });
       } else if (bet.amount === 0) {
         outcomes.push({
@@ -285,11 +285,11 @@ export class SharedTable {
 
   private settleBets(snapshots: BetSnapshot[], slot: PlayerSlot): void {
     for (const { bet, amount, oddsAmount } of snapshots) {
-      if (bet.payOut > 0) {
+      if ((bet.payOut ?? 0) > 0) {
         if (bet instanceof PassLineBet) {
-          slot.bankroll += amount + oddsAmount + bet.payOut;
+          slot.bankroll += amount + oddsAmount + (bet.payOut ?? 0);
         } else {
-          slot.bankroll += bet.payOut;
+          slot.bankroll += bet.payOut ?? 0;
         }
 
         bet.payOut = 0;

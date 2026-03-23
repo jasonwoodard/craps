@@ -10,7 +10,7 @@ export class PlaceBet extends BaseBet {
   }
 
   isOkayToPlace(_table: CrapsTable): boolean {
-    return VALID_PLACE_POINTS.includes(this.point);
+    return VALID_PLACE_POINTS.includes(this.point!);
   }
 
   evaluateDiceRoll(rollValue: number, table: CrapsTable): void {
@@ -25,7 +25,7 @@ export class PlaceBet extends BaseBet {
   }
 
   win(_table: CrapsTable): void {
-    this.payOut = this.amount + PlaceBet.computeWinAmount(this.amount, this.point);
+    this.payOut = this.amount + PlaceBet.computeWinAmount(this.amount, this.point!);
   }
 
   lose(): void {
