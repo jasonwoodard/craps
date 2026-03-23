@@ -1,7 +1,7 @@
 # Craps Simulator — Implementation Plan
 
 **Date:** March 2026
-**Status:** In Progress — M1 and M2 complete; M3.1–M3.5 done, M3.6 remaining; M4 implemented (pre-M3)
+**Status:** M1, M2, M3, and M4 all complete
 
 ---
 
@@ -13,7 +13,7 @@ Four milestones, each building on the last. Each ends with a structured review p
 |-----------|-------|--------------|--------|
 | M1 | Core engine — DSL wired end-to-end | 4.0 | DONE |
 | M2 | Output and CLI — usable from the terminal | 1.0, 1.2, 1.3, 2.0 | DONE |
-| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | In Progress (M3.1–M3.5 done) |
+| M3 | Comparison and custom strategies — full feature set | 1.1, 2.1, 2.2, 2.3, 3.0, 3.1, 3.2, 4.1, 4.2 | DONE |
 | M4 | Stage Machine — CATS-class strategy support | 5.0, 5.1, 5.2 | DONE |
 
 ### Demo Convention
@@ -515,11 +515,11 @@ Review findings noted but not addressed:
 
 ---
 
-### M3.6 — Milestone 3 Demo
+### M3.6 — Milestone 3 Demo [DONE]
 
-**New file:** `demo/<tbd-m3-demo>.ts`
+**File:** `demo/compare-strategies.ts`
 
-Write a demo exercising the primary M3 CUJs (1.1, 3.0, 3.1 — multi-strategy comparison, library usage). The demo should be free-standing and self-verifying. Ensure all prior demos still pass.
+Demo exercising the primary M3 CUJs (1.1, 3.0, 3.1 — multi-strategy comparison, library usage). Free-standing and self-verifying. All prior demos confirmed passing.
 
 ---
 
