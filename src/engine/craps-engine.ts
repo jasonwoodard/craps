@@ -231,13 +231,13 @@ export class CrapsEngine {
   private collectOutcomes(snapshots: BetSnapshot[]): Outcome[] {
     const outcomes: Outcome[] = [];
     for (const { bet, amount } of snapshots) {
-      if (bet.payOut > 0) {
+      if ((bet.payOut ?? 0) > 0) {
         outcomes.push({
           result: 'win',
           betType: bet.betType,
           point: bet.point,
           amount,
-          payout: bet.payOut,
+          payout: bet.payOut ?? 0,
         });
       } else if (bet.amount === 0) {
         outcomes.push({
@@ -254,16 +254,16 @@ export class CrapsEngine {
 
   private settleBets(snapshots: BetSnapshot[]): void {
     for (const { bet, amount, oddsAmount } of snapshots) {
-      if (bet.payOut > 0) {
+      if ((bet.payOut ?? 0) > 0) {
         // Collect winnings — payOut semantics differ by bet type:
         // PassLine/Come: payOut = profit only (even money + odds payout)
         // PlaceBet: payOut = original amount + profit
         if (bet instanceof PassLineBet) {
           // Return original flat bet + odds + profit
-          this.bankroll += amount + oddsAmount + bet.payOut;
+          this.bankroll += amount + oddsAmount + (bet.payOut ?? 0);
         } else {
           // PlaceBet: payOut already includes original
-          this.bankroll += bet.payOut;
+          this.bankroll += bet.payOut ?? 0;
         }
 
         // Clean up the winning bet so reconcile can re-place if needed

@@ -3,7 +3,7 @@ import * as _ from "lodash";
 import { BaseBet } from "./bets/base-bet";
 
 export class CrapsTable {
-  public currentPoint: number;
+  public currentPoint: number | undefined;
 
   public dice: Dice;
 

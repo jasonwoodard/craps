@@ -11,8 +11,8 @@ export abstract class BaseBet {
   betType: BetTypes = BetTypes.UNKNOWN;
   amount: number;
   player: string;
-  payOut: number;
-  point: number;
+  payOut: number | undefined;
+  point: number | undefined;
 
   constructor(betType: BetTypes, amount: number, playerId: string) {
     this.betType = betType;
