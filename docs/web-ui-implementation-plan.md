@@ -106,7 +106,7 @@ Returns `string[]` — keys of `BUILT_IN_STRATEGIES`. Drives the strategy select
 
 ---
 
-## Milestone 0 — Core Refactor
+## Milestone 0 — Core Refactor [DONE]
 
 **Goal:** Two surgical changes to `src/` that the rest of the web milestones depend on. All existing tests remain green. CLI behavior is unchanged.
 
@@ -114,7 +114,7 @@ Returns `string[]` — keys of `BUILT_IN_STRATEGIES`. Drives the strategy select
 
 ---
 
-### M0.1 — Add `stageName` to `RollRecord`
+### M0.1 — Add `stageName` to `RollRecord` [DONE]
 
 **File:** `src/engine/roll-record.ts`
 
@@ -152,7 +152,7 @@ Same pattern — each player slot has its own `ReconcileEngine` instance with it
 
 ---
 
-### M0.2 — Shared type re-exports
+### M0.2 — Shared type re-exports [DONE]
 
 **New file:** `types/simulation.ts`
 
@@ -171,13 +171,13 @@ No logic. Types only. Both `server/` and `web/` import from this file — not di
 
 ---
 
-### M0 Review
+### M0 Review [DONE]
 
-- [ ] `stageName` is populated correctly for CATS — spot-check 10 roll records from `--output json`
-- [ ] `stageName` is absent for PassLineOnly — not present as `"undefined"` string, genuinely absent
-- [ ] `types/simulation.ts` re-exports compile without error
-- [ ] Zero changes to CLI behavior — `npm test` and all manual CLI commands still work
-- [ ] No new `any` casts introduced beyond the existing `STAGE_MACHINE_RUNTIME` symbol lookup pattern
+- [x] `stageName` is populated correctly for CATS — spot-check 10 roll records from `--output json`
+- [x] `stageName` is absent for PassLineOnly — not present as `"undefined"` string, genuinely absent
+- [x] `types/simulation.ts` re-exports compile without error
+- [x] Zero changes to CLI behavior — `npm test` and all manual CLI commands still work
+- [x] No new `any` casts introduced beyond the existing `STAGE_MACHINE_RUNTIME` symbol lookup pattern
 
 ---
 
@@ -197,7 +197,7 @@ Self-verification: CATS output shows `"stageName":"accumulatorFull"` on early ro
 
 ---
 
-## Milestone 1 — MVP Web UI
+## Milestone 1 — MVP Web UI [DONE]
 
 **Goal:** A working browser page that renders a pre-configured simulation run as a summary stats panel and a time series chart. No user controls. No stage filter logic. Get the visual foundation right.
 
@@ -210,7 +210,7 @@ This is the same run used in manual CLI testing — final bankroll $6, a dramati
 
 ---
 
-### M1.1 — Express server scaffold
+### M1.1 — Express server scaffold [DONE]
 
 **New file:** `server/server.ts`
 
@@ -262,7 +262,7 @@ curl -X POST http://localhost:3001/api/simulate \
 
 ---
 
-### M1.2 — React + Vite scaffold
+### M1.2 — React + Vite scaffold [DONE]
 
 **New directory:** `web/`
 
@@ -299,7 +299,7 @@ export default defineConfig({
 
 ---
 
-### M1.3 — `useSimulation` hook
+### M1.3 — `useSimulation` hook [DONE]
 
 **New file:** `web/src/hooks/useSimulation.ts`
 
@@ -309,7 +309,7 @@ Calls `POST /api/simulate` on mount. Returns `{ data: EngineResult | null, loadi
 
 ---
 
-### M1.4 — Summary stats panel
+### M1.4 — Summary stats panel [DONE]
 
 **New file:** `web/src/lib/stats.ts`
 
@@ -338,7 +338,7 @@ Renders `SessionStats` as a card grid. Net change color-coded green/red. Monospa
 
 ---
 
-### M1.5 — Session chart
+### M1.5 — Session chart [DONE]
 
 **New component:** `web/src/components/SessionChart.tsx`
 
@@ -363,7 +363,7 @@ No stage logic of any kind in M1. `stageName` is in the data but the chart does 
 
 ---
 
-### M1.6 — Milestone 1 integration
+### M1.6 — Milestone 1 integration [DONE]
 
 Wire everything in `App.tsx`:
 
@@ -390,7 +390,7 @@ function App() {
 
 ---
 
-### M1 Review
+### M1 Review [DONE]
 
 Run the simplify pass across all new files:
 
@@ -404,15 +404,15 @@ Run the simplify pass across all new files:
 
 **Checklist:**
 
-- [ ] `computeSessionStats` is the single location for all derived stat computation — nothing inline in components
-- [ ] `useSimulation` handles non-200 responses and network errors explicitly
-- [ ] Express port (3001) defined in one place — not hardcoded in multiple files
-- [ ] Express returns 400 (not 500) for unknown strategy names
-- [ ] No `console.log` in production paths
-- [ ] Dual Y axis scales are independent — table load range does not compress bankroll line
-- [ ] `SessionChart` does not read or reference `stageName` — confirmed clean boundary with M2
-- [ ] Page is usable at 1280px width
-- [ ] `npm test` (existing Jasmine suite) still passes — no engine regressions
+- [x] `computeSessionStats` is the single location for all derived stat computation — nothing inline in components
+- [x] `useSimulation` handles non-200 responses and network errors explicitly
+- [x] Express port (3001) defined in one place — not hardcoded in multiple files
+- [x] Express returns 400 (not 500) for unknown strategy names
+- [x] No `console.log` in production paths
+- [x] Dual Y axis scales are independent — table load range does not compress bankroll line
+- [x] `SessionChart` does not read or reference `stageName` — confirmed clean boundary with M2
+- [x] Page is usable at 1280px width
+- [x] `npm test` (existing Jasmine suite) still passes — no engine regressions
 
 ---
 
