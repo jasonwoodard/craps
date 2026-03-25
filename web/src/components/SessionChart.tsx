@@ -2,7 +2,6 @@ import type { RollRecord } from '@shared/simulation';
 import {
   ComposedChart,
   Line,
-  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -58,7 +57,7 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             tick={{ fontSize: 11 }}
           />
           <Tooltip
-            formatter={(value) => [`$${value}`, '']}
+            formatter={(value: number, name: string) => [`$${value}`, name]}
             labelFormatter={(label) => `Roll ${label}`}
           />
           <Legend />
@@ -69,14 +68,13 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             strokeDasharray="6 3"
             label={{ value: 'Buy-in', position: 'right', fontSize: 11, fill: '#9ca3af' }}
           />
-          <Area
+          <Line
             yAxisId="load"
             dataKey="tableLoad"
             name="Table Load"
-            fill="#e0e7ff"
-            stroke="#818cf8"
+            stroke="#e97316"
             strokeWidth={1}
-            fillOpacity={0.4}
+            strokeOpacity={0.6}
             dot={false}
             isAnimationActive={false}
           />
