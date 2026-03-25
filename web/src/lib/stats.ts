@@ -16,9 +16,13 @@ export interface SessionStats {
 export function computeSessionStats(result: EngineResult): SessionStats {
   const { rolls, initialBankroll, finalBankroll } = result;
 
-  let peakBankroll = initialBankroll;
-  let troughBankroll = initialBankroll;
-  let lastPeak = initialBankroll;
+  // Scan starts from roll 1 (index 0). The initial bankroll (pre-roll state)
+  // is excluded so that peak, trough, and drawdown reflect only post-roll
+  // bankroll values — matching the CLI logger output exactly.
+  const firstBankroll = rolls.length > 0 ? rolls[0].bankrollAfter : initialBankroll;
+  let peakBankroll = firstBankroll;
+  let troughBankroll = firstBankroll;
+  let lastPeak = firstBankroll;
   let maxDrawdown = 0;
   let winRolls = 0;
   let lossRolls = 0;
