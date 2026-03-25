@@ -73,8 +73,8 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             dataKey="tableLoad"
             name="Table Load"
             stroke="#e97316"
-            strokeWidth={1}
-            strokeOpacity={0.6}
+            strokeWidth={2}
+            strokeOpacity={0.9}
             dot={false}
             isAnimationActive={false}
           />
@@ -82,7 +82,7 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             yAxisId="bankroll"
             dataKey="bankroll"
             name="Bankroll"
-            stroke="#2563eb"
+            stroke="#014d00"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}
