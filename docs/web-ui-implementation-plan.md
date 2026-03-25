@@ -181,7 +181,7 @@ No logic. Types only. Both `server/` and `web/` import from this file — not di
 
 ---
 
-### M0 Demo
+### M0 Demo [DONE]
 
 ```bash
 # Confirm stageName appears in JSON output for a Stage Machine strategy
