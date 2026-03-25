@@ -1,0 +1,61 @@
+import type { EngineResult } from '@shared/simulation';
+
+export interface SessionStats {
+  totalRolls: number;
+  netChange: number;
+  peakBankroll: number;
+  troughBankroll: number;
+  maxDrawdown: number;
+  winRolls: number;
+  lossRolls: number;
+  noActionRolls: number;
+  avgTableLoad: number;
+  maxTableLoad: number;
+}
+
+export function computeSessionStats(result: EngineResult): SessionStats {
+  const { rolls, initialBankroll, finalBankroll } = result;
+
+  let peakBankroll = initialBankroll;
+  let troughBankroll = initialBankroll;
+  let lastPeak = initialBankroll;
+  let maxDrawdown = 0;
+  let winRolls = 0;
+  let lossRolls = 0;
+  let totalTableLoad = 0;
+  let maxTableLoad = 0;
+
+  for (const roll of rolls) {
+    if (roll.bankrollAfter > peakBankroll) peakBankroll = roll.bankrollAfter;
+    if (roll.bankrollAfter < troughBankroll) troughBankroll = roll.bankrollAfter;
+
+    if (roll.bankrollAfter > lastPeak) lastPeak = roll.bankrollAfter;
+    const drawdown = lastPeak - roll.bankrollAfter;
+    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+
+    const hasWin = roll.outcomes.some(o => o.result === 'win');
+    const hasLoss = roll.outcomes.some(o => o.result === 'loss');
+    if (hasWin) winRolls++;
+    if (hasLoss) lossRolls++;
+
+    totalTableLoad += roll.tableLoadBefore;
+    if (roll.tableLoadBefore > maxTableLoad) maxTableLoad = roll.tableLoadBefore;
+  }
+
+  const totalRolls = rolls.length;
+  const noActionRolls = totalRolls - winRolls - lossRolls;
+  const avgTableLoad = totalRolls > 0 ? Math.round((totalTableLoad / totalRolls) * 100) / 100 : 0;
+
+  return {
+    totalRolls,
+    netChange: finalBankroll - initialBankroll,
+    peakBankroll,
+    troughBankroll,
+    maxDrawdown,
+    winRolls,
+    lossRolls,
+    noActionRolls,
+    avgTableLoad,
+    maxTableLoad,
+  };
+}

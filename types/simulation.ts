@@ -1,10 +1,21 @@
-import { Outcome } from '../dsl/outcome';
+// Shared type definitions for server/ and web/ consumers.
+// These mirror the engine types structurally; source of truth is src/engine/.
+// Using standalone definitions avoids importing engine source (which uses
+// constructs incompatible with the web's strict tsconfig settings).
 
 export interface ActiveBetInfo {
   type: string;
   point: number | null;
   amount: number;
   odds: number;
+}
+
+export interface Outcome {
+  result: 'win' | 'loss';
+  betType: number;
+  point?: number;
+  amount: number;
+  payout: number;
 }
 
 export interface RollRecord {

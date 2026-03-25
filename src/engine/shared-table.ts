@@ -9,6 +9,8 @@ import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
 import { RunLogger, SummaryRecord } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo } from './roll-record';
+import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
+import { StageMachineRuntime } from '../dsl/stage-machine-state';
 import { Outcome } from '../dsl/outcome';
 
 export interface SharedTableConfig {
@@ -155,6 +157,8 @@ export class SharedTable {
         rollValue: diceRoll.sum,
       });
 
+      const runtime = (slot.strategy as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
+
       const record: RollRecord = {
         rollNumber,
         die1: diceRoll.die1,
@@ -168,6 +172,7 @@ export class SharedTable {
         activeBets: pre.activeBets,
         tableLoadBefore: pre.tableLoadBefore,
         tableLoadAfter,
+        stageName: runtime?.getCurrentStage(),
       };
 
       slot.log.push(record);

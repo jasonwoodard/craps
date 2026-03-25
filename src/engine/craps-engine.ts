@@ -9,6 +9,8 @@ import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
 import { RunLogger } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
+import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
+import { StageMachineRuntime } from '../dsl/stage-machine-state';
 import { Outcome } from '../dsl/outcome';
 
 export { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
@@ -117,6 +119,8 @@ export class CrapsEngine {
       rollValue: diceRoll.sum,
     });
 
+    const runtime = (this.strategy as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
+
     return {
       rollNumber,
       die1: diceRoll.die1,
@@ -130,6 +134,7 @@ export class CrapsEngine {
       activeBets,
       tableLoadBefore,
       tableLoadAfter,
+      stageName: runtime?.getCurrentStage(),
     };
   }
 
