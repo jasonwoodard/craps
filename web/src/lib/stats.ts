@@ -13,7 +13,6 @@ export interface SessionStats {
   maxTableLoad: number;
 }
 
-// Rolling net bankroll change over a window of rolls ending at each index.
 export function computeRollingPnL(rolls: RollRecord[], window: number = 24): number[] {
   return rolls.map((_, i) => {
     const start = Math.max(0, i - window + 1);
@@ -21,7 +20,7 @@ export function computeRollingPnL(rolls: RollRecord[], window: number = 24): num
   });
 }
 
-// Consecutive 7-out count per roll. Increments on each 7-out; resets after any winning roll.
+// Resets on any win, not just after a hand completes — matches CATS step-down trigger logic.
 export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[] {
   const result: number[] = [];
   let count = 0;

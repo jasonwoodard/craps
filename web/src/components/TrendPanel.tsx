@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { computeRollingPnL, computeConsecutiveSevenOuts } from '../lib/stats';
 import { computeThresholdProximity, isCATSStrategy } from '../lib/cats-thresholds';
+import { fmtPnL } from '../lib/stages';
 
 interface Props {
   rolls: RollRecord[];
@@ -48,7 +49,6 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
     <div className="bg-white border border-gray-200 rounded p-4 mt-6">
       <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-6">Trend Indicators</h2>
 
-      {/* Signal 1: 24-roll rolling P&L */}
       <div className="mb-8">
         <h3 className="text-xs font-mono text-gray-600 font-medium mb-2">24-Roll Rolling P&amp;L</h3>
         <ResponsiveContainer width="100%" height={160}>
@@ -60,7 +60,7 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
               tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}$${v}`}
             />
             <Tooltip
-              formatter={(v: number) => [`${v >= 0 ? '+' : '-'}$${Math.abs(v)}`, '24-roll P&L']}
+              formatter={(v: number) => [fmtPnL(v), '24-roll P&L']}
               labelFormatter={(l: number) => `Roll ${l}`}
             />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
@@ -76,7 +76,6 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* Signal 2: CATS threshold proximity (only for CATS strategy) */}
       {isCats && thresholdChartData && (
         <div className="mb-8">
           <h3 className="text-xs font-mono text-gray-600 font-medium mb-2">
@@ -124,7 +123,6 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
         </div>
       )}
 
-      {/* Signal 3: Consecutive 7-out counter */}
       <div>
         <h3 className="text-xs font-mono text-gray-600 font-medium mb-2">Consecutive 7-Outs</h3>
         <ResponsiveContainer width="100%" height={160}>

@@ -1,5 +1,5 @@
 import type { RollRecord } from '@shared/simulation';
-import { computeStageVisitSummaries, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
+import { computeStageVisitSummaries, fmtPnL, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
 
 interface Props {
   rolls: RollRecord[];
@@ -7,10 +7,6 @@ interface Props {
 
 function fmt(n: number): string {
   return `$${Math.abs(n)}`;
-}
-
-function fmtPnL(n: number): string {
-  return `${n >= 0 ? '+' : '-'}$${Math.abs(n)}`;
 }
 
 export function StageBreakdown({ rolls }: Props) {
