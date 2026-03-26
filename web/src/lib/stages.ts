@@ -74,6 +74,27 @@ export function computeStageSpans(rolls: RollRecord[]): StageSpan[] {
   return spans;
 }
 
+export interface NormalizedVisit {
+  stageName: string;
+  visitIndex: number;
+  label: string;   // e.g. "Visit 1: Rolls 1–47"
+  points: Array<{ t: number; pnl: number }>;
+}
+
+// Returns all visits to the given stage, each normalized to T0 with Y axis as ±$ from entry bankroll.
+export function normalizeStageVisits(rolls: RollRecord[], stageName: string): NormalizedVisit[] {
+  const summaries = computeStageVisitSummaries(rolls).filter(s => s.stageName === stageName);
+  return summaries.map(s => {
+    const visitRolls = rolls.filter(r => r.rollNumber >= s.startRoll && r.rollNumber <= s.endRoll);
+    return {
+      stageName,
+      visitIndex: s.visitIndex,
+      label: `Visit ${s.visitIndex}: Rolls ${s.startRoll}–${s.endRoll}`,
+      points: visitRolls.map((r, t) => ({ t, pnl: r.bankrollAfter - s.entryBankroll })),
+    };
+  });
+}
+
 export function computeStageVisitSummaries(rolls: RollRecord[]): StageVisitSummary[] {
   const summaries: StageVisitSummary[] = [];
   const visitCounts: Record<string, number> = {};

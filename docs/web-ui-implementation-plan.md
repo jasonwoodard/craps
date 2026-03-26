@@ -593,7 +593,7 @@ Net P&L column color-coded green/red. The table makes it immediately visible whi
 
 ---
 
-### M2.3 — Section 3: Stage overlay chart
+### M2.3 — Section 3: Stage overlay chart [DONE]
 
 **New component:** `web/src/components/StageOverlayChart.tsx`
 
@@ -649,7 +649,7 @@ export function normalizeStageVisits(
 
 ---
 
-### M2.4 — Section 4: Trend indicators
+### M2.4 — Section 4: Trend indicators [DONE]
 
 **New component:** `web/src/components/TrendPanel.tsx`
 
