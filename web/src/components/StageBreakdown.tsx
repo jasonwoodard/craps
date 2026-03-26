@@ -25,8 +25,9 @@ export function StageBreakdown({ rolls }: Props) {
         <table className="w-full text-xs font-mono">
           <thead>
             <tr className="border-b border-gray-200 text-gray-500 text-left">
-              <th className="py-1 pr-3 font-medium">Visit</th>
+              <th className="py-1 pr-3 font-medium">#</th>
               <th className="py-1 pr-3 font-medium">Stage</th>
+              <th className="py-1 pr-3 font-medium text-right">Roll Range</th>
               <th className="py-1 pr-3 font-medium text-right">Rolls</th>
               <th className="py-1 pr-3 font-medium text-right">Entry</th>
               <th className="py-1 pr-3 font-medium text-right">Exit</th>
@@ -37,7 +38,7 @@ export function StageBreakdown({ rolls }: Props) {
             </tr>
           </thead>
           <tbody>
-            {summaries.map((s) => {
+            {summaries.map((s, i) => {
               const stageColor = STAGE_COLORS[s.stageName] ?? '#f5f5f5';
               const label = STAGE_LABELS[s.stageName] ?? s.stageName;
               const pnlClass = s.netPnL >= 0 ? 'text-green-700' : 'text-red-600';
@@ -46,7 +47,7 @@ export function StageBreakdown({ rolls }: Props) {
                   key={`${s.stageName}-${s.visitIndex}`}
                   className="border-b border-gray-100 last:border-0"
                 >
-                  <td className="py-1 pr-3 text-gray-400">{s.visitIndex}</td>
+                  <td className="py-1 pr-3 text-gray-400">{i + 1}</td>
                   <td className="py-1 pr-3">
                     <span
                       className="inline-block w-2 h-2 rounded-sm mr-1.5 align-middle"
@@ -54,6 +55,7 @@ export function StageBreakdown({ rolls }: Props) {
                     />
                     {label}
                   </td>
+                  <td className="py-1 pr-3 text-right text-gray-600">{s.startRoll}–{s.endRoll}</td>
                   <td className="py-1 pr-3 text-right text-gray-600">{s.rollCount}</td>
                   <td className="py-1 pr-3 text-right text-gray-600">{fmt(s.entryBankroll)}</td>
                   <td className="py-1 pr-3 text-right text-gray-600">{fmt(s.exitBankroll)}</td>
