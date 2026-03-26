@@ -454,6 +454,16 @@ Self-verification: Final bankroll in browser matches `$6` from CLI run with same
 
 ---
 
+## Milestone 2 — Stage Deep Dive
+
+**Theme:** Make CATS stage structure analytically visible and explorable. This milestone justifies the complexity of the Stage Machine by surfacing what it actually does during a session.
+
+**Dashboard philosophy:** The dashboard is a scrollable analytical report, not an app. Sections are additive — each independently useful, each built below the previous without touching it. Expert-oriented: length is not a problem, clarity is.
+
+**Hardcoded run for M2:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 }` — this session reaches multiple stages and revisits them repeatedly, making it the right fixture for developing and verifying stage visualizations. Seed 42 (M1 fixture) never escapes the Accumulator and is insufficient for M2 testing.
+
+---
+
 ### M2.0 — Assessment [DONE — resolved conversationally]
 
 Key decisions from the assessment:
@@ -779,7 +789,9 @@ Key decisions after M1:
 | Type sharing | Shared `types/simulation.ts` at repo root re-exports from engine source. No duplication. |
 | Server package location | Shares root `package.json`. Express in root `devDependencies`. `"server"` script in root. |
 | `stageName` in `RollRecord` | Added in M0.1. Optional field, populated by Stage Machine strategies only. |
-| Stage filter/overlay complexity | Evaluated in M2.0 assessment before any M2 implementation. |
+| Stage transition markers | Tried and removed — too dense at CATS's transition frequency. Table load line tells the stage story implicitly. |
+| Stage overlay Y axis | Relative ±$ from stage entry bankroll, starting at 0 each visit. |
+| Rolling trend window | 24 rolls. |
 
 ---
 
@@ -804,3 +816,9 @@ Key decisions after M1:
 | `web/src/App.tsx` | M1.6 | Root component |
 | `demo/web-session-view.md` | M1 Demo | Local dev instructions and self-verification |
 | `docs/web-ui-m2-assessment.md` | M2.0 | Stage deep dive complexity assessment |
+| `web/src/lib/stages.ts` | M2.1 | Stage span computation and visit normalization |
+| `web/src/lib/cats-thresholds.ts` | M2.4 | CATS-specific threshold proximity logic |
+| `web/src/components/StageBreakdown.tsx` | M2.2 | Stage visit summary table |
+| `web/src/components/StageOverlayChart.tsx` | M2.3 | T0-normalized stage overlay charts |
+| `web/src/components/TrendPanel.tsx` | M2.4 | Rolling P&L, threshold proximity, 7-out counter |
+| `demo/web-stage-deep-dive.md` | M2 Demo | Stage deep dive local dev instructions |
