@@ -1,5 +1,5 @@
 import type { RollRecord } from '@shared/simulation';
-import { computeStageSpans, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
+import { computeStageSpans, hasStageData, STAGE_COLORS } from '../lib/stages';
 import {
   ComposedChart,
   Line,
@@ -73,16 +73,6 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
               x2={span.endRoll}
               fill={STAGE_COLORS[span.stageName] ?? '#f5f5f5'}
               fillOpacity={0.15}
-            />
-          ))}
-          {stageSpans.slice(1).map(span => (
-            <ReferenceLine
-              key={`transition-${span.stageName}-${span.visitIndex}`}
-              yAxisId="bankroll"
-              x={span.startRoll}
-              stroke="#94a3b8"
-              strokeDasharray="3 3"
-              label={{ value: STAGE_LABELS[span.stageName] ?? span.stageName, position: 'top', fontSize: 9, fill: '#64748b' }}
             />
           ))}
           <ReferenceLine
