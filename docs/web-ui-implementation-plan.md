@@ -599,7 +599,7 @@ export function uniqueStages(rolls: RollRecord[]): string[]
 
 ---
 
-### M2.4 — Section 4: Trend indicators
+### M2.4 — Section 4: Trend indicators [DONE]
 
 **New component:** `web/src/components/TrendPanel.tsx`
 
@@ -664,7 +664,7 @@ export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[]
 
 ---
 
-### M2 Review
+### M2.5 Review
 
 Run the simplify pass across all new and modified files:
 
@@ -691,7 +691,7 @@ Run the simplify pass across all new and modified files:
 
 ---
 
-### M2 Demo
+### M2.6 Demo
 
 **File:** `demo/web-stage-deep-dive.md`
 
