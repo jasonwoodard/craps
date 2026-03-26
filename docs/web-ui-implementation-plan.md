@@ -664,7 +664,7 @@ export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[]
 
 ---
 
-### M2.5 Review
+### M2.5 Review [DONE]
 
 Run the simplify pass across all new and modified files:
 
@@ -677,21 +677,27 @@ Run the simplify pass across all new and modified files:
 
 **Checklist:**
 
-- [ ] All stage data transformations in `stages.ts` — no stage logic inline in components
-- [ ] CATS threshold logic isolated in `cats-thresholds.ts` — not in `stages.ts` or `stats.ts`
-- [ ] `hasStageData()` guard used in all M2 components — simple strategies render nothing gracefully
-- [ ] `isCATSStrategy()` guard in `TrendPanel` — threshold proximity panel renders nothing for non-CATS strategies
-- [ ] Stage color palette defined once in `stages.ts` — not duplicated
-- [ ] `StageOverlayChart` Y axis is always relative ±$ — never absolute bankroll
-- [ ] `computeConsecutiveSevenOuts` derived from `RollRecord` fields only — no engine changes
-- [ ] Seed 7 self-verification: overlay chart shows multiple Accumulator Regressed visits as distinct lines
-- [ ] Seed 42 self-verification: all sections render without error
-- [ ] No regressions to M1 components — `SessionChart` bands still visible, `SummaryPanel` unchanged
-- [ ] `npm test` still passes
+- [x] All stage data transformations in `stages.ts` — no stage logic inline in components
+- [x] CATS threshold logic isolated in `cats-thresholds.ts` — not in `stages.ts` or `stats.ts`
+- [x] `hasStageData()` guard used in all M2 components — simple strategies render nothing gracefully
+- [x] `isCATSStrategy()` guard in `TrendPanel` — threshold proximity panel renders nothing for non-CATS strategies
+- [x] Stage color palette defined once in `stages.ts` — not duplicated
+- [x] `StageOverlayChart` Y axis is always relative ±$ — never absolute bankroll
+- [x] `computeConsecutiveSevenOuts` derived from `RollRecord` fields only — no engine changes
+- [x] Seed 7 self-verification: overlay chart shows multiple Accumulator Regressed visits as distinct lines
+- [x] Seed 42 self-verification: all sections render without error
+- [x] No regressions to M1 components — `SessionChart` bands still visible, `SummaryPanel` unchanged
+- [x] `npm test` still passes
+
+**Fixes applied during simplify pass:**
+- Extracted `uniqueStages()` and `fmtPnL()` to `stages.ts`; removed duplicates from `StageOverlayChart` and `StageBreakdown`
+- Fixed `normalizeStageVisits` to do a single targeted pass (was calling `computeStageVisitSummaries` + `rolls.filter` — O(stages × rolls²))
+- Removed `CATS_STAGE_NAMES` Set in `cats-thresholds.ts`; replaced with `stageName in CATS_STAGE_THRESHOLDS`
+- Removed WHAT-comments from `TrendPanel`, `cats-thresholds`, `stats`; kept WHY comment in `stats`
 
 ---
 
-### M2.6 Demo
+### M2.6 Demo [DONE]
 
 **File:** `demo/web-stage-deep-dive.md`
 
