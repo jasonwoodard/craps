@@ -2,6 +2,8 @@ import { useSimulation } from './hooks/useSimulation';
 import { SummaryPanel } from './components/SummaryPanel';
 import { SessionChart } from './components/SessionChart';
 import { StageBreakdown } from './components/StageBreakdown';
+import { StageOverlayChart } from './components/StageOverlayChart';
+import { TrendPanel } from './components/TrendPanel';
 
 const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 };
 
@@ -33,6 +35,8 @@ function App() {
       <SummaryPanel result={data} params={HARDCODED_PARAMS} />
       <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
       <StageBreakdown rolls={data.rolls} />
+      <StageOverlayChart rolls={data.rolls} />
+      <TrendPanel rolls={data.rolls} initialBankroll={data.initialBankroll} strategyName={HARDCODED_PARAMS.strategy} />
     </div>
   );
 }

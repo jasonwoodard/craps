@@ -1,4 +1,4 @@
-import type { EngineResult } from '@shared/simulation';
+import type { EngineResult, RollRecord } from '@shared/simulation';
 
 export interface SessionStats {
   totalRolls: number;
@@ -11,6 +11,29 @@ export interface SessionStats {
   noActionRolls: number;
   avgTableLoad: number;
   maxTableLoad: number;
+}
+
+// Rolling net bankroll change over a window of rolls ending at each index.
+export function computeRollingPnL(rolls: RollRecord[], window: number = 24): number[] {
+  return rolls.map((_, i) => {
+    const start = Math.max(0, i - window + 1);
+    return rolls[i].bankrollAfter - rolls[start].bankrollBefore;
+  });
+}
+
+// Consecutive 7-out count per roll. Increments on each 7-out; resets after any winning roll.
+export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[] {
+  const result: number[] = [];
+  let count = 0;
+  for (const roll of rolls) {
+    if (roll.pointBefore != null && roll.rollValue === 7) {
+      count++;
+    } else if (roll.outcomes.some(o => o.result === 'win')) {
+      count = 0;
+    }
+    result.push(count);
+  }
+  return result;
 }
 
 export function computeSessionStats(result: EngineResult): SessionStats {
