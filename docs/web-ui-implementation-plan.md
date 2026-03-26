@@ -469,7 +469,7 @@ The M2.0 assessment was conducted conversationally and its conclusions are embed
 
 ---
 
-### M2.1 — Section 1 enhancement: Timeline with stage context
+### M2.1 — Section 1 enhancement: Timeline with stage context [DONE]
 
 **What changes:** `SessionChart` gains stage color bands and transition markers. The existing bankroll line, table load line, and event markers are untouched — bands layer behind them.
 
@@ -544,7 +544,7 @@ interface SessionChartProps {
 
 ---
 
-### M2.2 — Section 2: Stage breakdown table
+### M2.2 — Section 2: Stage breakdown table [DONE]
 
 **New component:** `web/src/components/StageBreakdown.tsx`
 

@@ -1,4 +1,5 @@
 import type { RollRecord } from '@shared/simulation';
+import { computeStageSpans, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
 import {
   ComposedChart,
   Line,
@@ -7,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ReferenceLine,
+  ReferenceArea,
   Legend,
   ResponsiveContainer,
 } from 'recharts';
@@ -25,6 +27,8 @@ interface ChartPoint {
 }
 
 export function SessionChart({ rolls, initialBankroll }: Props) {
+  const stageSpans = hasStageData(rolls) ? computeStageSpans(rolls) : [];
+
   const data: ChartPoint[] = rolls.map(r => ({
     roll: r.rollNumber,
     bankroll: r.bankrollAfter,
@@ -61,6 +65,26 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             labelFormatter={(label) => `Roll ${label}`}
           />
           <Legend />
+          {stageSpans.map(span => (
+            <ReferenceArea
+              key={`band-${span.stageName}-${span.visitIndex}`}
+              yAxisId="bankroll"
+              x1={span.startRoll}
+              x2={span.endRoll}
+              fill={STAGE_COLORS[span.stageName] ?? '#f5f5f5'}
+              fillOpacity={0.15}
+            />
+          ))}
+          {stageSpans.slice(1).map(span => (
+            <ReferenceLine
+              key={`transition-${span.stageName}-${span.visitIndex}`}
+              yAxisId="bankroll"
+              x={span.startRoll}
+              stroke="#94a3b8"
+              strokeDasharray="3 3"
+              label={{ value: STAGE_LABELS[span.stageName] ?? span.stageName, position: 'top', fontSize: 9, fill: '#64748b' }}
+            />
+          ))}
           <ReferenceLine
             yAxisId="bankroll"
             y={initialBankroll}
