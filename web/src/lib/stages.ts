@@ -23,7 +23,6 @@ export interface StageVisitSummary {
   sevenOuts: number;
 }
 
-// Defined once — imported by all components that need stage colors
 export const STAGE_COLORS: Record<string, string> = {
   accumulatorFull: '#fef3c7',      // amber-100
   accumulatorRegressed: '#fffbeb', // amber-50
@@ -42,6 +41,23 @@ export const STAGE_LABELS: Record<string, string> = {
 
 export function hasStageData(rolls: RollRecord[]): boolean {
   return rolls.some(r => r.stageName != null);
+}
+
+// Returns distinct stage names in order of first appearance.
+export function uniqueStages(rolls: RollRecord[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const r of rolls) {
+    if (r.stageName != null && !seen.has(r.stageName)) {
+      seen.add(r.stageName);
+      result.push(r.stageName);
+    }
+  }
+  return result;
+}
+
+export function fmtPnL(n: number): string {
+  return `${n >= 0 ? '+' : '-'}$${Math.abs(n)}`;
 }
 
 export function computeStageSpans(rolls: RollRecord[]): StageSpan[] {
@@ -81,18 +97,32 @@ export interface NormalizedVisit {
   points: Array<{ t: number; pnl: number }>;
 }
 
-// Returns all visits to the given stage, each normalized to T0 with Y axis as ±$ from entry bankroll.
 export function normalizeStageVisits(rolls: RollRecord[], stageName: string): NormalizedVisit[] {
-  const summaries = computeStageVisitSummaries(rolls).filter(s => s.stageName === stageName);
-  return summaries.map(s => {
-    const visitRolls = rolls.filter(r => r.rollNumber >= s.startRoll && r.rollNumber <= s.endRoll);
-    return {
-      stageName,
-      visitIndex: s.visitIndex,
-      label: `Visit ${s.visitIndex}: Rolls ${s.startRoll}–${s.endRoll}`,
-      points: visitRolls.map((r, t) => ({ t, pnl: r.bankrollAfter - s.entryBankroll })),
-    };
-  });
+  const result: NormalizedVisit[] = [];
+  let visitCount = 0;
+  let i = 0;
+
+  while (i < rolls.length) {
+    const name = rolls[i].stageName;
+    if (name == null) { i++; continue; }
+    let j = i + 1;
+    while (j < rolls.length && rolls[j].stageName === name) j++;
+
+    if (name === stageName) {
+      visitCount++;
+      const entryBankroll = rolls[i].bankrollBefore;
+      result.push({
+        stageName,
+        visitIndex: visitCount,
+        label: `Visit ${visitCount}: Rolls ${rolls[i].rollNumber}–${rolls[j - 1].rollNumber}`,
+        points: rolls.slice(i, j).map((r, t) => ({ t, pnl: r.bankrollAfter - entryBankroll })),
+      });
+    }
+
+    i = j;
+  }
+
+  return result;
 }
 
 export function computeStageVisitSummaries(rolls: RollRecord[]): StageVisitSummary[] {

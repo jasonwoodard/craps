@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { hasStageData, normalizeStageVisits, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
+import { fmtPnL, hasStageData, normalizeStageVisits, STAGE_COLORS, STAGE_LABELS, uniqueStages } from '../lib/stages';
 
 const VISIT_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
@@ -21,11 +21,6 @@ interface Props {
   rolls: RollRecord[];
 }
 
-function fmtPnL(v: number): string {
-  return `${v >= 0 ? '+' : '-'}$${Math.abs(v)}`;
-}
-
-// Build a merged data array for a set of visits: [{ t, v1, v2, ... }]
 function buildChartData(visits: ReturnType<typeof normalizeStageVisits>): Record<string, number | undefined>[] {
   const maxLen = Math.max(...visits.map(v => v.points.length));
   return Array.from({ length: maxLen }, (_, t) => {
@@ -95,13 +90,7 @@ function StageChart({ stageName, visits }: { stageName: string; visits: ReturnTy
 export function StageOverlayChart({ rolls }: Props) {
   if (!hasStageData(rolls)) return null;
 
-  // Collect all distinct stage names that appear in this session, in order of first visit.
-  const seenStages: string[] = [];
-  for (const r of rolls) {
-    if (r.stageName != null && !seenStages.includes(r.stageName)) {
-      seenStages.push(r.stageName);
-    }
-  }
+  const seenStages = uniqueStages(rolls);
 
   return (
     <div className="bg-white border border-gray-200 rounded p-4 mt-6">
