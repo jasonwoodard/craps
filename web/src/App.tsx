@@ -1,8 +1,9 @@
 import { useSimulation } from './hooks/useSimulation';
 import { SummaryPanel } from './components/SummaryPanel';
 import { SessionChart } from './components/SessionChart';
+import { StageBreakdown } from './components/StageBreakdown';
 
-const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 42 };
+const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 };
 
 function LoadingState() {
   return (
@@ -31,6 +32,7 @@ function App() {
       <h1 className="text-2xl font-mono font-bold mb-6">Craps Simulator</h1>
       <SummaryPanel result={data} params={HARDCODED_PARAMS} />
       <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
+      <StageBreakdown rolls={data.rolls} />
     </div>
   );
 }
