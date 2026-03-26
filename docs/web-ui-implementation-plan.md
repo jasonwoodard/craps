@@ -446,101 +446,60 @@ Self-verification: Final bankroll in browser matches `$6` from CLI run with same
 
 ## Milestone 2 — Stage Deep Dive
 
-**Theme:** Make CATS stage structure analytically visible and explorable. This milestone justifies the complexity of the Stage Machine by surfacing what it actually does during a session. The dashboard is a scrollable analytical report — sections are additive, each independently useful. Build one section at a time.
+**Theme:** Make CATS stage structure analytically visible and explorable. This milestone justifies the complexity of the Stage Machine by surfacing what it actually does during a session.
 
-**UI code can become a hot tangled mess.** M2 is scoped into four sub-milestones matching four dashboard sections. Each is a clean addition below the existing M1 content — no refactoring of `SessionChart` or `SummaryPanel`.
+**Dashboard philosophy:** The dashboard is a scrollable analytical report, not an app. Sections are additive — each independently useful, each built below the previous without touching it. Expert-oriented: length is not a problem, clarity is.
 
-**Hardcoded run for M2 development:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 }` — this session reaches multiple stages and revisits stages, making it the right fixture for developing and verifying stage visualizations. Seed 42 (M1 fixture) never escapes the Accumulator and is insufficient for M2 testing.
+**Hardcoded run for M2:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 }` — this session reaches multiple stages and revisits them repeatedly, making it the right fixture for developing and verifying stage visualizations. Seed 42 (M1 fixture) never escapes the Accumulator and is insufficient for M2 testing.
 
 ---
 
-### M2.0 — Assessment [DONE — replaced by this spec]
+### M2.0 — Assessment [DONE — resolved conversationally]
 
-The M2.0 assessment was conducted conversationally and its conclusions are embedded in the milestone designs below. Key resolved decisions:
+Key decisions from the assessment:
 
 | Question | Resolution |
 |---|---|
-| Stage bands vs. red/green event lines | Not mutually exclusive — `ReferenceArea` renders behind, event lines render on top. Keep both. |
-| Stage filter dropdown | Deferred — the overlay chart (M2.3) does this better |
-| Stage overlay Y axis | Relative ±$ from stage entry bankroll, starting at 0 each visit |
-| Rolling trend window | 24 rolls |
-| Table load in overlay | Implicit in relative ±$ — not shown separately |
-| Dashboard layout | Scrollable sections, additive, expert-oriented |
+| Stage bands vs. red/green event lines | Not mutually exclusive — `ReferenceArea` renders behind, event lines on top. Keep both. |
+| Stage transition vertical markers | Removed — too dense at CATS's transition frequency. Table load line tells the stage story implicitly. |
+| Stage filter dropdown | Deferred — overlay chart (M2.3) is the better answer to the multi-visit problem. |
+| Stage overlay Y axis | Relative ±$ from stage entry bankroll, starting at 0 each visit. |
+| Rolling trend window | 24 rolls. |
+| Dashboard layout | Scrollable sections, additive, no refactoring of prior sections. |
 
 ---
 
-### M2.1 — Section 1 enhancement: Timeline with stage context [DONE]
+### M2.1 — Section 1 enhancement: Stage color bands on timeline [DONE]
 
-**What changes:** `SessionChart` gains stage color bands and transition markers. The existing bankroll line, table load line, and event markers are untouched — bands layer behind them.
+**What was built:** `SessionChart` gained background `ReferenceArea` color bands derived from `stageName` on each `RollRecord`. Bands render behind all existing chart elements — bankroll line, table load line, 7-out markers, and point-made markers are all unaffected.
 
-**New utility:** `web/src/lib/stages.ts`
-
-All stage-related data transformations live here. `SessionChart` imports from this file — no stage logic inline in the component.
+**New utility:** `web/src/lib/stages.ts` — all stage data transformations live here. No stage logic in components.
 
 ```typescript
 export interface StageSpan {
   stageName: string;
   startRoll: number;
   endRoll: number;
-  visitIndex: number;      // 1st visit, 2nd visit, etc. — for labeling
+  visitIndex: number;
 }
 
-// Detect consecutive stageName runs in RollRecord[]
 export function computeStageSpans(rolls: RollRecord[]): StageSpan[]
-
-// Returns null if rolls have no stageName (simple strategies)
 export function hasStageData(rolls: RollRecord[]): boolean
 ```
 
-**Stage color palette** — defined in `stages.ts`, not in the chart component:
+**Stage color palette** (defined in `stages.ts`):
 
-| Stage | Color | Rationale |
-|---|---|---|
-| `accumulatorFull` | amber-100 | Warm, early |
-| `accumulatorRegressed` | amber-50 | Same family, lighter |
-| `littleMolly` | green-100 | Transition to Molly stages |
-| `threePtMollyTight` | blue-100 | Alpha territory |
-| `threePtMollyLoose` | indigo-100 | Deep Alpha |
+| Stage | Color |
+|---|---|
+| `accumulatorFull` | amber-100 |
+| `accumulatorRegressed` | amber-50 |
+| `littleMolly` | green-100 |
+| `threePtMollyTight` | blue-100 |
+| `threePtMollyLoose` | indigo-100 |
 
-All bands at 15% opacity — readable but not distracting.
+All bands at 15% opacity. Stage transition vertical markers and top labels were implemented then removed — too dense at CATS's transition frequency.
 
-**`SessionChart` additions:**
-
-```tsx
-// Background bands (renders behind everything)
-{stageSpans.map(span => (
-  <ReferenceArea
-    key={`${span.stageName}-${span.visitIndex}`}
-    x1={span.startRoll}
-    x2={span.endRoll}
-    fill={STAGE_COLORS[span.stageName]}
-    fillOpacity={0.15}
-  />
-))}
-
-// Transition markers (renders in front of bands, behind lines)
-{stageSpans.slice(1).map(span => (
-  <ReferenceLine
-    key={`transition-${span.visitIndex}`}
-    x={span.startRoll}
-    stroke="#94a3b8"
-    strokeDasharray="3 3"
-    label={{ value: span.stageName, position: 'top', fontSize: 9 }}
-  />
-))}
-```
-
-**`SessionChart` props addition:**
-
-```tsx
-interface SessionChartProps {
-  rolls: RollRecord[];
-  initialBankroll: number;
-  // showStageContext defaults to true when stageName data present
-}
-```
-
-**Acceptance test:** Seed 7 CATS run shows colored bands across the timeline. Transition points are marked with dashed verticals. The existing bankroll line, table load line, 7-out markers, and point-made markers are all still visible and readable.
+**What was NOT built (and won't be):** Stage transition `ReferenceLine` components. The table load line tells the stage story sufficiently. Explicit markers added noise without insight.
 
 ---
 
@@ -548,83 +507,83 @@ interface SessionChartProps {
 
 **New component:** `web/src/components/StageBreakdown.tsx`
 
-A compact table showing what happened in each stage visit. Positioned below the session chart.
+A time-ordered table showing every stage visit as a row. Positioned below `SessionChart`.
 
 **Data shape** (computed in `stages.ts`):
 
 ```typescript
 export interface StageVisitSummary {
   stageName: string;
-  visitIndex: number;
+  visitIndex: number;      // per-stage visit count (used for color dot)
+  globalIndex: number;     // sequential row number across all stages
   startRoll: number;
   endRoll: number;
   rollCount: number;
   entryBankroll: number;
   exitBankroll: number;
-  netPnL: number;           // exitBankroll - entryBankroll
-  peakPnL: number;          // max bankrollAfter - entryBankroll within visit
-  troughPnL: number;        // min bankrollAfter - entryBankroll within visit
+  netPnL: number;
+  peakPnL: number;
+  troughPnL: number;
   winRolls: number;
   lossRolls: number;
   sevenOuts: number;
 }
-
-export function computeStageVisitSummaries(rolls: RollRecord[]): StageVisitSummary[]
 ```
 
-**Table layout:**
+**Table columns (in order):**
 
-| Visit | Stage | Rolls | Entry | Exit | Net P&L | Peak | Trough | 7-outs |
-|---|---|---|---|---|---|---|---|---|
-| 1 | Accumulator Full | 8 | $300 | $264 | -$36 | +$0 | -$36 | 0 |
-| 2 | Accumulator Regressed | 162 | $264 | $382 | +$118 | +$134 | -$48 | 12 |
-| 3 | Little Molly | 44 | $382 | $351 | -$31 | +$22 | -$62 | 4 |
-| ... | | | | | | | | |
+| # | Stage | Roll Range | Rolls | Entry | Exit | Net P&L | Peak | Trough | 7-outs |
+|---|---|---|---|---|---|---|---|---|---|
 
-Net P&L column color-coded green/red. The table makes it immediately visible which stages generated profit and which consumed it.
+- `#` — global sequential row number (1, 2, 3...) making temporal order unambiguous
+- `Roll Range` — `startRoll–endRoll` (e.g. `"1–43"`) showing timeline position
+- Net P&L — color-coded green/red
 
-**`App.tsx` addition:**
+For strategies without `stageName`, the component renders nothing — `hasStageData()` guard.
 
-```tsx
-<StageBreakdown rolls={data.rolls} />
-```
-
-**Acceptance test:** Table renders for seed 7 CATS run. Each stage visit is a row. Net P&L is color-coded. For strategies without `stageName` (PassLineOnly), the component renders nothing — `hasStageData()` guard.
+**What the table reveals:** With seed 7, Little Molly visits are almost all 1–2 rolls before stepping back down. Accumulator Regressed visits are doing the real grinding work. Visit 11 of Accumulator Regressed is 61 rolls alone. The roll range column makes these patterns immediately legible.
 
 ---
 
-### M2.3 — Section 3: Stage overlay chart [DONE]
+### M2.3 — Section 3: Stage overlay chart
 
 **New component:** `web/src/components/StageOverlayChart.tsx`
 
-One chart per stage that was visited during the session. Each chart overlays all visits to that stage, aligned to a common T0. Y axis is relative ±$ from stage entry bankroll. This answers: "Are multiple visits to the same stage structurally similar, or does variance dominate?"
+One chart per stage that was visited during the session. Each chart overlays all visits to that stage, aligned to a common T0. Answers: "Are multiple visits to the same stage structurally similar, or does variance dominate?"
 
-**Data transformation** (in `stages.ts`):
+**Why this has analytic value:** When CATS steps back down to Accumulator after a bad run, is that second visit structurally different from the first? The first starts from a cold table with a full bankroll. The second starts post-losses. If the overlay shows visits tracking similarly — same slope, same dwell time — the step-down rule is working as designed and stage behavior is consistent. If they're wildly different, that's meaningful variance that a summary statistic would hide. This is a question nobody can answer without this data model.
+
+**Data transformation** (add to `stages.ts`):
 
 ```typescript
 export interface NormalizedVisit {
   stageName: string;
   visitIndex: number;
-  label: string;           // "Visit 1: Rolls 1–47"
+  label: string;           // "Visit 1: Rolls 1–43"
   points: Array<{
-    t: number;             // roll offset from stage entry (0, 1, 2, ...)
-    pnl: number;           // bankrollAfter - entryBankroll
+    t: number;             // roll offset from stage entry (0, 1, 2...)
+    pnl: number;           // bankrollAfter - entryBankroll (relative ±$)
   }>;
 }
 
 export function normalizeStageVisits(
   rolls: RollRecord[],
-  stageName: string
+  targetStage: string
 ): NormalizedVisit[]
+
+// Returns all unique stage names present in the session
+export function uniqueStages(rolls: RollRecord[]): string[]
 ```
 
 **Chart structure per stage:**
 
 ```tsx
-<ComposedChart data={/* longest visit length */}>
-  <XAxis dataKey="t" label="Rolls into stage" />
-  <YAxis label="P&L ($)" />
+<ComposedChart>
+  <XAxis dataKey="t" label={{ value: 'Rolls into stage', position: 'insideBottom' }} />
+  <YAxis label={{ value: 'P&L ($)', angle: -90 }} />
   <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" label="Entry" />
+  <Tooltip formatter={(v: number) => `${v >= 0 ? '+' : ''}$${v}`} />
+  <Legend />
   {visits.map((visit, i) => (
     <Line
       key={visit.label}
@@ -636,83 +595,111 @@ export function normalizeStageVisits(
       stroke={VISIT_COLORS[i % VISIT_COLORS.length]}
     />
   ))}
-  <Legend />
-  <Tooltip formatter={(v) => `$${v >= 0 ? '+' : ''}${v}`} />
 </ComposedChart>
 ```
 
-**Layout:** If CATS visits 3 distinct stages, 3 charts render stacked vertically. Each chart has a heading: "Accumulator Regressed — 4 visits". Charts for stages with only one visit are still rendered — a single line is still informative.
+**Layout:** One chart per distinct stage visited, stacked vertically. Each has a heading: `"Accumulator Regressed — 12 visits"`. Stages with only one visit still render — a single line is still informative.
 
-**The analytic payoff:** If all Accumulator Regressed visits show a similar slope (slow grind, modest wins), the strategy is behaving consistently. If one visit is a steep cliff (rapid losses), that visit was exceptional and worth noting. This is the view that makes the CATS stage design legible without reading the source code.
+**Y axis is always relative ±$.** Absolute bankroll would be meaningless across visits that start at different bankroll levels. The zero reference line represents stage entry — every visit starts at 0, gains and losses are relative to that.
 
-**Acceptance test:** Seed 7 CATS run renders one chart per visited stage. Multiple visits to the same stage appear as distinct labeled lines. Y axis starts at 0 for all visits. The longest visit determines the X axis domain; shorter visits end before the right edge.
+**X axis domain:** The longest visit determines the right edge. Shorter visits end before it — their lines simply stop. No padding or extrapolation.
+
+**Acceptance test:** Seed 7 CATS run renders one chart per visited stage. Multiple Accumulator Regressed visits appear as distinct labeled lines from T0. Y axis reads ±$. The spread between visit lines — tight cluster vs. wide fan — is immediately readable.
 
 ---
 
-### M2.4 — Section 4: Trend indicators [DONE]
+### M2.4 — Section 4: Trend indicators
 
 **New component:** `web/src/components/TrendPanel.tsx`
 
-Three derived signals that show session dynamics over time. Not predictive — these describe *what has happened recently* as context for judgment. Positioned below the stage overlay charts.
+Three derived signals showing session dynamics over time. These describe *what has happened recently* — useful context for judgment, not predictions. Positioned below the stage overlay charts.
 
 **Signal 1: 24-roll rolling P&L**
 
-Rolling net bankroll change over the last 24 rolls. Computed in `stats.ts`:
+Rolling net bankroll change over the last 24 rolls. 24 is approximately 3× the average shooter hand length, smoothing single-hand noise while remaining responsive to trend shifts.
 
 ```typescript
+// Add to stats.ts
 export function computeRollingPnL(rolls: RollRecord[], window: number = 24): number[]
 ```
 
-Rendered as a `Line` in a small `ComposedChart` with a zero reference line. Green when positive, red when negative. This is the session's momentum signal — a sustained negative trend is what CATS's consecutive 7-out rule is approximating.
+Rendered as a `Line` in a small `ComposedChart` with a zero reference line. The CATS consecutive 7-out step-down rule is a discrete approximation of this signal — the rolling P&L makes the underlying trend continuous and visible.
 
 **Signal 2: Proximity to CATS thresholds**
 
-For each roll, compute distance from current profit to the nearest step-up and step-down thresholds for the current stage. Rendered as two lines on a shared chart:
+For each roll, compute distance from current profit to the nearest step-up and step-down thresholds for the current stage.
 
-```
-Current profit: $118
-Step-up threshold (littleMolly → threePtMollyTight): $150  →  $32 away
-Step-down threshold (littleMolly → accumulatorRegressed): $70  →  $48 cushion
+```typescript
+// New file: web/src/lib/cats-thresholds.ts
+// CATS-specific logic isolated here — not in general utilities
+
+export interface ThresholdProximity {
+  rollNumber: number;
+  currentProfit: number;
+  stepUpThreshold: number | null;    // null if no step-up from current stage
+  stepDownThreshold: number | null;  // null if at starting stage
+  distanceToStepUp: number | null;
+  cushionAboveStepDown: number | null;
+}
+
+export function computeCATSThresholdProximity(rolls: RollRecord[]): ThresholdProximity[]
 ```
 
-This is CATS-specific logic. It belongs in a `cats-thresholds.ts` utility, not in general `stats.ts` or `stages.ts`. The component should gracefully render nothing for non-CATS strategies — a `isCATSStrategy(strategyName)` guard.
+CATS thresholds by stage:
+
+| Stage | Step-up at | Step-down at |
+|---|---|---|
+| `accumulatorFull` | (transitions on hit, not profit) | — |
+| `accumulatorRegressed` | +$70 | — |
+| `littleMolly` | +$150 | +$70 |
+| `threePtMollyTight` | +$200 | +$150 |
+| `threePtMollyLoose` | +$250 | +$150 |
+
+Rendered as two lines on a shared chart — distance to step-up (how far to go) and cushion above step-down (how much buffer). A `ReferenceLine` at y=0 marks each threshold boundary.
+
+This component uses `isCATSStrategy(strategyName: string): boolean` — for non-CATS strategies it renders nothing. CATS threshold logic is isolated in `cats-thresholds.ts` and never leaks into general utilities.
 
 **Signal 3: Consecutive 7-out counter over time**
 
-A simple bar chart showing the consecutive 7-out count at each roll. The CATS step-down rule fires at 2 — a horizontal reference line at y=2 makes this threshold visible. Shows exactly when the step-down rule fired (counter drops back to 0 after a win).
-
-**Note on consecutive 7-out data:** This signal requires `consecutiveSevenOuts` per roll, which is currently only in `SessionState` at the end of the session — not in `RollRecord`. Two options: (a) derive it client-side from the roll sequence (a 7-out increments the counter, any win resets it — fully derivable from `RollRecord` fields), or (b) add it to `RollRecord` in a future engine pass. Prefer (a) — no engine changes, fully computable from existing data.
+A bar chart showing the consecutive 7-out count at each roll. The CATS step-down rule fires at 2 — a horizontal `ReferenceLine` at y=2 makes the trigger threshold visible. Counter drops to 0 after any win, so spikes show where step-downs fired.
 
 ```typescript
-// In stats.ts — derivable from RollRecord without engine changes
+// Add to stats.ts — derivable from RollRecord, no engine changes needed
 export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[]
+// Logic: 7-out (pointBefore != null && rollValue === 7) increments counter
+//        any win outcome resets counter to 0
+//        no-action rolls leave counter unchanged
 ```
 
-**Acceptance test:** Three charts render for seed 7 CATS run. Rolling P&L shows the momentum shift around roll 300 where the session starts declining. Threshold proximity shows the session entering and leaving Little Molly territory. Consecutive 7-out counter shows the spikes that triggered step-downs.
+**Acceptance test:** Seed 7 CATS run renders all three panels. Rolling P&L shows positive momentum in the first ~300 rolls followed by decline. Threshold proximity shows the session repeatedly approaching but not sustaining Little Molly threshold. Consecutive 7-out counter shows spikes that triggered step-downs, with the y=2 reference line visible.
+
+Cross-check with seed 42: All panels render without error. Rolling P&L is flat/negative throughout (Accumulator-only session). Threshold proximity shows profit never reaching +$70. Consecutive 7-out counter shows the frequency of 7-outs that kept the session trapped.
 
 ---
 
 ### M2 Review
 
-Run the simplify pass across all new files:
+Run the simplify pass across all new and modified files:
 
 - `web/src/lib/stages.ts`
+- `web/src/lib/cats-thresholds.ts`
 - `web/src/components/StageBreakdown.tsx`
 - `web/src/components/StageOverlayChart.tsx`
 - `web/src/components/TrendPanel.tsx`
-- `web/src/components/cats-thresholds.ts`
+- `web/src/components/SessionChart.tsx` (M2.1 changes)
 
 **Checklist:**
 
-- [ ] All stage data transformations live in `stages.ts` — no stage logic in components
+- [ ] All stage data transformations in `stages.ts` — no stage logic inline in components
+- [ ] CATS threshold logic isolated in `cats-thresholds.ts` — not in `stages.ts` or `stats.ts`
 - [ ] `hasStageData()` guard used in all M2 components — simple strategies render nothing gracefully
-- [ ] Stage color palette defined once in `stages.ts` — not duplicated across components
+- [ ] `isCATSStrategy()` guard in `TrendPanel` — threshold proximity panel renders nothing for non-CATS strategies
+- [ ] Stage color palette defined once in `stages.ts` — not duplicated
 - [ ] `StageOverlayChart` Y axis is always relative ±$ — never absolute bankroll
-- [ ] CATS threshold logic isolated in `cats-thresholds.ts` — not in general utilities
 - [ ] `computeConsecutiveSevenOuts` derived from `RollRecord` fields only — no engine changes
 - [ ] Seed 7 self-verification: overlay chart shows multiple Accumulator Regressed visits as distinct lines
-- [ ] Seed 42 self-verification: overlay chart shows single Accumulator Full visit and many Accumulator Regressed visits (session never escaped Accumulator stages)
-- [ ] No regressions to M1 components — `SessionChart` and `SummaryPanel` unchanged
+- [ ] Seed 42 self-verification: all sections render without error, overlay has single or few visits per stage
+- [ ] No regressions to M1 components — `SessionChart` bands still visible, `SummaryPanel` unchanged
 - [ ] `npm test` still passes
 
 ---
@@ -720,6 +707,11 @@ Run the simplify pass across all new files:
 ### M2 Demo
 
 **File:** `demo/web-stage-deep-dive.md`
+
+Update `App.tsx` hardcoded params to seed 7 for M2 development:
+```tsx
+const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 };
+```
 
 ```bash
 # Terminal 1
@@ -732,22 +724,17 @@ cd web && npm run dev
 open http://localhost:5173
 ```
 
-**Switch hardcoded params to seed 7** for M2 development:
-```tsx
-const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 };
-```
+**Scroll top to bottom and verify:**
 
-**What to verify, scrolling top to bottom:**
+**Section 1 — Timeline:** Stage color bands visible behind bankroll and table load lines. All M1 event markers (7-outs, point made) still visible on top of bands. No vertical transition markers.
 
-**Section 1 — Timeline:** Stage color bands visible behind the bankroll and table load lines. Transition markers at stage boundaries. All M1 event markers (7-outs, point made) still visible on top of the bands.
+**Section 2 — Stage breakdown table:** Rows numbered sequentially (#1, #2, #3...). Roll Range column shows timeline position of each visit (e.g. `"1–43"`). Little Molly visits are mostly 1–2 rolls. Accumulator Regressed visits vary widely in length. Net P&L color-coded.
 
-**Section 2 — Stage breakdown table:** Multiple rows for Accumulator Regressed (multiple visits). Net P&L column shows which visits were profitable. Total rolls per visit shows dwell time variation.
+**Section 3 — Stage overlay:** One chart per visited stage. Accumulator Regressed chart shows 10+ visit lines overlaid from T0. Y axis reads ±$. Tight cluster of lines = consistent stage behavior. Wide fan = high variance within the stage.
 
-**Section 3 — Stage overlay:** Accumulator Regressed chart shows multiple visit lines overlaid from T0. Lines are distinguishable by color and labeled in legend. Y axis reads ±$ relative to stage entry. Visits with similar slopes confirm consistent stage behavior. Outlier visits are visually obvious.
+**Section 4 — Trend indicators:** Three panels. Rolling P&L shows momentum shift around roll 300. Threshold proximity shows session approaching but not sustaining +$70 step-up level consistently. Consecutive 7-out spikes correspond to visible step-downs in Section 2 table.
 
-**Section 4 — Trend panel:** Rolling P&L trend shows positive momentum in the first ~300 rolls followed by decline. Threshold proximity shows the session repeatedly approaching but not reaching Tight Molly. Consecutive 7-out counter shows the spikes that triggered step-downs back to Accumulator.
-
-**Cross-check:** Run with seed 42 to verify graceful behavior when stages are limited (Accumulator only). All four sections should render — just with fewer rows, fewer overlay lines, and flat trend signals.
+**Cross-check:** Switch to seed 42. All sections render. Dashboard degrades gracefully — fewer overlay lines, flat trend signals, no crashes.
 
 ---
 
