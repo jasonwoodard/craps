@@ -1,7 +1,7 @@
 # Craps Simulator — Web UI Implementation Plan
 
 **Date:** March 2026  
-**Status:** Draft v1.3  
+**Status:** Draft v1.3 [DONE]  
 **Scope:** Visualization layer — engine changes are minimal and surgical (M0 only)
 
 ---
@@ -516,7 +516,7 @@ Lives inside the sidebar. Manages form state only — no API calls. Submitting n
 
 ---
 
-### M3.4 — Session page with URL params
+### M3.4 — Session page with URL params [DONE]
 
 **New file:** `web/src/pages/SessionPage.tsx`
 
@@ -580,21 +580,21 @@ Each renders a heading and "Coming soon" placeholder. Purpose: confirm routing w
 
 ---
 
-### M3 Review
+### M3 Review [DONE]
 
-- [ ] `RunControls` manages form state only — no simulation logic
-- [ ] `SessionPage` owns the API call — nothing in `Shell` or `RunControls` touches the API
-- [ ] Seed always in URL after completed run
-- [ ] Browser back/forward works — navigates between runs
-- [ ] Sidebar collapse state is local `useState` — not in URL
-- [ ] `GET /api/strategies` called once in `RunControls`, not on every render
-- [ ] All M2 components render correctly inside `SessionPage`
-- [ ] Stub pages render without errors
-- [ ] `npm test` still passes
+- [x] `RunControls` manages form state only — no simulation logic
+- [x] `SessionPage` owns the API call — nothing in `Shell` or `RunControls` touches the API
+- [x] Seed always in URL after completed run
+- [x] Browser back/forward works — navigates between runs
+- [x] Sidebar collapse state is local `useState` — not in URL
+- [x] `GET /api/strategies` called once in `RunControls`, not on every render
+- [x] All M2 components render correctly inside `SessionPage`
+- [x] Stub pages render without errors
+- [x] `npm test` still passes
 
 ---
 
-### M3 Demo
+### M3 Demo [DONE]
 
 **File:** `demo/web-app-shell.md`
 

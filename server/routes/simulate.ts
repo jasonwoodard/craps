@@ -30,13 +30,15 @@ export function simulateRoute(req: Request, res: Response): void {
     return;
   }
 
+  const resolvedSeed = seed !== undefined ? (seed as number) : Math.floor(Math.random() * 1_000_000);
+
   const engine = new CrapsEngine({
     strategy: BUILT_IN_STRATEGIES[strategy],
     bankroll,
     rolls,
-    seed: seed as number | undefined,
+    seed: resolvedSeed,
   });
 
   const result = engine.run();
-  res.json(result);
+  res.json({ ...result, seed: resolvedSeed });
 }
