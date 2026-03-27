@@ -244,7 +244,7 @@ Server at `server/server.ts`. Routes: `POST /api/simulate`, `GET /api/strategies
 
 ---
 
-## Milestone 2 — Stage Deep Dive
+## Milestone 2 — Stage Deep Dive [DONE]
 
 **Theme:** Make CATS stage structure analytically visible and explorable across four scrollable dashboard sections.
 
@@ -281,7 +281,7 @@ Server at `server/server.ts`. Routes: `POST /api/simulate`, `GET /api/strategies
 
 ---
 
-### M2.3 — Section 3: Stage overlay chart
+### M2.3 — Section 3: Stage overlay chart [DONE]
 
 **New component:** `web/src/components/StageOverlayChart.tsx`
 
@@ -312,7 +312,7 @@ export function uniqueStages(rolls: RollRecord[]): string[]
 
 ---
 
-### M2.4 — Section 4: Trend indicators
+### M2.4 — Section 4: Trend indicators [DONE]
 
 **New component:** `web/src/components/TrendPanel.tsx`
 
@@ -359,22 +359,22 @@ Bar chart. `ReferenceLine` at y=2 marks the CATS step-down trigger.
 
 ---
 
-### M2 Review
+### M2 Review [DONE]
 
-- [ ] All stage transformations in `stages.ts` — no stage logic in components
-- [ ] CATS threshold logic isolated in `cats-thresholds.ts`
-- [ ] `hasStageData()` guard in all M2 components
-- [ ] `isCATSStrategy()` guard in `TrendPanel`
-- [ ] Stage color palette defined once in `stages.ts`
-- [ ] `StageOverlayChart` Y axis always relative ±$
-- [ ] `computeConsecutiveSevenOuts` derived from `RollRecord` only — no engine changes
-- [ ] Seed 7 and seed 42 both render without error
-- [ ] No M1 regressions
-- [ ] `npm test` passes
+- [x] All stage transformations in `stages.ts` — no stage logic in components
+- [x] CATS threshold logic isolated in `cats-thresholds.ts`
+- [x] `hasStageData()` guard in all M2 components
+- [x] `isCATSStrategy()` guard in `TrendPanel`
+- [x] Stage color palette defined once in `stages.ts`
+- [x] `StageOverlayChart` Y axis always relative ±$
+- [x] `computeConsecutiveSevenOuts` derived from `RollRecord` only — no engine changes
+- [x] Seed 7 and seed 42 both render without error
+- [x] No M1 regressions
+- [x] `npm test` passes
 
 ---
 
-### M2 Demo
+### M2 Demo [DONE]
 
 `demo/web-stage-deep-dive.md` — seed 7. Scroll through all four sections. Cross-check seed 42 for graceful degradation.
 
@@ -412,7 +412,7 @@ Defaults when params absent: `strategy=CATS`, `rolls=500`, `bankroll=300`, `seed
 
 ---
 
-### M3.1 — Install React Router and define routes
+### M3.1 — Install React Router and define routes [DONE]
 
 **New dependency:**
 ```bash
@@ -452,7 +452,7 @@ function App() {
 
 ---
 
-### M3.2 — App shell: collapsible sidebar layout
+### M3.2 — App shell: collapsible sidebar layout [DONE]
 
 **New component:** `web/src/components/Shell.tsx`
 
