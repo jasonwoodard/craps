@@ -39,4 +39,5 @@ export interface EngineResult {
   initialBankroll: number;
   rollsPlayed: number;
   rolls: RollRecord[];
+  seed?: number;
 }
