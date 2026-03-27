@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router-dom';
 import { RunControls } from './RunControls';
 
 interface ShellProps {
@@ -14,6 +14,22 @@ const NAV_LINKS = [
 
 export function Shell({ children }: ShellProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [searchParams] = useSearchParams();
+
+  const navTo = (path: string) => {
+    // Carry forward shared params, drop page-specific ones
+    const shared = new URLSearchParams();
+    const strategy = searchParams.get('strategy');
+    const rolls = searchParams.get('rolls');
+    const bankroll = searchParams.get('bankroll');
+    const seed = searchParams.get('seed');
+    if (strategy) shared.set('strategy', strategy);
+    if (rolls) shared.set('rolls', rolls);
+    if (bankroll) shared.set('bankroll', bankroll);
+    if (seed) shared.set('seed', seed);
+    const qs = shared.toString();
+    return qs ? `${path}?${qs}` : path;
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900">
@@ -24,7 +40,7 @@ export function Shell({ children }: ShellProps) {
           {NAV_LINKS.map(({ to, label }) => (
             <NavLink
               key={to}
-              to={to}
+              to={navTo(to)}
               className={({ isActive }) =>
                 `font-mono text-sm px-2 py-1 rounded transition-colors ${
                   isActive
@@ -51,7 +67,7 @@ export function Shell({ children }: ShellProps) {
             {NAV_LINKS.map(({ to, label, icon }) => (
               <NavLink
                 key={to}
-                to={to}
+                to={navTo(to)}
                 title={!sidebarExpanded ? label : undefined}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-2 py-2 rounded font-mono text-sm transition-colors whitespace-nowrap ${
