@@ -1,11 +1,12 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface FormState {
   strategy: string;
   rolls: string;
   bankroll: string;
   seed: string;
+  seeds: string;
 }
 
 interface FormErrors {
@@ -16,14 +17,18 @@ interface FormErrors {
 
 export function RunControls() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [strategies, setStrategies] = useState<string[]>(['CATS']);
   const [form, setForm] = useState<FormState>({
     strategy: 'CATS',
     rolls: '500',
     bankroll: '300',
     seed: '',
+    seeds: '500',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const isDistribution = location.pathname === '/distribution';
 
   useEffect(() => {
     fetch('/api/strategies')
@@ -57,13 +62,15 @@ export function RunControls() {
       return;
     }
     setErrors({});
+    const base = location.pathname;
     const params = new URLSearchParams({
       strategy: form.strategy,
       rolls: form.rolls,
       bankroll: form.bankroll,
+      ...(form.seed !== '' ? { seed: form.seed } : {}),
+      ...(isDistribution ? { seeds: form.seeds } : {}),
     });
-    if (form.seed !== '') params.set('seed', form.seed);
-    navigate(`/session?${params.toString()}`);
+    navigate(`${base}?${params.toString()}`);
   }
 
   function setField(name: keyof FormState, value: string) {
@@ -128,6 +135,18 @@ export function RunControls() {
         />
         {errors.seed && <p className={errorClass}>{errors.seed}</p>}
       </div>
+
+      {isDistribution && (
+        <div>
+          <label className={labelClass}>Seeds</label>
+          <input
+            type="number"
+            value={form.seeds}
+            onChange={e => setField('seeds', e.target.value)}
+            className={inputClass}
+          />
+        </div>
+      )}
 
       <button
         type="submit"
