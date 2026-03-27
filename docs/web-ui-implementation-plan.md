@@ -166,7 +166,7 @@ Emits a JSON event every 10% of seeds completed:
 
 ---
 
-### M4.1 — Server: SSE distribution endpoint
+### M4.1 — Server: SSE distribution endpoint [DONE]
 
 **New file:** `server/routes/distribution.ts`
 
@@ -230,7 +230,7 @@ Raw `RollRecord[]` for all sessions never leaves the server.
 
 ---
 
-### M4.2 — Client: SSE hook
+### M4.2 — Client: SSE hook [DONE]
 
 **New file:** `web/src/hooks/useDistribution.ts`
 
@@ -260,7 +260,7 @@ export function useDistribution(params: DistributionParams) {
 
 ---
 
-### M4.3 — Distribution page layout
+### M4.3 — Distribution page layout [DONE]
 
 **New file:** `web/src/pages/DistributionPage.tsx` (replaces M3 stub)
 
@@ -299,7 +299,7 @@ X axis: roll number. Y axis: P(ruin) 0–100%. Single rising line. Shows *when* 
 
 ---
 
-### M4.4 — Update nav
+### M4.4 — Update nav [DONE]
 
 Shell nav updated: Session | Distribution | Compare.
 

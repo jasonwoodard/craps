@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { simulateRoute } from './routes/simulate';
 import { strategiesRoute } from './routes/strategies';
+import { distributionStreamRoute } from './routes/distribution';
 
 const PORT = 3001;
 
@@ -11,5 +12,6 @@ app.use(express.json());
 
 app.post('/api/simulate', simulateRoute);
 app.get('/api/strategies', strategiesRoute);
+app.get('/api/distribution/stream', distributionStreamRoute);
 
 app.listen(PORT, () => console.log(`Server running on :${PORT}`));

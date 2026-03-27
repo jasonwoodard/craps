@@ -41,3 +41,16 @@ export interface EngineResult {
   rolls: RollRecord[];
   seed?: number;
 }
+
+export interface DistributionAggregates {
+  p10: number[];
+  p50: number[];
+  p90: number[];
+  finalBankroll: { p10: number; p50: number; p90: number; mean: number };
+  peakBankroll:  { p10: number; p50: number; p90: number; mean: number };
+  rollsToPeak:   { p10: number; p50: number; p90: number; mean: number };
+  ruinByRoll:    number[];
+  winRate:       number;
+  ruinRate:      number;
+  seedCount:     number;
+}

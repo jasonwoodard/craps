@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { SessionPage } from './pages/SessionPage';
-import { AnalysisPage } from './pages/AnalysisPage';
+import { DistributionPage } from './pages/DistributionPage';
 import { ComparePage } from './pages/ComparePage';
 
 function App() {
@@ -10,7 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/session" replace />} />
         <Route path="/session" element={<SessionPage />} />
-        <Route path="/analysis" element={<AnalysisPage />} />
+        <Route path="/distribution" element={<DistributionPage />} />
         <Route path="/compare" element={<ComparePage />} />
       </Routes>
     </Shell>

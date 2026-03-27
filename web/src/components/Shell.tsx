@@ -8,7 +8,7 @@ interface ShellProps {
 
 const NAV_LINKS = [
   { to: '/session', label: 'Session', icon: '📈' },
-  { to: '/analysis', label: 'Analysis', icon: '📊' },
+  { to: '/distribution', label: 'Distribution', icon: '📊' },
   { to: '/compare', label: 'Compare', icon: '⚖️' },
 ];
 
