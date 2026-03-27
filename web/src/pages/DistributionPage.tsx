@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useDistribution } from '../hooks/useDistribution';
 import { BandChart } from '../components/BandChart';
 import { OutcomeSummary } from '../components/OutcomeSummary';
@@ -39,7 +39,6 @@ function ProgressBar({ progress, completed, total }: { progress: number; complet
 
 export function DistributionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
 
   const strategy = searchParams.get('strategy') ?? 'CATS';
   const seeds = Number(searchParams.get('seeds') ?? 500);

@@ -40,8 +40,8 @@ export function RuinCurve({ aggregates }: Props) {
           width={48}
         />
         <Tooltip
-          formatter={(value: number) => [`${value}%`, 'P(ruin)']}
-          labelFormatter={(label: number) => `Roll ${label}`}
+          formatter={(value) => [`${value ?? 0}%`, 'P(ruin)']}
+          labelFormatter={(label) => `Roll ${label}`}
           contentStyle={{ fontFamily: 'monospace', fontSize: 12 }}
         />
         <Area
