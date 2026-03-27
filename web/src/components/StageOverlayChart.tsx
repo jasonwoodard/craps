@@ -64,8 +64,8 @@ function StageChart({ stageName, visits }: { stageName: string; visits: ReturnTy
             tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}${v}`}
           />
           <Tooltip
-            formatter={(v: number) => [fmtPnL(v), '']}
-            labelFormatter={(t: number) => `Roll +${t}`}
+            formatter={(v) => [fmtPnL(Number(v ?? 0)), '']}
+            labelFormatter={(t) => `Roll +${t}`}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
           <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" label={{ value: 'Entry', position: 'right', fontSize: 9, fill: '#94a3b8' }} />

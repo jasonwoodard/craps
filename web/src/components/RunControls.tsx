@@ -1,8 +1,9 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 
 interface FormState {
-  strategy: string;
+  strategyA: string;
+  strategyB: string;
   rolls: string;
   bankroll: string;
   seed: string;
@@ -18,17 +19,25 @@ interface FormErrors {
 export function RunControls() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [strategies, setStrategies] = useState<string[]>(['CATS']);
-  const [form, setForm] = useState<FormState>({
-    strategy: 'CATS',
-    rolls: '500',
-    bankroll: '300',
-    seed: '',
-    seeds: '500',
-  });
   const [errors, setErrors] = useState<FormErrors>({});
 
   const isDistribution = location.pathname === '/distribution';
+  const isCompare = location.pathname === '/compare';
+
+  // Initialize form from URL params so sidebar reflects current page state.
+  const [form, setForm] = useState<FormState>(() => {
+    const strategiesParts = searchParams.get('strategies')?.split(',').map(s => s.trim()) ?? [];
+    return {
+      strategyA: searchParams.get('strategy') ?? strategiesParts[0] ?? 'CATS',
+      strategyB: strategiesParts[1] ?? 'ThreePointMolly3X',
+      rolls: searchParams.get('rolls') ?? '500',
+      bankroll: searchParams.get('bankroll') ?? '300',
+      seed: searchParams.get('seed') ?? '',
+      seeds: searchParams.get('seeds') ?? '500',
+    };
+  });
 
   useEffect(() => {
     fetch('/api/strategies')
@@ -64,12 +73,16 @@ export function RunControls() {
     setErrors({});
     const base = location.pathname;
     const params = new URLSearchParams({
-      strategy: form.strategy,
       rolls: form.rolls,
       bankroll: form.bankroll,
       ...(form.seed !== '' ? { seed: form.seed } : {}),
-      ...(isDistribution ? { seeds: form.seeds } : {}),
     });
+    if (isCompare) {
+      params.set('strategies', `${form.strategyA},${form.strategyB}`);
+    } else {
+      params.set('strategy', form.strategyA);
+      if (isDistribution) params.set('seeds', form.seeds);
+    }
     navigate(`${base}?${params.toString()}`);
   }
 
@@ -87,18 +100,47 @@ export function RunControls() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-3">
-      <div>
-        <label className={labelClass}>Strategy</label>
-        <select
-          value={form.strategy}
-          onChange={e => setField('strategy', e.target.value)}
-          className={inputClass}
-        >
-          {strategies.map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
+      {isCompare ? (
+        <>
+          <div>
+            <label className={labelClass}>Strategy A</label>
+            <select
+              value={form.strategyA}
+              onChange={e => setField('strategyA', e.target.value)}
+              className={`${inputClass} border-l-2 border-l-blue-400`}
+            >
+              {strategies.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Strategy B</label>
+            <select
+              value={form.strategyB}
+              onChange={e => setField('strategyB', e.target.value)}
+              className={`${inputClass} border-l-2 border-l-orange-400`}
+            >
+              {strategies.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className={labelClass}>Strategy</label>
+          <select
+            value={form.strategyA}
+            onChange={e => setField('strategyA', e.target.value)}
+            className={inputClass}
+          >
+            {strategies.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className={labelClass}>Rolls</label>

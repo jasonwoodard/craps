@@ -42,6 +42,50 @@ export interface EngineResult {
   seed?: number;
 }
 
+export interface SummaryRecord {
+  type: 'summary';
+  meta: {
+    strategy: string;
+    startBankroll: number;
+    totalRolls: number;
+    seed: number | null;
+    timestamp: string;
+  };
+  bankroll: {
+    final: number;
+    peak: number;
+    trough: number;
+    maxDrawdown: number;
+    netChange: number;
+  };
+  tableLoad: {
+    avg: number;
+    max: number;
+    min: number;
+    avgWhenActive: number;
+  };
+  activity: {
+    rollsWithWin: number;
+    rollsWithLoss: number;
+    rollsNoAction: number;
+    winRate: number;
+    lossRate: number;
+  };
+  diceDistribution: {
+    bySum: Record<string, number>;
+    byDieFace: Record<string, number>;
+  };
+}
+
+export interface SharedTableResult {
+  [strategyName: string]: {
+    finalBankroll: number;
+    netChange: number;
+    log: RollRecord[];
+    summary: SummaryRecord;
+  };
+}
+
 export interface DistributionAggregates {
   p10: number[];
   p50: number[];

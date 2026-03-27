@@ -60,8 +60,8 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
               tickFormatter={(v: number) => `${v >= 0 ? '+' : ''}$${v}`}
             />
             <Tooltip
-              formatter={(v: number) => [fmtPnL(v), '24-roll P&L']}
-              labelFormatter={(l: number) => `Roll ${l}`}
+              formatter={(v) => [fmtPnL(Number(v ?? 0)), '24-roll P&L']}
+              labelFormatter={(l) => `Roll ${l}`}
             />
             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
             <Line
@@ -93,10 +93,10 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
                 tickFormatter={(v: number) => `$${v}`}
               />
               <Tooltip
-                formatter={(v: number | null, name: string) =>
-                  v != null ? [`$${v}`, name] : ['—', name]
+                formatter={(v, name) =>
+                  v != null ? [`$${v}`, String(name)] : ['—', String(name)]
                 }
-                labelFormatter={(l: number) => `Roll ${l}`}
+                labelFormatter={(l) => `Roll ${l}`}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" />
@@ -131,8 +131,8 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
             <XAxis dataKey="roll" tick={{ fontSize: 10 }} label={{ value: 'Roll', position: 'insideBottomRight', offset: -8, fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
             <Tooltip
-              formatter={(v: number) => [v, 'Consecutive 7-outs']}
-              labelFormatter={(l: number) => `Roll ${l}`}
+              formatter={(v) => [v ?? 0, 'Consecutive 7-outs']}
+              labelFormatter={(l) => `Roll ${l}`}
             />
             <ReferenceLine
               y={2}

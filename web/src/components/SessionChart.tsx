@@ -61,7 +61,7 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             tick={{ fontSize: 11 }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => [`$${value}`, name]}
+            formatter={(value, name) => [`$${value ?? 0}`, String(name)]}
             labelFormatter={(label) => `Roll ${label}`}
           />
           <Legend />

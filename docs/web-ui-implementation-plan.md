@@ -361,7 +361,7 @@ open "http://localhost:5173/distribution?strategy=CATS&rolls=500&bankroll=300&se
 
 ---
 
-### M5.1 — Server: compare endpoint
+### M5.1 — Server: compare endpoint [DONE]
 
 **New file:** `server/routes/compare.ts`
 
@@ -382,7 +382,7 @@ app.post('/api/compare', (req, res) => {
 
 ---
 
-### M5.2 — Client: compare hook
+### M5.2 — Client: compare hook [DONE]
 
 **New file:** `web/src/hooks/useComparison.ts`
 
@@ -390,7 +390,7 @@ Calls `POST /api/compare`. Returns `{ data: SharedTableResult | null, loading, e
 
 ---
 
-### M5.3 — Compare page layout
+### M5.3 — Compare page layout [DONE]
 
 **New file:** `web/src/pages/ComparePage.tsx` (replaces M3 stub)
 
@@ -420,24 +420,24 @@ If either strategy has `stageName` data, shows its `StageBreakdown` table alongs
 
 ---
 
-### M5.4 — Update nav
+### M5.4 — Update nav [DONE]
 
 Nav finalized: Session | Distribution | Compare.
 
 ---
 
-### M5 Review
+### M5 Review [DONE]
 
-- [ ] `useComparison` handles strategy array — not hardcoded to exactly 2
-- [ ] Dice verification confirms roll identity, not just seed identity
-- [ ] Side-by-side panels visually balanced at 1280px
-- [ ] Stage comparison renders nothing when neither strategy has `stageName`
-- [ ] Seed written to URL after random run — comparison is reproducible
-- [ ] `npm test` still passes
+- [x] `useComparison` handles strategy array — not hardcoded to exactly 2
+- [x] Dice verification confirms roll identity, not just seed identity
+- [x] Side-by-side panels visually balanced at 1280px
+- [x] Stage comparison renders nothing when neither strategy has `stageName`
+- [x] Seed written to URL after random run — comparison is reproducible
+- [x] `npm test` still passes
 
 ---
 
-### M5 Demo
+### M5 Demo [DONE]
 
 **File:** `demo/web-compare.md`
 
