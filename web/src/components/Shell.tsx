@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
+import { RunControls } from './RunControls';
 
 interface ShellProps {
   children: ReactNode;
@@ -65,6 +66,13 @@ export function Shell({ children }: ShellProps) {
               </NavLink>
             ))}
           </nav>
+
+          {/* Run controls — visible only when expanded */}
+          {sidebarExpanded && (
+            <div className="border-t border-gray-700">
+              <RunControls />
+            </div>
+          )}
 
           {/* Collapse toggle */}
           <button
