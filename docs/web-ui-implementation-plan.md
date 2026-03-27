@@ -186,6 +186,9 @@ app.get('/api/distribution/stream', (req, res) => {
 
   for (let i = 0; i < N; i++) {
     const engine = new CrapsEngine({ strategy: strategyFn, bankroll: Number(bankroll), rolls: Number(rolls), seed: i });
+    // Seeds are sequential integers (0, 1, 2...) — intentional.
+    // Quick/Standard/Deep presets are nested subsets: Standard includes all Quick seeds.
+    // This means bands refine smoothly when upgrading presets rather than jumping.
     allResults.push(summarize(engine.run(), i));
 
     if ((i + 1) % batchSize === 0 || i === N - 1) {
