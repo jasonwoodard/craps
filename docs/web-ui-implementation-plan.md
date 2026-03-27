@@ -305,21 +305,21 @@ Shell nav updated: Session | Distribution | Compare.
 
 ---
 
-### M4 Review
+### M4 Review [DONE]
 
-- [ ] SSE connection closes cleanly on component unmount
-- [ ] Aggregates computed server-side — no raw roll arrays sent to client
-- [ ] Band chart updates smoothly on each SSE message
-- [ ] Progress bar accurately reflects seed completion
-- [ ] Seed preset buttons update URL and restart the stream
-- [ ] `computeAggregates` in `server/lib/distribution.ts` — not inline in route handler
-- [ ] `useDistribution` cleans up `EventSource` on unmount
-- [ ] Page degrades gracefully if SSE connection drops
-- [ ] `npm test` still passes
+- [x] SSE connection closes cleanly on component unmount
+- [x] Aggregates computed server-side — no raw roll arrays sent to client
+- [x] Band chart updates smoothly on each SSE message
+- [x] Progress bar accurately reflects seed completion
+- [x] Seed preset buttons update URL and restart the stream
+- [x] `computeAggregates` in `server/lib/distribution.ts` — not inline in route handler
+- [x] `useDistribution` cleans up `EventSource` on unmount
+- [x] Page degrades gracefully if SSE connection drops
+- [x] `npm test` still passes
 
 ---
 
-### M4 Demo
+### M4 Demo [DONE]
 
 **File:** `demo/web-distribution.md`
 
