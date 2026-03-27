@@ -1,7 +1,7 @@
 # Craps Simulator — Web UI Implementation Plan
 
 **Date:** March 2026  
-**Status:** Draft v1.2  
+**Status:** Draft v1.3  
 **Scope:** Visualization layer — engine changes are minimal and surgical (M0 only)
 
 ---
@@ -34,22 +34,22 @@ This document follows the same milestone structure as `docs/implementation-plan.
 
 ```
 craps/
-├── src/                    ← minimal changes in M0 only
+├── src/                        ← minimal changes in M0 only
 │   ├── engine/
-│   │   └── roll-record.ts  ← add stageName?: string (M0)
+│   │   └── roll-record.ts      ← add stageName?: string (M0)
 │   ├── dsl/
 │   ├── cli/
 │   ├── bets/
 │   ├── dice/
 │   └── logger/
-├── types/                  ← new in M0: shared type re-exports
+├── types/                      ← new in M0: shared type re-exports
 │   └── simulation.ts
-├── server/                 ← new in M1: Express API server
+├── server/                     ← new in M1: Express API server
 │   ├── server.ts
 │   └── routes/
 │       ├── simulate.ts
 │       └── strategies.ts
-├── web/                    ← new in M1: React frontend
+├── web/                        ← new in M1: React frontend
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── tsconfig.json
@@ -62,16 +62,22 @@ craps/
 │       │   ├── stages.ts
 │       │   └── cats-thresholds.ts
 │       ├── components/
+│       │   ├── Shell.tsx
+│       │   ├── RunControls.tsx
 │       │   ├── SummaryPanel.tsx
 │       │   ├── SessionChart.tsx
 │       │   ├── StageBreakdown.tsx
 │       │   ├── StageOverlayChart.tsx
 │       │   └── TrendPanel.tsx
+│       ├── pages/
+│       │   ├── SessionPage.tsx
+│       │   ├── AnalysisPage.tsx
+│       │   └── ComparePage.tsx
 │       └── hooks/
 │           └── useSimulation.ts
 ├── docs/
 ├── spec/
-└── package.json            ← add Express to devDeps, add "server" script
+└── package.json
 ```
 
 ### Request flow
@@ -85,8 +91,6 @@ Browser → Vite dev server (port 5173)
         ← Recharts renders charts
 ```
 
-In development: Vite and Express run as two separate processes. In any future production packaging: Express serves the Vite build as static files from `web/dist/`.
-
 ---
 
 ## API Contract
@@ -96,18 +100,24 @@ In development: Vite and Express run as two separate processes. In any future pr
 **Request body:**
 ```typescript
 {
-  strategy: string;      // key from BUILT_IN_STRATEGIES
+  strategy: string;
   rolls: number;
   bankroll: number;
-  seed?: number;         // omit for random
+  seed?: number;         // omit for random — server generates and echoes back
 }
 ```
 
-**Response:** `EngineResult` serialized as JSON — no transformation. Full `rolls: RollRecord[]` included.
+**Response:** `EngineResult` plus the seed used:
+```typescript
+{
+  ...EngineResult,
+  seed: number;          // always present — generated if not provided
+}
+```
 
 ### `GET /api/strategies`
 
-Returns `string[]` — keys of `BUILT_IN_STRATEGIES`. Drives the strategy selector in M3.
+Returns `string[]` — keys of `BUILT_IN_STRATEGIES`.
 
 ---
 
@@ -115,15 +125,11 @@ Returns `string[]` — keys of `BUILT_IN_STRATEGIES`. Drives the strategy select
 
 **Goal:** Two surgical changes to `src/` that the rest of the web milestones depend on. All existing tests remain green. CLI behavior is unchanged.
 
-**Why M0 is its own milestone:** These changes are prerequisites for everything that follows and have their own acceptance criteria. Conflating them with server or frontend work creates confusion about what broke what.
-
 ---
 
 ### M0.1 — Add `stageName` to `RollRecord` [DONE]
 
 **File:** `src/engine/roll-record.ts`
-
-Add one optional field:
 
 ```typescript
 export interface RollRecord {
@@ -132,28 +138,15 @@ export interface RollRecord {
 }
 ```
 
-**File:** `src/engine/craps-engine.ts`
+**Files:** `src/engine/craps-engine.ts` and `src/engine/shared-table.ts` — populate `stageName` from Stage Machine runtime after `postRoll`. Each player slot has its own runtime reference; slots without a Stage Machine strategy produce `undefined` naturally.
 
-In `playRoll()`, after `this.reconcileEngine.postRoll()`, read the current stage from the Stage Machine runtime if present and write it to the `RollRecord`:
-
-```typescript
-const runtime = (this.strategy as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
-record.stageName = runtime?.getCurrentStage();
-```
-
-**File:** `src/engine/shared-table.ts`
-
-Same pattern — each player slot has its own `ReconcileEngine` instance with its own cached runtime reference. Populate `stageName` per slot after `postRoll`. Slots whose strategy is not a Stage Machine strategy will produce `undefined` naturally — no special casing needed.
-
-**The identity model:**
-
-`strategyName` lives in the result envelope — `SharedTable` returns results keyed by strategy name, and `CrapsEngine` receives it via request params. It does not need to be on `RollRecord`. `stageName` on `RollRecord` is sufficient for the UI to know where in its lifecycle a Stage Machine strategy is on any given roll. Simple strategies produce rolls with no `stageName` — which is itself analytically informative in a comparison view.
+**The identity model:** `strategyName` lives in the result envelope. `stageName` on `RollRecord` tells the UI where in its lifecycle a Stage Machine strategy is on any given roll.
 
 **Acceptance criteria:**
 - `npm test` passes with zero failures
-- A single CATS run via `CrapsEngine` with `--output json` shows `stageName` populated on roll entries, transitioning from `accumulatorFull` after first 6 or 8 hit
-- A single PassLineOnly run shows `stageName` genuinely absent on roll entries — not present as the string `"undefined"`
-- A `SharedTable` comparison run with CATS vs. ThreePointMolly3X produces `stageName` populated on CATS roll records and absent on ThreePointMolly3X roll records — confirming per-slot isolation works correctly with mixed strategy types
+- CATS run with `--output json` shows `stageName` on roll entries
+- PassLineOnly run shows `stageName` genuinely absent
+- `SharedTable` comparison run with CATS vs. ThreePointMolly3X produces `stageName` on CATS slots and absent on ThreePointMolly3X slots
 
 ---
 
@@ -162,378 +155,129 @@ Same pattern — each player slot has its own `ReconcileEngine` instance with it
 **New file:** `types/simulation.ts`
 
 ```typescript
-// Single re-export point for engine types consumed by server/ and web/
-// Source of truth remains src/engine/roll-record.ts and src/dsl/outcome.ts
 export type { RollRecord, EngineResult, ActiveBetInfo } from '../src/engine/roll-record';
 export type { Outcome } from '../src/dsl/outcome';
 ```
-
-No logic. Types only. Both `server/` and `web/` import from this file — not directly from `src/`.
-
-**Acceptance criteria:**
-- `tsc --noEmit` from repo root passes
-- `import type { RollRecord } from '../types/simulation'` works from a file in `server/`
 
 ---
 
 ### M0 Review [DONE]
 
-- [x] `stageName` is populated correctly for CATS — spot-check 10 roll records from `--output json`
-- [x] `stageName` is absent for PassLineOnly — not present as `"undefined"` string, genuinely absent
-- [x] `types/simulation.ts` re-exports compile without error
-- [x] Zero changes to CLI behavior — `npm test` and all manual CLI commands still work
-- [x] No new `any` casts introduced beyond the existing `STAGE_MACHINE_RUNTIME` symbol lookup pattern
+- [x] `stageName` populated correctly for CATS
+- [x] `stageName` absent for PassLineOnly — not present as `"undefined"` string
+- [x] `types/simulation.ts` compiles without error
+- [x] Zero CLI behavior changes — `npm test` passes
 
 ---
 
 ### M0 Demo [DONE]
 
 ```bash
-# Confirm stageName appears in JSON output for a Stage Machine strategy
-npx ts-node src/cli/run-sim.ts --strategy CATS --rolls 50 --bankroll 300 --seed 42 --output json \
-  | head -20
-
-# Confirm stageName is absent for a simple strategy
-npx ts-node src/cli/run-sim.ts --strategy PassLineOnly --rolls 20 --bankroll 300 --seed 42 --output json \
-  | head -5
+npx ts-node src/cli/run-sim.ts --strategy CATS --rolls 50 --bankroll 300 --seed 42 --output json | head -20
+npx ts-node src/cli/run-sim.ts --strategy PassLineOnly --rolls 20 --bankroll 300 --seed 42 --output json | head -5
 ```
-
-Self-verification: CATS output shows `"stageName":"accumulatorFull"` on early rolls, transitioning to `"accumulatorRegressed"` after the first 6 or 8 hit.
 
 ---
 
 ## Milestone 1 — MVP Web UI [DONE]
 
-**Goal:** A working browser page that renders a pre-configured simulation run as a summary stats panel and a time series chart. No user controls. No stage filter logic. Get the visual foundation right.
+**Goal:** A working browser page rendering a pre-configured simulation run as a summary stats panel and time series chart. No user controls.
 
-**Hardcoded run for M1:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 42 }`  
-This is the same run used in manual CLI testing — final bankroll $6, a dramatically bad session that exercises the full chart range.
-
-**Stage handling in M1:** Color banding only — background bands derived from `stageName` changes in the roll array. No dropdown, no filter, no zoom. That work belongs in M2.
-
-**Does not include:** User controls, strategy selection, comparison runs, multi-session aggregation, stage filter or overlay.
+**Hardcoded run:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 42 }` — final bankroll $6.
 
 ---
 
 ### M1.1 — Express server scaffold [DONE]
 
-**New file:** `server/server.ts`
-
-```typescript
-import express from 'express';
-import cors from 'cors';
-import { simulateRoute } from './routes/simulate';
-import { strategiesRoute } from './routes/strategies';
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.post('/api/simulate', simulateRoute);
-app.get('/api/strategies', strategiesRoute);
-
-app.listen(3001, () => console.log('Server running on :3001'));
-```
-
-**New file:** `server/routes/simulate.ts`
-
-Imports `CrapsEngine` and `BUILT_IN_STRATEGIES` directly. Validates request body — returns 400 for unknown strategy name or invalid params. Runs simulation. Returns `EngineResult` as JSON.
-
-**New file:** `server/routes/strategies.ts`
-
-Returns `Object.keys(BUILT_IN_STRATEGIES)` as JSON.
-
-**Root `package.json` additions:**
-```json
-{
-  "devDependencies": {
-    "express": "^4.18",
-    "cors": "^2.8",
-    "@types/express": "^4.17",
-    "@types/cors": "^2.8"
-  },
-  "scripts": {
-    "server": "ts-node server/server.ts"
-  }
-}
-```
-
-**Acceptance test:**
-```bash
-curl -X POST http://localhost:3001/api/simulate \
-  -H "Content-Type: application/json" \
-  -d '{"strategy":"CATS","rolls":500,"bankroll":300,"seed":42}'
-# Returns JSON — rolls[0] has stageName: "accumulatorFull"
-```
+Server at `server/server.ts`. Routes: `POST /api/simulate`, `GET /api/strategies`. Shares root `package.json`. `"server": "ts-node server/server.ts"` script in root.
 
 ---
 
 ### M1.2 — React + Vite scaffold [DONE]
 
-**New directory:** `web/`
-
-```bash
-cd web && npm create vite@latest . -- --template react-ts
-npm install
-npm install recharts
-npm install -D tailwindcss @tailwindcss/vite
-```
-
-**`web/vite.config.ts`:**
-```typescript
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    proxy: { '/api': 'http://localhost:3001' }
-  },
-  resolve: {
-    alias: { '@types': path.resolve(__dirname, '../types') }
-  }
-});
-```
-
-**`web/tsconfig.json`** — path alias:
-```json
-{
-  "compilerOptions": {
-    "paths": { "@types/*": ["../types/*"] }
-  }
-}
-```
-
-**Acceptance test:** `cd web && npm run dev` opens a blank page at `localhost:5173` without errors. `import type { RollRecord } from '@types/simulation'` compiles cleanly.
+`web/` directory. Vite + React + TypeScript. Recharts + Tailwind. API proxy to port 3001. Path alias `@types` → `../types`.
 
 ---
 
 ### M1.3 — `useSimulation` hook [DONE]
 
-**New file:** `web/src/hooks/useSimulation.ts`
-
-Calls `POST /api/simulate` on mount. Returns `{ data: EngineResult | null, loading: boolean, error: string | null }`. Handles non-200 responses and network errors explicitly — surfaces error state, does not silently fail.
-
-`params` is a parameter (not hardcoded inside the hook) — designed for M3 when params become user-controlled.
+`web/src/hooks/useSimulation.ts` — calls `POST /api/simulate`, returns `{ data, loading, error }`. Handles non-200 responses explicitly.
 
 ---
 
 ### M1.4 — Summary stats panel [DONE]
 
-**New file:** `web/src/lib/stats.ts`
+`web/src/lib/stats.ts` — `computeSessionStats(result: EngineResult): SessionStats`. Single location for all derived stat computation.
 
-`computeSessionStats(result: EngineResult)` — single location for all derived stat computation. Components do not compute stats inline.
-
-```typescript
-export interface SessionStats {
-  totalRolls: number;
-  netChange: number;
-  peakBankroll: number;
-  troughBankroll: number;
-  maxDrawdown: number;
-  winRolls: number;
-  lossRolls: number;
-  noActionRolls: number;
-  avgTableLoad: number;
-  maxTableLoad: number;
-}
-
-export function computeSessionStats(result: EngineResult): SessionStats { ... }
-```
-
-**New component:** `web/src/components/SummaryPanel.tsx`
-
-Renders `SessionStats` as a card grid. Net change color-coded green/red. Monospaced numbers. Dense but readable.
+`web/src/components/SummaryPanel.tsx` — card grid, net change color-coded green/red.
 
 ---
 
 ### M1.5 — Session chart [DONE]
 
-**New component:** `web/src/components/SessionChart.tsx`
-
-Dual-axis time series using Recharts `ComposedChart`.
-
-**X axis:** Roll number
-
-**Left Y axis — Bankroll:**
-- `Line` — `bankrollAfter` per roll
-- `ReferenceLine` — `initialBankroll`, dashed, labeled "Buy-in"
-
-**Right Y axis — Table load:**
-- `Line` — `tableLoadBefore` per roll, orange, secondary visual weight
-
-**Event markers:**
-- Red marker on X axis: `pointBefore != null && rollValue === 7` (7-out)
-- Green marker on X axis: `pointBefore != null && pointBefore === rollValue` (point made)
-
-No stage logic of any kind in M1. `stageName` is in the data but the chart does not read it. Stage visualization belongs in M2 where it can be designed with full context.
-
-**Acceptance test:** Chart renders with both lines, reference line visible, dual Y axes correctly labeled, event markers present.
+`web/src/components/SessionChart.tsx` — dual-axis `ComposedChart`. Bankroll line (left axis), table load line in orange (right axis), buy-in reference line, 7-out and point-made event markers. No `stageName` logic in M1.
 
 ---
 
 ### M1.6 — Milestone 1 integration [DONE]
 
-Wire everything in `App.tsx`:
-
-```tsx
-const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 42 };
-
-function App() {
-  const { data, loading, error } = useSimulation(HARDCODED_PARAMS);
-
-  if (loading) return <LoadingState />;
-  if (error || !data) return <ErrorState message={error} />;
-
-  return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-mono mb-6">Craps Simulator</h1>
-      <SummaryPanel result={data} params={HARDCODED_PARAMS} />
-      <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
-    </div>
-  );
-}
-```
-
-**Acceptance test:** Both processes running → browser shows summary panel and chart. Final bankroll in summary panel matches CLI output: `$300 → $6`.
+`App.tsx` wired with hardcoded params. Final bankroll matches CLI: `$300 → $6`.
 
 ---
 
 ### M1 Review [DONE]
 
-- [x] `computeSessionStats` is the single location for all derived stat computation — nothing inline in components
-- [x] `useSimulation` handles non-200 responses and network errors explicitly
-- [x] Express port (3001) defined in one place — not hardcoded in multiple files
-- [x] Express returns 400 (not 500) for unknown strategy names
+- [x] `computeSessionStats` is single location for all derived stat computation
+- [x] `useSimulation` handles non-200 responses explicitly
+- [x] Express port defined in one place
+- [x] Express returns 400 for unknown strategy names
 - [x] No `console.log` in production paths
-- [x] Dual Y axis scales are independent — table load range does not compress bankroll line
-- [x] `SessionChart` does not read or reference `stageName` — confirmed clean boundary with M2
-- [x] Page is usable at 1280px width
-- [x] `npm test` (existing Jasmine suite) still passes — no engine regressions
+- [x] Dual Y axis scales independent
+- [x] `SessionChart` does not reference `stageName`
+- [x] `npm test` passes
 
 ---
 
 ### M1 Demo [DONE]
 
-**File:** `demo/web-session-view.md`
-
-```bash
-# Terminal 1
-npm run server
-
-# Terminal 2
-cd web && npm run dev
-
-# Browser
-open http://localhost:5173
-```
-
-**What to verify:**
-
-- Summary panel shows all stats; net change is red (-$294)
-- Chart shows bankroll declining from $300 to near $0 over 500 rolls
-- Buy-in reference line ($300) is visible as a dashed horizontal
-- 7-out markers cluster visibly on the X axis
-- Table load line shows brief jumps when Molly stages are entered
-
-Self-verification: Final bankroll in browser matches `$6` from CLI run with same seed.
+`demo/web-session-view.md` — self-verification: final bankroll `$6` for seed 42.
 
 ---
 
 ## Milestone 2 — Stage Deep Dive
 
-**Theme:** Make CATS stage structure analytically visible and explorable. This milestone justifies the complexity of the Stage Machine by surfacing what it actually does during a session.
+**Theme:** Make CATS stage structure analytically visible and explorable across four scrollable dashboard sections.
 
-**Dashboard philosophy:** The dashboard is a scrollable analytical report, not an app. Sections are additive — each independently useful, each built below the previous without touching it. Expert-oriented: length is not a problem, clarity is.
-
-**Hardcoded run for M2:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 }` — this session reaches multiple stages and revisits them repeatedly, making it the right fixture for developing and verifying stage visualizations. Seed 42 (M1 fixture) never escapes the Accumulator and is insufficient for M2 testing.
+**Hardcoded run for M2:** `{ strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 }` — peak $834, 65 stage visits.
 
 ---
 
 ### M2.0 — Assessment [DONE — resolved conversationally]
 
-Key decisions from the assessment:
-
 | Question | Resolution |
 |---|---|
-| Stage bands vs. red/green event lines | Not mutually exclusive — `ReferenceArea` renders behind, event lines on top. Keep both. |
-| Stage transition vertical markers | Tried and removed — too dense at CATS's transition frequency. Table load line tells the stage story implicitly. |
-| Stage filter dropdown | Deferred — overlay chart (M2.3) is the better answer to the multi-visit problem. |
-| Stage overlay Y axis | Relative ±$ from stage entry bankroll, starting at 0 each visit. |
-| Rolling trend window | 24 rolls. |
-| Dashboard layout | Scrollable sections, additive, no refactoring of prior sections. |
+| Stage bands vs. event lines | Not mutually exclusive — `ReferenceArea` behind, event lines on top |
+| Stage transition vertical markers | Tried and removed — too dense. Table load line tells stage story implicitly |
+| Stage filter dropdown | Deferred — overlay chart is the better answer |
+| Stage overlay Y axis | Relative ±$ from stage entry bankroll |
+| Rolling trend window | 24 rolls |
+| Dashboard layout | Scrollable sections, additive |
 
 ---
 
-### M2.1 — Section 1 enhancement: Stage color bands on timeline [DONE]
+### M2.1 — Section 1: Stage color bands on timeline [DONE]
 
-**What was built:** `SessionChart` gained background `ReferenceArea` color bands derived from `stageName` on each `RollRecord`. Bands render behind all existing chart elements — bankroll line, table load line, 7-out markers, and point-made markers are all unaffected.
+`web/src/lib/stages.ts` — `computeStageSpans()`, `hasStageData()`. Stage color palette defined here.
 
-**New utility:** `web/src/lib/stages.ts` — all stage data transformations live here. No stage logic in components.
-
-```typescript
-export interface StageSpan {
-  stageName: string;
-  startRoll: number;
-  endRoll: number;
-  visitIndex: number;
-}
-
-export function computeStageSpans(rolls: RollRecord[]): StageSpan[]
-export function hasStageData(rolls: RollRecord[]): boolean
-```
-
-**Stage color palette** (defined in `stages.ts`):
-
-| Stage | Color |
-|---|---|
-| `accumulatorFull` | amber-100 |
-| `accumulatorRegressed` | amber-50 |
-| `littleMolly` | green-100 |
-| `threePtMollyTight` | blue-100 |
-| `threePtMollyLoose` | indigo-100 |
-
-All bands at 15% opacity. Stage transition vertical markers and top labels were implemented then removed — too dense at CATS's transition frequency.
-
-**What was NOT built (and won't be):** Stage transition `ReferenceLine` components. The table load line tells the stage story sufficiently. Explicit markers added noise without insight.
+`SessionChart` gains background `ReferenceArea` bands from `stageName`. No vertical markers — removed after implementation as too dense.
 
 ---
 
 ### M2.2 — Section 2: Stage breakdown table [DONE]
 
-**New component:** `web/src/components/StageBreakdown.tsx`
+`web/src/components/StageBreakdown.tsx` — time-ordered table, one row per stage visit.
 
-A time-ordered table showing every stage visit as a row. Positioned below `SessionChart`.
-
-**Data shape** (computed in `stages.ts`):
-
-```typescript
-export interface StageVisitSummary {
-  stageName: string;
-  visitIndex: number;      // per-stage visit count (used for color dot)
-  globalIndex: number;     // sequential row number across all stages
-  startRoll: number;
-  endRoll: number;
-  rollCount: number;
-  entryBankroll: number;
-  exitBankroll: number;
-  netPnL: number;
-  peakPnL: number;
-  troughPnL: number;
-  winRolls: number;
-  lossRolls: number;
-  sevenOuts: number;
-}
-```
-
-**Table columns (in order):**
-
-| # | Stage | Roll Range | Rolls | Entry | Exit | Net P&L | Peak | Trough | 7-outs |
-|---|---|---|---|---|---|---|---|---|---|
-
-- `#` — global sequential row number (1, 2, 3...) making temporal order unambiguous
-- `Roll Range` — `startRoll–endRoll` (e.g. `"1–43"`) showing timeline position
-- Net P&L — color-coded green/red
-
-For strategies without `stageName`, the component renders nothing — `hasStageData()` guard.
-
-**What the table reveals:** With seed 7, Little Molly visits are almost all 1–2 rolls before stepping back down. Accumulator Regressed visits are doing the real grinding work. The roll range column makes these patterns immediately legible.
+`StageVisitSummary` in `stages.ts` includes `globalIndex` (sequential row number) and `startRoll`/`endRoll` (roll range column). Net P&L color-coded. `hasStageData()` guard — renders nothing for simple strategies.
 
 ---
 
@@ -541,9 +285,7 @@ For strategies without `stageName`, the component renders nothing — `hasStageD
 
 **New component:** `web/src/components/StageOverlayChart.tsx`
 
-One chart per stage that was visited during the session. Each chart overlays all visits to that stage, aligned to a common T0. Answers: "Are multiple visits to the same stage structurally similar, or does variance dominate?"
-
-**Why this has analytic value:** When CATS steps back down to Accumulator after a bad run, is that second visit structurally different from the first? The first starts from a cold table with a full bankroll. The second starts post-losses. If the overlay shows visits tracking similarly — same slope, same dwell time — the step-down rule is working as designed and stage behavior is consistent. If they're wildly different, that's meaningful variance that a summary statistic would hide.
+One chart per distinct stage visited. Each overlays all visits aligned to T0. Y axis is relative ±$ from stage entry bankroll — absolute bankroll is meaningless across visits starting at different levels.
 
 **Data transformation** (add to `stages.ts`):
 
@@ -553,158 +295,308 @@ export interface NormalizedVisit {
   visitIndex: number;
   label: string;           // "Visit 1: Rolls 1–43"
   points: Array<{
-    t: number;             // roll offset from stage entry (0, 1, 2...)
-    pnl: number;           // bankrollAfter - entryBankroll (relative ±$)
+    t: number;             // roll offset from stage entry
+    pnl: number;           // bankrollAfter - entryBankroll
   }>;
 }
 
-export function normalizeStageVisits(
-  rolls: RollRecord[],
-  targetStage: string
-): NormalizedVisit[]
-
+export function normalizeStageVisits(rolls: RollRecord[], targetStage: string): NormalizedVisit[]
 export function uniqueStages(rolls: RollRecord[]): string[]
 ```
 
-**Chart structure per stage:**
+**Chart structure:** `ComposedChart` with one `Line` per visit. Zero `ReferenceLine` at entry. Longest visit sets X domain — shorter visits end before right edge. Heading: `"Accumulator Regressed — 21 visits"`.
 
-```tsx
-<ComposedChart>
-  <XAxis dataKey="t" label={{ value: 'Rolls into stage', position: 'insideBottom' }} />
-  <YAxis label={{ value: 'P&L ($)', angle: -90 }} />
-  <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 2" label="Entry" />
-  <Tooltip formatter={(v: number) => `${v >= 0 ? '+' : ''}$${v}`} />
-  <Legend />
-  {visits.map((visit, i) => (
-    <Line
-      key={visit.label}
-      data={visit.points}
-      dataKey="pnl"
-      name={visit.label}
-      dot={false}
-      strokeWidth={1.5}
-      stroke={VISIT_COLORS[i % VISIT_COLORS.length]}
-    />
-  ))}
-</ComposedChart>
-```
+**Why this has analytic value:** Multiple visits to the same stage overlaid at T0 show whether stage behavior is consistent (tight cluster) or highly variable (wide fan). A summary statistic hides this. The table in M2.2 shows what happened; this chart shows whether it was typical.
 
-**Layout:** One chart per distinct stage visited, stacked vertically. Each has a heading: `"Accumulator Regressed — 12 visits"`. Stages with only one visit still render — a single line is still informative.
-
-**Y axis is always relative ±$.** Absolute bankroll is meaningless across visits that start at different bankroll levels. The zero reference line represents stage entry — every visit starts at 0.
-
-**X axis domain:** The longest visit determines the right edge. Shorter visits end before it — their lines simply stop.
-
-**Acceptance test:** Seed 7 CATS run renders one chart per visited stage. Multiple Accumulator Regressed visits appear as distinct labeled lines from T0. Y axis reads ±$. Cross-check seed 42: all sections render without error.
+**Acceptance test:** Seed 7 renders one chart per visited stage. Multiple Accumulator Regressed visits appear as distinct labeled lines. Y axis reads ±$. Seed 42 renders without error (fewer visits, graceful degradation).
 
 ---
 
-### M2.4 — Section 4: Trend indicators [DONE]
+### M2.4 — Section 4: Trend indicators
 
 **New component:** `web/src/components/TrendPanel.tsx`
 
-Three derived signals showing session dynamics over time. These describe *what has happened recently* — useful context for judgment, not predictions. Positioned below the stage overlay charts.
+Three derived signals. Positioned below stage overlay charts. These describe what has happened recently — context for judgment, not predictions.
 
 **Signal 1: 24-roll rolling P&L**
-
-Rolling net bankroll change over the last 24 rolls. 24 is approximately 3× the average shooter hand length, smoothing single-hand noise while remaining responsive to trend shifts.
 
 ```typescript
 // Add to stats.ts
 export function computeRollingPnL(rolls: RollRecord[], window: number = 24): number[]
 ```
 
-Rendered as a `Line` in a small `ComposedChart` with a zero reference line.
+Line chart with zero reference. Shows momentum — the CATS consecutive 7-out rule is a discrete approximation of this signal.
 
-**Signal 2: Proximity to CATS thresholds**
-
-For each roll, compute distance from current profit to the nearest step-up and step-down thresholds for the current stage.
+**Signal 2: CATS threshold proximity**
 
 ```typescript
 // New file: web/src/lib/cats-thresholds.ts
-// CATS-specific logic isolated here — not in general utilities
-
-export interface ThresholdProximity {
-  rollNumber: number;
-  currentProfit: number;
-  stepUpThreshold: number | null;
-  stepDownThreshold: number | null;
-  distanceToStepUp: number | null;
-  cushionAboveStepDown: number | null;
-}
-
 export function computeCATSThresholdProximity(rolls: RollRecord[]): ThresholdProximity[]
+export function isCATSStrategy(strategyName: string): boolean
 ```
 
 CATS thresholds by stage:
 
 | Stage | Step-up at | Step-down at |
 |---|---|---|
-| `accumulatorFull` | (transitions on hit, not profit) | — |
 | `accumulatorRegressed` | +$70 | — |
 | `littleMolly` | +$150 | +$70 |
 | `threePtMollyTight` | +$200 | +$150 |
 | `threePtMollyLoose` | +$250 | +$150 |
 
-This component uses `isCATSStrategy(strategyName: string): boolean` — for non-CATS strategies it renders nothing.
+Two lines: distance to step-up, cushion above step-down. `isCATSStrategy()` guard — renders nothing for non-CATS strategies.
 
-**Signal 3: Consecutive 7-out counter over time**
-
-A bar chart showing the consecutive 7-out count at each roll. The CATS step-down rule fires at 2 — a horizontal `ReferenceLine` at y=2 makes the trigger threshold visible.
+**Signal 3: Consecutive 7-out counter**
 
 ```typescript
-// Add to stats.ts — derivable from RollRecord, no engine changes needed
+// Add to stats.ts — derived from RollRecord, no engine changes
 export function computeConsecutiveSevenOuts(rolls: RollRecord[]): number[]
-// Logic: 7-out (pointBefore != null && rollValue === 7) increments counter
-//        any win outcome resets counter to 0
-//        no-action rolls leave counter unchanged
 ```
 
-**Acceptance test:** Seed 7 CATS run renders all three panels. Rolling P&L shows positive momentum in early rolls followed by decline. Threshold proximity shows the session approaching but not sustaining Little Molly threshold. Consecutive 7-out counter shows spikes with y=2 reference line visible.
+Bar chart. `ReferenceLine` at y=2 marks the CATS step-down trigger.
+
+**Acceptance test:** Seed 7 renders all three panels. Seed 42 renders without error. PassLineOnly renders nothing for threshold proximity panel.
 
 ---
 
-### M2.5 Review [DONE]
+### M2 Review
 
-Run the simplify pass across all new and modified files:
-
-- `web/src/lib/stages.ts`
-- `web/src/lib/cats-thresholds.ts`
-- `web/src/components/StageBreakdown.tsx`
-- `web/src/components/StageOverlayChart.tsx`
-- `web/src/components/TrendPanel.tsx`
-- `web/src/components/SessionChart.tsx` (M2.1 changes)
-
-**Checklist:**
-
-- [x] All stage data transformations in `stages.ts` — no stage logic inline in components
-- [x] CATS threshold logic isolated in `cats-thresholds.ts` — not in `stages.ts` or `stats.ts`
-- [x] `hasStageData()` guard used in all M2 components — simple strategies render nothing gracefully
-- [x] `isCATSStrategy()` guard in `TrendPanel` — threshold proximity panel renders nothing for non-CATS strategies
-- [x] Stage color palette defined once in `stages.ts` — not duplicated
-- [x] `StageOverlayChart` Y axis is always relative ±$ — never absolute bankroll
-- [x] `computeConsecutiveSevenOuts` derived from `RollRecord` fields only — no engine changes
-- [x] Seed 7 self-verification: overlay chart shows multiple Accumulator Regressed visits as distinct lines
-- [x] Seed 42 self-verification: all sections render without error
-- [x] No regressions to M1 components — `SessionChart` bands still visible, `SummaryPanel` unchanged
-- [x] `npm test` still passes
-
-**Fixes applied during simplify pass:**
-- Extracted `uniqueStages()` and `fmtPnL()` to `stages.ts`; removed duplicates from `StageOverlayChart` and `StageBreakdown`
-- Fixed `normalizeStageVisits` to do a single targeted pass (was calling `computeStageVisitSummaries` + `rolls.filter` — O(stages × rolls²))
-- Removed `CATS_STAGE_NAMES` Set in `cats-thresholds.ts`; replaced with `stageName in CATS_STAGE_THRESHOLDS`
-- Removed WHAT-comments from `TrendPanel`, `cats-thresholds`, `stats`; kept WHY comment in `stats`
+- [ ] All stage transformations in `stages.ts` — no stage logic in components
+- [ ] CATS threshold logic isolated in `cats-thresholds.ts`
+- [ ] `hasStageData()` guard in all M2 components
+- [ ] `isCATSStrategy()` guard in `TrendPanel`
+- [ ] Stage color palette defined once in `stages.ts`
+- [ ] `StageOverlayChart` Y axis always relative ±$
+- [ ] `computeConsecutiveSevenOuts` derived from `RollRecord` only — no engine changes
+- [ ] Seed 7 and seed 42 both render without error
+- [ ] No M1 regressions
+- [ ] `npm test` passes
 
 ---
 
-### M2.6 Demo [DONE]
+### M2 Demo
 
-**File:** `demo/web-stage-deep-dive.md`
+`demo/web-stage-deep-dive.md` — seed 7. Scroll through all four sections. Cross-check seed 42 for graceful degradation.
 
-Update `App.tsx` hardcoded params to seed 7 for M2 development:
+---
+
+## Milestone 3 — App Shell and Interactive Controls
+
+**Theme:** Transform the single hardcoded page into a navigable multi-page application. Introduce the collapsible sidebar, React Router routing, and URL-driven simulation params. Every run is a URL — bookmarkable, shareable, browser-back-compatible.
+
+**Re-run vs. cache:** Re-run on request. Simulations are sub-100ms. The URL is the cache — the same URL with a fixed seed always produces the same result.
+
+**Terminology:** "App shell" or "layout" — not "chrome" (conflicts with the browser name).
+
+---
+
+### M3.0 — Assessment [DONE — resolved conversationally]
+
+| Question | Decision |
+|---|---|
+| Routing library | `react-router-dom` — industry standard, handles nested routes, `useSearchParams`, `useNavigate` cleanly. Manual `URLSearchParams` doesn't compose across multiple pages. |
+| Layout | Collapsible left sidebar (expanded by default, collapses to 48px icon rail). Full vertical height available for charts. |
+| URL schema | Defined below. Seed always written to URL after run. |
+| Loading state | Spinner overlay on existing content — no clear-and-reload. Runs are fast enough that full skeleton screens add complexity without benefit. |
+| Seed UX | Always written to URL after completed run. Clear the field for a new random run. Every completed run is reproducible by URL. |
+
+**URL schema:**
+
+```
+/session?strategy=CATS&rolls=500&bankroll=300&seed=7
+/analysis?strategy=CATS&rolls=500&bankroll=300&seeds=1000
+/compare?strategies=CATS,ThreePointMolly3X&rolls=500&bankroll=300&seed=7
+```
+
+Defaults when params absent: `strategy=CATS`, `rolls=500`, `bankroll=300`, `seed` generated randomly and written back.
+
+---
+
+### M3.1 — Install React Router and define routes
+
+**New dependency:**
+```bash
+cd web && npm install react-router-dom
+```
+
+**`web/src/main.tsx`:**
 ```tsx
-const HARDCODED_PARAMS = { strategy: 'CATS', rolls: 500, bankroll: 300, seed: 7 };
+import { BrowserRouter } from 'react-router-dom';
+
+createRoot(document.getElementById('root')!).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
 ```
+
+**`web/src/App.tsx`:**
+```tsx
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+function App() {
+  return (
+    <Shell>
+      <Routes>
+        <Route path="/" element={<Navigate to="/session" replace />} />
+        <Route path="/session" element={<SessionPage />} />
+        <Route path="/analysis" element={<AnalysisPage />} />
+        <Route path="/compare" element={<ComparePage />} />
+      </Routes>
+    </Shell>
+  );
+}
+```
+
+**Acceptance test:** `/session`, `/analysis`, `/compare` each render correct page without full reload. `/` redirects to `/session`.
+
+---
+
+### M3.2 — App shell: collapsible sidebar layout
+
+**New component:** `web/src/components/Shell.tsx`
+
+Persistent app frame. Top navigation bar + collapsible left sidebar + main content area.
+
+**Top nav bar:**
+- App name: "Craps Simulator"
+- Nav links: Session | Analysis | Compare
+- Active link highlighted via React Router `NavLink`
+
+**Left sidebar:**
+- Default: expanded (240px)
+- Collapsed: icon rail (48px) — icons only, no labels
+- Toggle button at sidebar bottom
+- Contains `RunControls` — hidden when collapsed
+- Collapse state is local UI state (`useState`) — not in URL
+
+**Layout:**
+```
+┌─────────────────────────────────────────┐
+│  Top nav bar (fixed)                    │
+├────────┬────────────────────────────────┤
+│        │                               │
+│ Side-  │  Main content (scrollable)    │
+│ bar    │                               │
+│        │  <children />                 │
+│        │                               │
+└────────┴────────────────────────────────┘
+```
+
+**Acceptance test:** Sidebar collapses/expands. Nav links navigate without full reload. Layout holds at 1280px.
+
+---
+
+### M3.3 — Run controls form
+
+**New component:** `web/src/components/RunControls.tsx`
+
+Lives inside the sidebar. Manages form state only — no API calls. Submitting navigates to `/session?...` with updated params.
+
+**Controls:**
+
+| Control | Type | Default |
+|---|---|---|
+| Strategy | Dropdown | CATS |
+| Rolls | Number input | 500 |
+| Bankroll | Number input | 300 |
+| Seed | Number input | (empty = random) |
+| Run | Button | — |
+
+**Submission behavior:**
+1. Validate inputs
+2. If seed empty: leave it out of the URL — server will generate and echo back
+3. Navigate to `/session?strategy=X&rolls=N&bankroll=N` (seed added after run completes)
+
+**Strategies dropdown** populated from `GET /api/strategies` — called once on mount, not on every render.
+
+**`RunControls` is stateless with respect to simulation data.** Form state only.
+
+**Acceptance test:** Clicking Run with valid inputs navigates to the correct `/session?...` URL. Invalid inputs show inline validation errors without navigating.
+
+---
+
+### M3.4 — Session page with URL params
+
+**New file:** `web/src/pages/SessionPage.tsx`
+
+Replaces hardcoded `App.tsx` content. Reads params from URL, calls API, renders dashboard.
+
+```tsx
+export function SessionPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const params = {
+    strategy: searchParams.get('strategy') ?? 'CATS',
+    rolls: Number(searchParams.get('rolls') ?? 500),
+    bankroll: Number(searchParams.get('bankroll') ?? 300),
+    seed: searchParams.get('seed') ? Number(searchParams.get('seed')) : undefined,
+  };
+
+  const { data, loading, error } = useSimulation(params);
+
+  // After run: write generated seed back to URL — makes run reproducible
+  useEffect(() => {
+    if (data?.seed && !searchParams.get('seed')) {
+      const next = new URLSearchParams(searchParams);
+      next.set('seed', String(data.seed));
+      navigate(`/session?${next.toString()}`, { replace: true });
+    }
+  }, [data]);
+
+  if (loading) return <SpinnerOverlay />;
+  if (error || !data) return <ErrorState message={error} />;
+
+  return (
+    <>
+      <SummaryPanel result={data} params={params} />
+      <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
+      <StageBreakdown rolls={data.rolls} />
+      <StageOverlayChart rolls={data.rolls} />
+      <TrendPanel rolls={data.rolls} strategyName={params.strategy} />
+    </>
+  );
+}
+```
+
+**`server/routes/simulate.ts` change** — generate seed if not provided, echo in response:
+```typescript
+const seed = body.seed ?? Math.floor(Math.random() * 1_000_000);
+const engine = new CrapsEngine({ ...params, seed });
+const result = engine.run();
+return res.json({ ...result, seed });
+```
+
+**Acceptance test:** `/session?strategy=CATS&rolls=500&bankroll=300&seed=7` renders final bankroll `$322`. `/session?strategy=CATS&rolls=500&bankroll=300` runs and updates URL with generated seed.
+
+---
+
+### M3.5 — Stub pages for M4 and M5
+
+**New files:** `web/src/pages/AnalysisPage.tsx`, `web/src/pages/ComparePage.tsx`
+
+Each renders a heading and "Coming soon" placeholder. Purpose: confirm routing works, give nav links a destination.
+
+---
+
+### M3 Review
+
+- [ ] `RunControls` manages form state only — no simulation logic
+- [ ] `SessionPage` owns the API call — nothing in `Shell` or `RunControls` touches the API
+- [ ] Seed always in URL after completed run
+- [ ] Browser back/forward works — navigates between runs
+- [ ] Sidebar collapse state is local `useState` — not in URL
+- [ ] `GET /api/strategies` called once in `RunControls`, not on every render
+- [ ] All M2 components render correctly inside `SessionPage`
+- [ ] Stub pages render without errors
+- [ ] `npm test` still passes
+
+---
+
+### M3 Demo
+
+**File:** `demo/web-app-shell.md`
 
 ```bash
 # Terminal 1
@@ -713,53 +605,42 @@ npm run server
 # Terminal 2
 cd web && npm run dev
 
-# Browser
 open http://localhost:5173
 ```
 
-**Scroll top to bottom and verify:**
+**What to verify:**
 
-**Section 1 — Timeline:** Stage color bands visible behind bankroll and table load lines. All M1 event markers still visible on top of bands. No vertical transition markers.
-
-**Section 2 — Stage breakdown table:** Rows numbered sequentially (#1, #2, #3...). Roll Range column shows timeline position. Little Molly visits are mostly 1–2 rolls. Net P&L color-coded.
-
-**Section 3 — Stage overlay:** One chart per visited stage. Accumulator Regressed chart shows 10+ visit lines overlaid from T0. Y axis reads ±$. Tight cluster = consistent behavior. Wide fan = high variance.
-
-**Section 4 — Trend indicators:** Three panels. Rolling P&L shows momentum shift. Threshold proximity shows session approaching but not sustaining +$70 step-up. Consecutive 7-out spikes correspond to step-downs in Section 2 table.
-
-**Cross-check:** Switch to seed 42. All sections render. Dashboard degrades gracefully — fewer overlay lines, flat trend signals, no crashes.
-
----
-
-## Milestone 3 — Interactive Controls
-
-**Goal:** Replace hardcoded simulation params with user controls. Strategy selector, roll count, bankroll, seed input with optional lock. Run button triggers new simulation.
-
-*Not designed in detail — depends on M2 visual foundation being stable.*
-
-Key decisions after M2:
-- Form layout: sidebar vs. above chart
-- Seed UX: explicit input vs. auto-generate with "lock" toggle
-- Loading state: re-render in place vs. clear and reload
+- Nav links: Session | Analysis | Compare all navigate correctly without full reload
+- Sidebar: collapses to icon rail, expands back, chart area widens when collapsed
+- Run controls: select ThreePointMolly3X, 300 rolls, $500 bankroll, no seed → Run → URL updates with generated seed, dashboard renders
+- Seed reproducibility: copy URL, open new tab, paste → identical output
+- Browser back: after two runs, back returns to previous run's URL and re-renders it
+- Direct URL: `/session?strategy=CATS&rolls=500&bankroll=300&seed=7` → final bankroll `$322`
 
 ---
 
 ## Milestone 4 — Multi-Session Analysis
 
-**Goal:** Run N sessions across a seed range, render percentile distributions.
+**Goal:** Run N sessions across a seed range, render percentile distributions. Answer the exit-threshold and ruin-probability questions.
 
 - P10/P50/P90 bankroll bands over time
-- Peak bankroll distribution — when to walk
+- Peak bankroll distribution — the "when to walk" signal
 - Ruin probability by session length
-- Stage dwell time histogram for CATS (connects to Goal (c) leading indicators)
+- Stage dwell time histogram for CATS
 
-**API addition:** `POST /api/analyze` — server computes percentile aggregates, does not return raw `RollRecord[]` for all sessions.
+**Page URL:** `/analysis?strategy=CATS&rolls=500&bankroll=300&seeds=1000`
+
+**API addition:** `POST /api/analyze` — server computes percentile aggregates server-side. Does not return raw `RollRecord[]` for all sessions (too large). Returns pre-aggregated distributions.
+
+**Why multi-session before comparison:** The stage dwell histogram validates CATS threshold calibration. Understanding one strategy deeply before comparing multiple strategies is the right analytical sequence.
 
 ---
 
 ## Milestone 5 — Strategy Comparison
 
-**Goal:** Head-to-head comparison using `SharedTable`. Two or more strategies, identical dice, multiple bankroll lines on the same chart.
+**Goal:** Head-to-head comparison using `SharedTable`. Two or more strategies on identical dice. Multiple bankroll lines on the same chart.
+
+**Page URL:** `/compare?strategies=CATS,ThreePointMolly3X&rolls=500&bankroll=300&seed=7`
 
 **API addition:** `POST /api/compare` — wraps `SharedTable`, returns `SharedTableResult`.
 
@@ -769,13 +650,18 @@ Key decisions after M2:
 
 | Decision | Resolution |
 |---|---|
-| Type sharing | Shared `types/simulation.ts` at repo root re-exports from engine source. No duplication. |
-| Server package location | Shares root `package.json`. Express in root `devDependencies`. `"server"` script in root. |
-| `stageName` in `RollRecord` | Added in M0.1. Optional field, populated by Stage Machine strategies only. |
-| Stage transition markers | Tried and removed — too dense at CATS's transition frequency. Table load line tells the stage story implicitly. |
-| Stage overlay Y axis | Relative ±$ from stage entry bankroll, starting at 0 each visit. |
-| Rolling trend window | 24 rolls. |
-| Stage filter dropdown | Deferred — overlay chart (M2.3) answers the multi-visit question better. |
+| Type sharing | Shared `types/simulation.ts` at repo root re-exports from engine source |
+| Server package location | Shares root `package.json`. `"server"` script in root |
+| `stageName` in `RollRecord` | Added in M0.1. Optional, Stage Machine strategies only |
+| Stage transition markers | Tried and removed — too dense. Table load tells stage story |
+| Stage overlay Y axis | Relative ±$ from stage entry bankroll |
+| Rolling trend window | 24 rolls |
+| Stage filter dropdown | Deferred — overlay chart is the better answer |
+| Routing library | `react-router-dom` |
+| Layout | Collapsible left sidebar, expanded by default, collapses to 48px icon rail |
+| URL schema | `/session`, `/analysis`, `/compare` with defined param schemas |
+| Loading state | Spinner overlay — no clear-and-reload |
+| Seed UX | Always written to URL after run. Clear field for new random run |
 
 ---
 
@@ -788,20 +674,27 @@ Key decisions after M2:
 | `src/engine/shared-table.ts` | M0.1 | Populate `stageName` per player slot |
 | `types/simulation.ts` | M0.2 | Shared type re-exports |
 | `server/server.ts` | M1.1 | Express entry point |
-| `server/routes/simulate.ts` | M1.1 | POST /api/simulate handler |
+| `server/routes/simulate.ts` | M1.1 | POST /api/simulate handler (M3.4: add seed echo) |
 | `server/routes/strategies.ts` | M1.1 | GET /api/strategies handler |
-| `web/package.json` | M1.2 | Frontend package (React, Vite, Recharts, Tailwind) |
+| `web/package.json` | M1.2 | Frontend package |
 | `web/vite.config.ts` | M1.2 | Vite config with API proxy and path alias |
-| `web/tsconfig.json` | M1.2 | TypeScript config with path alias for shared types |
-| `web/src/lib/stats.ts` | M1.4 | `computeSessionStats` — all derived stat computation |
+| `web/tsconfig.json` | M1.2 | TypeScript config with path alias |
+| `web/src/lib/stats.ts` | M1.4 | `computeSessionStats`, rolling P&L, consecutive 7-outs |
 | `web/src/hooks/useSimulation.ts` | M1.3 | Data fetching hook |
 | `web/src/components/SummaryPanel.tsx` | M1.4 | Stats card grid |
 | `web/src/components/SessionChart.tsx` | M1.5 | Dual-axis chart with stage color banding |
-| `web/src/App.tsx` | M1.6 | Root component |
-| `demo/web-session-view.md` | M1 Demo | Local dev instructions and self-verification |
-| `web/src/lib/stages.ts` | M2.1 | Stage span computation, visit normalization, color palette |
+| `web/src/App.tsx` | M1.6 → M3.1 | Root component → route definitions |
+| `web/src/main.tsx` | M3.1 | BrowserRouter wrapper |
+| `demo/web-session-view.md` | M1 Demo | M1 local dev instructions |
+| `web/src/lib/stages.ts` | M2.1 | Stage spans, visit normalization, color palette |
 | `web/src/components/StageBreakdown.tsx` | M2.2 | Stage visit summary table |
 | `web/src/components/StageOverlayChart.tsx` | M2.3 | T0-normalized stage overlay charts |
-| `web/src/lib/cats-thresholds.ts` | M2.4 | CATS-specific threshold proximity logic |
+| `web/src/lib/cats-thresholds.ts` | M2.4 | CATS threshold proximity logic |
 | `web/src/components/TrendPanel.tsx` | M2.4 | Rolling P&L, threshold proximity, 7-out counter |
-| `demo/web-stage-deep-dive.md` | M2 Demo | Stage deep dive local dev instructions |
+| `demo/web-stage-deep-dive.md` | M2 Demo | M2 local dev instructions |
+| `web/src/components/Shell.tsx` | M3.2 | App layout — top nav + collapsible sidebar |
+| `web/src/components/RunControls.tsx` | M3.3 | Simulation params form |
+| `web/src/pages/SessionPage.tsx` | M3.4 | Session detail page (URL-driven) |
+| `web/src/pages/AnalysisPage.tsx` | M3.5 | Multi-session analysis stub |
+| `web/src/pages/ComparePage.tsx` | M3.5 | Strategy comparison stub |
+| `demo/web-app-shell.md` | M3 Demo | M3 local dev instructions |
