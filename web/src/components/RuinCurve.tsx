@@ -40,10 +40,8 @@ export function RuinCurve({ aggregates }: Props) {
           width={48}
         />
         <Tooltip
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          formatter={((value: number) => [`${value}%`, 'P(ruin)']) as any}
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          labelFormatter={((label: number) => `Roll ${label}`) as any}
+          formatter={(value) => [`${value ?? 0}%`, 'P(ruin)']}
+          labelFormatter={(label) => `Roll ${label}`}
           contentStyle={{ fontFamily: 'monospace', fontSize: 12 }}
         />
         <Area

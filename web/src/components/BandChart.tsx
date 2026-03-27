@@ -45,10 +45,8 @@ export function BandChart({ aggregates, initialBankroll }: Props) {
           width={56}
         />
         <Tooltip
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          formatter={((value: number, name: string) => [`$${value}`, name]) as any}
-          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-          labelFormatter={((label: number) => `Roll ${label}`) as any}
+          formatter={(value, name) => [`$${value ?? 0}`, String(name)]}
+          labelFormatter={(label) => `Roll ${label}`}
           contentStyle={{ fontFamily: 'monospace', fontSize: 12 }}
         />
         <Legend
