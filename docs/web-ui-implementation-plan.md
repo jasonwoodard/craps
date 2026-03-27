@@ -487,7 +487,7 @@ Persistent app frame. Top navigation bar + collapsible left sidebar + main conte
 
 ---
 
-### M3.3 — Run controls form
+### M3.3 — Run controls form [DONE]
 
 **New component:** `web/src/components/RunControls.tsx`
 
@@ -572,7 +572,7 @@ return res.json({ ...result, seed });
 
 ---
 
-### M3.5 — Stub pages for M4 and M5
+### M3.5 — Stub pages for M4 and M5 [DONE]
 
 **New files:** `web/src/pages/AnalysisPage.tsx`, `web/src/pages/ComparePage.tsx`
 
