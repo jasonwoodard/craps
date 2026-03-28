@@ -119,7 +119,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'PlaceInside':       PlaceInside,
   'PlaceAll':          PlaceAll,
   'PassLineOnly':      PassLineOnly,
-  'SixIn8Progressive': SixIn8Progressive,
+  'Place6And8Progressive': Place6And8Progressive,
 };
 ```
 

@@ -11,7 +11,7 @@ describe('BUILT_IN_STRATEGIES', () => {
     'PlaceInside',
     'PlaceAll',
     'PassLineOnly',
-    'SixIn8Progressive',
+    'Place6And8Progressive',
     'CATS',
   ];
 

@@ -244,7 +244,7 @@ export const ThreePointMolly: StrategyDefinition = ({ bets, track }) => {
 Press (double up) on Place 6 after the first win, then return to base unit.
 
 ```typescript
-export const SixIn8Progressive: StrategyDefinition = ({ bets, track }) => {
+export const Place6And8Progressive: StrategyDefinition = ({ bets, track }) => {
   const wins = track<number>('wins', 0);
 
   if (wins === 0) {
