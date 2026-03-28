@@ -59,6 +59,7 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             orientation="right"
             label={{ value: 'Table Load ($)', angle: 90, position: 'insideRight', offset: 10 }}
             tick={{ fontSize: 11 }}
+            domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.4)]}
           />
           <Tooltip
             formatter={(value, name) => [`$${value ?? 0}`, String(name)]}
@@ -86,9 +87,10 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
             yAxisId="load"
             dataKey="tableLoad"
             name="Table Load"
-            stroke="#e97316"
-            strokeWidth={2}
-            strokeOpacity={0.9}
+            type="stepAfter"
+            stroke="#94a3b8"
+            strokeWidth={1.5}
+            strokeOpacity={0.6}
             dot={false}
             isAnimationActive={false}
           />
