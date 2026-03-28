@@ -14,7 +14,7 @@
 
 **Repository context:** This document targets the craps simulator at the root of this repository. The primary source tree is `src/`, tests are in `spec/`, strategy documents are in `strategy/`, and design documentation lives in `docs/`. The existing implementation plan is `docs/implementation-plan.md`. All file paths in this document are relative to the repository root.
 
-The existing `StrategyDefinition` DSL — a plain function called once per roll that declares desired bets via `BetReconciler` — is the right tool for simple strategies. `Place6And8`, `ThreePointMolly`, and `SixIn8Progressive` are all clean, readable, and correct in this model. The engine handles reconciliation; the strategy handles declaration. Good.
+The existing `StrategyDefinition` DSL — a plain function called once per roll that declares desired bets via `BetReconciler` — is the right tool for simple strategies. `Place6And8`, `ThreePointMolly`, and `Place6And8Progressive` are all clean, readable, and correct in this model. The engine handles reconciliation; the strategy handles declaration. Good.
 
 CATS breaks this model. Not because CATS is complicated, but because CATS has **named states and explicit transitions between them**. Implementing CATS as a `StrategyDefinition` function produces a 150-line pile of nested if/else that implicitly re-implements a state machine without saying so. It is error-prone to write, opaque to read, and impossible to test at the state level.
 

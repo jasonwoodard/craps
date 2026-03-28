@@ -72,7 +72,7 @@ Replace `(value % 6) + 1` with rejection sampling: generate a random integer, di
 
 - Add `ReconcileEngine.postRoll(outcomes: Outcome[])` method
 - Define the mapping: a resolved win on any bet increments `'wins'`; a resolved loss increments `'losses'`; the engine iterates outcomes and applies the mapping
-- Add tests using `SixIn8Progressive` (or a simpler fixture) to confirm that `track('wins', 0)` returns `1` after a winning roll and `0` after a losing roll
+- Add tests using `Place6And8Progressive` (or a simpler fixture) to confirm that `track('wins', 0)` returns `1` after a winning roll and `0` after a losing roll
 
 **FR:** 6 — progressive strategies require a working track() write path
 **Risk:** Medium. Requires defining and stabilizing the `Outcome` type if not already consistent.
@@ -248,7 +248,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'PlaceInside':       PlaceInside,
   'PlaceAll':          PlaceAll,
   'PassLineOnly':      PassLineOnly,
-  'SixIn8Progressive': SixIn8Progressive,
+  'Place6And8Progressive': Place6And8Progressive,
 };
 ```
 
@@ -259,7 +259,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
 **Risk:** Low.
 
 Implementation notes:
-- Canonical strategy definitions added to `src/dsl/strategies.ts`: `PassLineOnly`, `Place6And8`, `PlaceInside`, `PlaceAll`, `SixIn8Progressive`, and five `ThreePointMolly[1-5]X` variants (odds multiplier on a $10 flat bet). `PassLineAnd2Comes` is a deprecated alias for `ThreePointMolly5X`; `PassLineAndPlace68` is kept as-is.
+- Canonical strategy definitions added to `src/dsl/strategies.ts`: `PassLineOnly`, `Place6And8`, `PlaceInside`, `PlaceAll`, `Place6And8Progressive`, and five `ThreePointMolly[1-5]X` variants (odds multiplier on a $10 flat bet). `PassLineAnd2Comes` is a deprecated alias for `ThreePointMolly5X`; `PassLineAndPlace68` is kept as-is.
 - `lookupStrategy(name)` throws a descriptive error listing all available names if the name is unknown.
 - Tests in `spec/cli/strategy-registry-spec.ts` verify all ten names resolve, five ThreePointMolly variants are distinct, and unknown names throw.
 
@@ -473,7 +473,7 @@ Comprehensive test coverage for `SharedTable` and comparison CLI:
 
 - **Dice identity test** (CUJ 4.1): `SharedTable` integration test proving roll-by-roll `die1`/`die2` identity across all strategies over a full run
 - **Bankroll independence test**: strategies with different betting behavior end at different bankrolls even with identical dice
-- **Progressive strategy test** (CUJ 2.1): `SixIn8Progressive` run via `SharedTable` alongside `Place6And8`; confirm track() values accumulate correctly and the progressive strategy diverges from the flat one
+- **Progressive strategy test** (CUJ 2.1): `Place6And8Progressive` run via `SharedTable` alongside `Place6And8`; confirm track() values accumulate correctly and the progressive strategy diverges from the flat one
 - **Seed reproducibility test** (CUJs 1.2, 2.3): same seed produces identical `log[i].roll` values across two separate `CrapsEngine` (or `SharedTable`) instantiations
 
 **FR:** 2, 4, 9

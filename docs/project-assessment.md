@@ -46,7 +46,7 @@ CLI (run-sim.ts)
 - **Correct craps mechanics.** Point establishment, naturals/craps on come-out, seven-out, come bet travel to points — all implemented correctly.
 - **Test infrastructure.** `RiggedDice` and `TableMaker` builder make tests expressive and deterministic. This is the right foundation for a simulation tool.
 - **Mersenne Twister.** Better statistical properties than `Math.random()` for long-run simulations.
-- **DSL strategy design.** `ThreePointMolly`, `Place6And8`, `SixIn8Progressive` and others are readable, declarative, and show the potential of the approach. The spec is solid.
+- **DSL strategy design.** `ThreePointMolly`, `Place6And8`, `Place6And8Progressive` and others are readable, declarative, and show the potential of the approach. The spec is solid.
 - **The bet self-evaluation pattern.** Bets know how to resolve themselves, keeping resolution logic localized.
 - **Comprehensive documentation.** Functional requirements, DSL spec, logging spec, CUJs, and this tech plan together provide a clear and unambiguous implementation target.
 
@@ -70,14 +70,14 @@ The DSL layer (`src/dsl/`) and the original game engine (`src/craps-game.ts`) do
 
 ### 2. `track()` write path is not implemented
 
-`ReconcileEngine` holds the `trackers` map for read access but has no `postRoll()` method. The engine never writes to tracked values. As a result, `SixIn8Progressive` and any other progression-based strategy compile but cannot work as intended — `wins` will always be `0`.
+`ReconcileEngine` holds the `trackers` map for read access but has no `postRoll()` method. The engine never writes to tracked values. As a result, `Place6And8Progressive` and any other progression-based strategy compile but cannot work as intended — `wins` will always be `0`.
 
 **Decision made (per FR6):** The write path is engine-owned. After each roll's outcomes are resolved, `ReconcileEngine.postRoll(outcomes)` increments tracked counters based on resolved bet outcomes. Strategy functions never write directly.
 
 **Remaining work:**
 - Implement `ReconcileEngine.postRoll(outcomes: Outcome[])`
 - Define the mapping from outcome events to tracked key updates
-- Test with `SixIn8Progressive` to confirm progression works
+- Test with `Place6And8Progressive` to confirm progression works
 
 ---
 

@@ -1,6 +1,6 @@
 import { ReconcileEngine } from '../../src/dsl/strategy';
 import { GameState } from '../../src/dsl/game-state';
-import { PassLineAndPlace68, SixIn8Progressive } from '../../src/dsl/strategies';
+import { PassLineAndPlace68, Place6And8Progressive } from '../../src/dsl/strategies';
 import { CrapsTable } from '../../src/craps-table';
 import { RiggedDice } from '../dice/rigged-dice';
 import { PassLineBet } from '../../src/bets/pass-line-bet';
@@ -103,19 +103,19 @@ describe('ReconcileEngine', () => {
     it('increments wins tracker after a winning outcome', () => {
       const { engine } = makeEngine();
 
-      // First reconcile to initialize tracker with SixIn8Progressive
-      engine.reconcile(SixIn8Progressive);
+      // First reconcile to initialize tracker with Place6And8Progressive
+      engine.reconcile(Place6And8Progressive);
 
       // Win 1: bet stays flat at $12 (collect profit, no press yet)
       engine.postRoll([winOutcome(6)]);
-      const cmds1 = engine.reconcile(SixIn8Progressive);
+      const cmds1 = engine.reconcile(Place6And8Progressive);
       const place1 = cmds1.find(c => c.type === 'place' && 'amount' in c);
       expect(place1).toBeDefined();
       expect((place1 as any).amount).toBe(12);
 
       // Win 2: press by $6 → $18
       engine.postRoll([winOutcome(6)]);
-      const cmds2 = engine.reconcile(SixIn8Progressive);
+      const cmds2 = engine.reconcile(Place6And8Progressive);
       const place2 = cmds2.find(c => c.type === 'place' && 'amount' in c);
       expect(place2).toBeDefined();
       expect((place2 as any).amount).toBe(18);
@@ -124,7 +124,7 @@ describe('ReconcileEngine', () => {
     it('increments losses tracker after a losing outcome', () => {
       const { engine } = makeEngine();
 
-      engine.reconcile(SixIn8Progressive);
+      engine.reconcile(Place6And8Progressive);
       engine.postRoll([lossOutcome(6)]);
 
       // Verify the loss was tracked by reading it through a custom strategy
@@ -138,7 +138,7 @@ describe('ReconcileEngine', () => {
     it('does not increment trackers when there are no outcomes', () => {
       const { engine } = makeEngine();
 
-      engine.reconcile(SixIn8Progressive);
+      engine.reconcile(Place6And8Progressive);
       engine.postRoll([]);
 
       let trackedWins = -1;
@@ -154,11 +154,11 @@ describe('ReconcileEngine', () => {
     it('accumulates multiple wins across rolls', () => {
       const { engine } = makeEngine();
 
-      engine.reconcile(SixIn8Progressive);
+      engine.reconcile(Place6And8Progressive);
       engine.postRoll([winOutcome(6)]);
       engine.postRoll([winOutcome(6)]);
 
-      // After 2 wins, SixIn8Progressive should revert to base bet ($12)
+      // After 2 wins, Place6And8Progressive should revert to base bet ($12)
       let trackedWins = -1;
       engine.reconcile(({ track }) => {
         trackedWins = track<number>('wins', 0);
@@ -169,7 +169,7 @@ describe('ReconcileEngine', () => {
     it('tracks wins and losses independently', () => {
       const { engine } = makeEngine();
 
-      engine.reconcile(SixIn8Progressive);
+      engine.reconcile(Place6And8Progressive);
       engine.postRoll([winOutcome(6)]);
       engine.postRoll([lossOutcome(6)]);
       engine.postRoll([winOutcome(6)]);
@@ -187,7 +187,7 @@ describe('ReconcileEngine', () => {
     it('handles multiple outcomes in a single roll', () => {
       const { engine } = makeEngine();
 
-      engine.reconcile(SixIn8Progressive);
+      engine.reconcile(Place6And8Progressive);
       // Two bets resolve on the same roll
       engine.postRoll([winOutcome(6), winOutcome(8)]);
 

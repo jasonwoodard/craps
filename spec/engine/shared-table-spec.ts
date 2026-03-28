@@ -2,7 +2,7 @@ import { SharedTable } from '../../src/engine/shared-table';
 import { CrapsEngine } from '../../src/engine/craps-engine';
 import { StrategyDefinition } from '../../src/dsl/strategy';
 import { RiggedDice } from '../dice/rigged-dice';
-import { SixIn8Progressive, Place6And8 as Place6And8Strategy } from '../../src/dsl/strategies';
+import { Place6And8Progressive, Place6And8 as Place6And8Strategy } from '../../src/dsl/strategies';
 
 // --- Strategy fixtures ---
 
@@ -191,53 +191,53 @@ describe('SharedTable', () => {
   //   Roll 1 (4): come-out; point=4 established; place bets placed but OFF (no resolution).
   //   Roll 2 (6): place 6 hits (wins=0→1). Both strategies pay at $12.
   //   Roll 3 (8): place 8 hits (wins=1→2). Both strategies pay at $12.
-  //   Roll 4 (6): place 6 hits (wins=2→3). SixIn8Progressive still has place6@$12 on table
+  //   Roll 4 (6): place 6 hits (wins=2→3). Place6And8Progressive still has place6@$12 on table
   //               (updateOdds is a no-op for place bets; amount updates only take effect after
   //               a bet is naturally removed and re-placed). Pays at $12.
-  //   Roll 5 (8): place 8 hits (wins=3→4). SixIn8Progressive re-placed place8@$18 before this
+  //   Roll 5 (8): place 8 hits (wins=3→4). Place6And8Progressive re-placed place8@$18 before this
   //               roll (after roll 3's win cleared it and wins=2 on reconcile), so it pays at $18
   //               vs Place6And8's flat $12.
   //   Roll 6 (7): seven-out; both remaining place bets lose; no credit.
   //
   // Expected final bankrolls (derived from hand-trace):
-  //   SixIn8Progressive: 515  (higher exposure from pressing bets)
+  //   Place6And8Progressive: 515  (higher exposure from pressing bets)
   //   Place6And8:        532  (flat $12 throughout — avoids the larger bets but misses upside)
   describe('progressive strategy (CUJ 2.1)', () => {
 
-    it('SixIn8Progressive diverges from flat Place6And8 on identical dice (CUJ 2.1)', () => {
+    it('Place6And8Progressive diverges from flat Place6And8 on identical dice (CUJ 2.1)', () => {
       // [4, 6, 8, 6, 8, 7]: point established, four place-bet wins at escalating sizes, then seven-out
       const rolls = [4, 6, 8, 6, 8, 7];
       const dice = new RiggedDice(rolls);
       const table = new SharedTable({ rolls: rolls.length, dice });
 
-      table.addStrategy('SixIn8Progressive', SixIn8Progressive, { bankroll: 500 });
+      table.addStrategy('Place6And8Progressive', Place6And8Progressive, { bankroll: 500 });
       table.addStrategy('Place6And8',        Place6And8Strategy, { bankroll: 500 });
 
       const results = table.run();
 
       // Both strategies see identical dice — the comparison is fair
       for (let i = 0; i < rolls.length; i++) {
-        expect(results['SixIn8Progressive'].log[i].rollValue)
+        expect(results['Place6And8Progressive'].log[i].rollValue)
           .toBe(results['Place6And8'].log[i].rollValue);
       }
 
       // Strategies produce different final bankrolls because bet sizes diverged after wins accumulated
-      expect(results['SixIn8Progressive'].finalBankroll).not.toBe(results['Place6And8'].finalBankroll);
+      expect(results['Place6And8Progressive'].finalBankroll).not.toBe(results['Place6And8'].finalBankroll);
 
       // Exact values verified by hand-trace (see comment above)
-      expect(results['SixIn8Progressive'].finalBankroll).toBe(515);
+      expect(results['Place6And8Progressive'].finalBankroll).toBe(515);
       expect(results['Place6And8'].finalBankroll).toBe(532);
     });
 
-    it('SixIn8Progressive shows larger place bets than Place6And8 once wins accumulate', () => {
-      // After 2 wins (rolls 2 and 3 in the sequence), SixIn8Progressive re-places the cleared
+    it('Place6And8Progressive shows larger place bets than Place6And8 once wins accumulate', () => {
+      // After 2 wins (rolls 2 and 3 in the sequence), Place6And8Progressive re-places the cleared
       // bet at $18 while Place6And8 re-places at $12.  We inspect activeBets (snapshotted after
       // reconcile, before the dice roll) to verify the amounts directly.
       const rolls = [4, 6, 8, 6, 8, 7];
       const dice = new RiggedDice(rolls);
       const table = new SharedTable({ rolls: rolls.length, dice });
 
-      table.addStrategy('SixIn8Progressive', SixIn8Progressive, { bankroll: 500 });
+      table.addStrategy('Place6And8Progressive', Place6And8Progressive, { bankroll: 500 });
       table.addStrategy('Place6And8',        Place6And8Strategy, { bankroll: 500 });
 
       const results = table.run();
@@ -246,13 +246,13 @@ describe('SharedTable', () => {
       // Place6 was removed after roll 4's win and re-placed at $24.
       // Place8 survived from before roll 4, but was placed at $18 (wins=2 on that reconcile)
       // and was not updated (updateOdds is a no-op for place bets).
-      const progressiveLog = results['SixIn8Progressive'].log;
+      const progressiveLog = results['Place6And8Progressive'].log;
       const flatLog        = results['Place6And8'].log;
 
       const progressiveBetsOnRoll5 = progressiveLog[4].activeBets;
       const flatBetsOnRoll5        = flatLog[4].activeBets;
 
-      // SixIn8Progressive has at least one bet larger than $12 by roll 5
+      // Place6And8Progressive has at least one bet larger than $12 by roll 5
       const progressiveAmounts = progressiveBetsOnRoll5.map(b => b.amount);
       expect(progressiveAmounts.some(a => a > 12)).toBe(true);
 

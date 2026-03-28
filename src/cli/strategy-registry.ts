@@ -9,7 +9,7 @@ import {
   PlaceInside,
   PlaceAll,
   PassLineOnly,
-  SixIn8Progressive,
+  Place6And8Progressive,
 } from '../dsl/strategies';
 import { CATS } from '../dsl/strategies-staged';
 
@@ -23,7 +23,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'PlaceInside':       PlaceInside,
   'PlaceAll':          PlaceAll,
   'PassLineOnly':      PassLineOnly,
-  'SixIn8Progressive': SixIn8Progressive,
+  'Place6And8Progressive': Place6And8Progressive,
   'CATS':              CATS(),
 };
 
