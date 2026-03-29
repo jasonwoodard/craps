@@ -98,3 +98,12 @@ export interface DistributionAggregates {
   ruinRate:      number;
   seedCount:     number;
 }
+
+/** Extended aggregates produced by CLI --output distribution runs (10k+ seeds). */
+export interface FullDistributionAggregates extends DistributionAggregates {
+  p95: number[];
+  p99: number[];
+  finalBankroll: { p10: number; p50: number; p90: number; p95: number; p99: number; mean: number };
+  generatedAt: string;   // ISO timestamp
+  params: { strategy: string; rolls: number; bankroll: number };
+}
