@@ -71,6 +71,7 @@ export function BandChart({ aggregates, initialBankroll }: Props) {
           fill="#bfdbfe"
           fillOpacity={0.4}
           legendType="none"
+          tooltipType="none"
           isAnimationActive={false}
         />
         <Area
@@ -80,6 +81,7 @@ export function BandChart({ aggregates, initialBankroll }: Props) {
           fill="#f9fafb"
           fillOpacity={1}
           legendType="none"
+          tooltipType="none"
           isAnimationActive={false}
         />
         <Line type="monotone" dataKey="p10" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} />
