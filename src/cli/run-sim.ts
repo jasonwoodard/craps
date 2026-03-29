@@ -24,6 +24,7 @@ import { RunLogger } from '../logger/run-logger';
 import { StrategyDefinition } from '../dsl/strategy';
 import { lookupStrategy } from './strategy-registry';
 import { loadStrategyFile } from './strategy-loader';
+import { summarize, computeFullAggregates } from '../../server/lib/distribution';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,7 +43,8 @@ export interface CliArgs {
   rolls: number;
   bankroll: number;
   seed?: number;
-  output: 'summary' | 'verbose' | 'json';
+  seeds?: number;
+  output: 'summary' | 'verbose' | 'json' | 'distribution';
 }
 
 // ---------------------------------------------------------------------------
@@ -122,8 +124,22 @@ export function parseArgs(argv: string[]): CliArgs {
   }
 
   const outputRaw = single['output'] ?? 'summary';
-  if (outputRaw !== 'summary' && outputRaw !== 'verbose' && outputRaw !== 'json') {
-    throw new Error(`Invalid value for --output: "${outputRaw}". Must be summary, verbose, or json.`);
+  if (outputRaw !== 'summary' && outputRaw !== 'verbose' && outputRaw !== 'json' && outputRaw !== 'distribution') {
+    throw new Error(`Invalid value for --output: "${outputRaw}". Must be summary, verbose, json, or distribution.`);
+  }
+
+  let seeds: number | undefined;
+  if (single['seeds'] !== undefined) {
+    seeds = parsePositiveInt(single['seeds'], 'seeds', 500);
+  }
+
+  if (outputRaw === 'distribution') {
+    if (seeds === undefined) {
+      throw new Error('--output distribution requires --seeds <n>.');
+    }
+    if (isCompareMode) {
+      throw new Error('--output distribution is not supported in comparison mode.');
+    }
   }
 
   return {
@@ -134,6 +150,7 @@ export function parseArgs(argv: string[]): CliArgs {
     rolls,
     bankroll,
     seed,
+    seeds,
     output: outputRaw,
   };
 }
@@ -179,7 +196,46 @@ export function runSim(args: CliArgs): void {
   });
 
   engine.run();
-  logger.flush(args.output);
+  logger.flush(args.output as 'summary' | 'verbose' | 'json');
+}
+
+// ---------------------------------------------------------------------------
+// Distribution runner — M6.0
+// ---------------------------------------------------------------------------
+
+export function runDistribution(args: CliArgs): void {
+  let strategyName: string;
+  let strategy: StrategyDefinition;
+
+  if (args.strategyFile) {
+    strategy = loadStrategyFile(args.strategyFile);
+    strategyName = args.strategyFile;
+  } else {
+    strategyName = args.strategy!;
+    strategy = lookupStrategy(strategyName);
+  }
+
+  const N = args.seeds!;
+  const sessionResults = [];
+
+  for (let i = 0; i < N; i++) {
+    // Seeds are sequential integers starting at 0 — same convention as SSE stream.
+    const engine = new CrapsEngine({
+      strategy,
+      bankroll: args.bankroll,
+      rolls: args.rolls,
+      seed: i,
+    });
+    sessionResults.push(summarize(engine.run(), i));
+  }
+
+  const aggregates = computeFullAggregates(sessionResults, {
+    strategy: strategyName,
+    rolls: args.rolls,
+    bankroll: args.bankroll,
+  });
+
+  process.stdout.write(JSON.stringify(aggregates, null, 2) + '\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -278,6 +334,8 @@ if (require.main === module) {
     const args = parseArgs(argv);
     if (args.compare || args.compareFiles) {
       runCompare(args);
+    } else if (args.output === 'distribution') {
+      runDistribution(args);
     } else {
       runSim(args);
     }
@@ -289,7 +347,7 @@ if (require.main === module) {
     console.error('  npx ts-node src/cli/run-sim.ts --compare <name1> <name2> [options]');
     console.error('  npx ts-node src/cli/run-sim.ts --compare-files <file1> <file2> [options]');
     console.error('  npx ts-node src/cli/run-sim.ts --compare <name> --strategy-file <file> [options]');
-    console.error('Options: --rolls <n>  --bankroll <n>  --seed <n>  --output summary|verbose|json');
+    console.error('Options: --rolls <n>  --bankroll <n>  --seed <n>  --seeds <n>  --output summary|verbose|json|distribution');
     process.exit(1);
   }
 }

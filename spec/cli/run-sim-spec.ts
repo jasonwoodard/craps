@@ -1,4 +1,4 @@
-import { parseArgs, runSim, runCompare, CliArgs } from '../../src/cli/run-sim';
+import { parseArgs, runSim, runCompare, runDistribution, CliArgs } from '../../src/cli/run-sim';
 
 // ---------------------------------------------------------------------------
 // parseArgs
@@ -93,6 +93,130 @@ describe('parseArgs', () => {
   it('throws when a flag has no value', () => {
     expect(() => parseArgs(['--strategy', 'PassLineOnly', '--rolls']))
       .toThrowError(/--rolls requires a value/);
+  });
+
+  it('parses --output distribution', () => {
+    const args = parseArgs(['--strategy', 'PassLineOnly', '--seeds', '10', '--output', 'distribution']);
+    expect(args.output).toBe('distribution');
+  });
+
+  it('parses --seeds as a positive integer', () => {
+    const args = parseArgs(['--strategy', 'PassLineOnly', '--seeds', '200', '--output', 'distribution']);
+    expect(args.seeds).toBe(200);
+  });
+
+  it('defaults seeds to undefined when --seeds is not provided', () => {
+    const args = parseArgs(['--strategy', 'PassLineOnly']);
+    expect(args.seeds).toBeUndefined();
+  });
+
+  it('throws for --output distribution without --seeds', () => {
+    expect(() => parseArgs(['--strategy', 'PassLineOnly', '--output', 'distribution']))
+      .toThrowError(/--output distribution requires --seeds/);
+  });
+
+  it('throws for --output distribution in compare mode', () => {
+    expect(() => parseArgs(['--compare', 'PassLineOnly', 'Place6And8', '--seeds', '10', '--output', 'distribution']))
+      .toThrowError(/not supported in comparison mode/);
+  });
+
+  it('throws for invalid --seeds value', () => {
+    expect(() => parseArgs(['--strategy', 'PassLineOnly', '--seeds', 'abc', '--output', 'distribution']))
+      .toThrowError(/Invalid value for --seeds/);
+  });
+
+  it('throws for non-positive --seeds value', () => {
+    expect(() => parseArgs(['--strategy', 'PassLineOnly', '--seeds', '0', '--output', 'distribution']))
+      .toThrowError(/Invalid value for --seeds/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runDistribution integration — M6.0
+// ---------------------------------------------------------------------------
+
+describe('runDistribution', () => {
+  let writtenChunks: string[];
+  let originalWrite: typeof process.stdout.write;
+
+  beforeEach(() => {
+    writtenChunks = [];
+    originalWrite = process.stdout.write.bind(process.stdout);
+    (process.stdout as any).write = (chunk: any) => {
+      writtenChunks.push(String(chunk));
+      return true;
+    };
+  });
+
+  afterEach(() => {
+    (process.stdout as any).write = originalWrite;
+  });
+
+  it('runs without throwing', () => {
+    expect(() => runDistribution({ strategy: 'PassLineOnly', seeds: 5, rolls: 20, bankroll: 300, output: 'distribution' }))
+      .not.toThrow();
+  });
+
+  it('produces a single valid JSON object on stdout', () => {
+    runDistribution({ strategy: 'PassLineOnly', seeds: 5, rolls: 20, bankroll: 300, output: 'distribution' });
+    const output = writtenChunks.join('');
+    let parsed: any;
+    expect(() => { parsed = JSON.parse(output); }).not.toThrow();
+    expect(typeof parsed).toBe('object');
+  });
+
+  it('output contains all required FullDistributionAggregates fields', () => {
+    runDistribution({ strategy: 'PassLineOnly', seeds: 5, rolls: 20, bankroll: 300, output: 'distribution' });
+    const parsed = JSON.parse(writtenChunks.join(''));
+    expect(Array.isArray(parsed.p10)).toBe(true);
+    expect(Array.isArray(parsed.p50)).toBe(true);
+    expect(Array.isArray(parsed.p90)).toBe(true);
+    expect(Array.isArray(parsed.p95)).toBe(true);
+    expect(Array.isArray(parsed.p99)).toBe(true);
+    expect(Array.isArray(parsed.ruinByRoll)).toBe(true);
+    expect(typeof parsed.winRate).toBe('number');
+    expect(typeof parsed.ruinRate).toBe('number');
+    expect(typeof parsed.seedCount).toBe('number');
+    expect(typeof parsed.generatedAt).toBe('string');
+    expect(typeof parsed.params).toBe('object');
+  });
+
+  it('seedCount matches the --seeds argument', () => {
+    runDistribution({ strategy: 'PassLineOnly', seeds: 7, rolls: 20, bankroll: 300, output: 'distribution' });
+    const parsed = JSON.parse(writtenChunks.join(''));
+    expect(parsed.seedCount).toBe(7);
+  });
+
+  it('params.strategy matches the strategy name', () => {
+    runDistribution({ strategy: 'PassLineOnly', seeds: 3, rolls: 20, bankroll: 300, output: 'distribution' });
+    const parsed = JSON.parse(writtenChunks.join(''));
+    expect(parsed.params.strategy).toBe('PassLineOnly');
+  });
+
+  it('band arrays have length equal to --rolls (all seeds ran full length)', () => {
+    runDistribution({ strategy: 'PassLineOnly', seeds: 3, rolls: 15, bankroll: 300, output: 'distribution' });
+    const parsed = JSON.parse(writtenChunks.join(''));
+    // Rolls = 15, no ruin expected on PassLineOnly with $300, so all bands should be 15 long
+    expect(parsed.p50.length).toBe(15);
+    expect(parsed.p95.length).toBe(15);
+  });
+
+  it('produces identical output for the same inputs (seeds are deterministic)', () => {
+    const run = () => {
+      writtenChunks = [];
+      runDistribution({ strategy: 'PassLineOnly', seeds: 5, rolls: 20, bankroll: 300, output: 'distribution' });
+      return JSON.parse(writtenChunks.join(''));
+    };
+    const first  = run();
+    const second = run();
+    expect(first.p50).toEqual(second.p50);
+    expect(first.finalBankroll).toEqual(second.finalBankroll);
+    expect(first.seedCount).toEqual(second.seedCount);
+  });
+
+  it('throws for an unknown strategy name', () => {
+    expect(() => runDistribution({ strategy: 'Fake', seeds: 3, rolls: 10, bankroll: 300, output: 'distribution' }))
+      .toThrowError(/Unknown strategy "Fake"/);
   });
 });
 

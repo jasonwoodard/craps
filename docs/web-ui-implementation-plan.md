@@ -464,7 +464,7 @@ open "http://localhost:5173/compare?strategies=CATS,ThreePointMolly3X&rolls=500&
 
 ---
 
-### M6.0 — CLI output format for tail analysis
+### M6.0 — CLI output format for tail analysis [DONE]
 
 New CLI flag `--seeds N --output distribution` produces a `.distribution.json` file:
 
@@ -490,7 +490,7 @@ interface FullDistributionAggregates extends DistributionAggregates {
 
 ---
 
-### M6.1 — Web UI: distribution file loader
+### M6.1 — Web UI: distribution file loader [DONE]
 
 "Load file" button on `/distribution` page alongside seed preset buttons. Accepts `.distribution.json`. Reads client-side via `FileReader` — no server round-trip (already aggregated).
 
@@ -501,11 +501,41 @@ When loaded:
 
 ---
 
-### M6 Review / M6 Demo
+### M6 Review [DONE]
 
-*Defined when M6 is implemented.*
+- [x] CLI `--seeds N --output distribution` produces valid `.distribution.json` with P95/P99
+- [x] Output shape matches `FullDistributionAggregates` — includes `params`, `generatedAt`, `seedCount`
+- [x] `FileReader` reads file client-side — no server round-trip
+- [x] Band chart shows P95/P99 dashed lines (amber/purple) when file is loaded
+- [x] Outcome summary shows P95/P99 stat cards when file is loaded
+- [x] Page header shows filename and seed count when file is loaded
+- [x] "Clear" button restores streaming mode
+- [x] Clicking a seed preset clears loaded file and restarts stream
+- [x] File load error shown inline (invalid JSON, wrong shape)
+- [x] Web TypeScript compiles clean
 
-Key acceptance test: 10,000-seed CLI run loaded into web UI shows stable P95/P99 bands that the 500-seed streaming run cannot produce.
+### M6 Demo [DONE]
+
+```bash
+# Generate a 10k-seed distribution file
+npx ts-node src/cli/run-sim.ts \
+  --strategy CATS --rolls 500 --bankroll 300 \
+  --seeds 10000 --output distribution \
+  > cats-10k.distribution.json
+
+# Open distribution page and click "Load file…" to load cats-10k.distribution.json
+open "http://localhost:5173/distribution?strategy=CATS&rolls=500&bankroll=300&seeds=500"
+```
+
+**What to verify:**
+
+- Load `cats-10k.distribution.json` via "Load file…" button
+- Page header shows "Loaded: cats-10k.distribution.json (10,000 seeds)"
+- Band chart shows 5 lines: P10/P50/P90 plus dashed P95 (amber) and P99 (purple)
+- Outcome summary gains P95 Final and P99 Final stat cards
+- P95/P99 bands are visibly tighter than a 500-seed streaming run could produce
+- "Clear" button restores normal streaming view
+- Clicking Quick/Standard/Deep also clears the loaded file
 
 ---
 

@@ -1,6 +1,6 @@
-import type { EngineResult, DistributionAggregates } from '../../types/simulation';
+import type { EngineResult, DistributionAggregates, FullDistributionAggregates } from '../../types/simulation';
 
-export type { DistributionAggregates };
+export type { DistributionAggregates, FullDistributionAggregates };
 
 export interface SessionSummary {
   seed: number;
@@ -136,5 +136,50 @@ export function computeAggregates(results: SessionSummary[]): DistributionAggreg
     winRate,
     ruinRate,
     seedCount: n,
+  };
+}
+
+export function computeFullAggregates(
+  results: SessionSummary[],
+  params: { strategy: string; rolls: number; bankroll: number },
+): FullDistributionAggregates {
+  const base = computeAggregates(results);
+
+  if (results.length === 0) {
+    return {
+      ...base,
+      p95: [],
+      p99: [],
+      finalBankroll: { ...base.finalBankroll, p95: 0, p99: 0 },
+      generatedAt: new Date().toISOString(),
+      params,
+    };
+  }
+
+  const maxRolls = Math.max(...results.map(r => r.bankrollByRoll.length));
+  const p95: number[] = [];
+  const p99: number[] = [];
+
+  for (let i = 0; i < maxRolls; i++) {
+    const values = results
+      .map(r => (i < r.bankrollByRoll.length ? r.bankrollByRoll[i] : 0))
+      .sort((a, b) => a - b);
+    p95.push(Math.round(percentile(values, 95)));
+    p99.push(Math.round(percentile(values, 99)));
+  }
+
+  const finalValues = results.map(r => r.finalBankroll).sort((a, b) => a - b);
+
+  return {
+    ...base,
+    p95,
+    p99,
+    finalBankroll: {
+      ...base.finalBankroll,
+      p95: Math.round(percentile(finalValues, 95)),
+      p99: Math.round(percentile(finalValues, 99)),
+    },
+    generatedAt: new Date().toISOString(),
+    params,
   };
 }

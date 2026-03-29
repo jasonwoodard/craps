@@ -1,7 +1,9 @@
 import type { DistributionAggregates } from '../../../types/simulation';
 
+type FinalBankrollWithTails = DistributionAggregates['finalBankroll'] & { p95?: number; p99?: number };
+
 interface Props {
-  aggregates: DistributionAggregates;
+  aggregates: DistributionAggregates & { finalBankroll: FinalBankrollWithTails };
   initialBankroll: number;
 }
 
@@ -33,6 +35,7 @@ function StatCard({ label, value, sub, highlight }: StatCardProps) {
 
 export function OutcomeSummary({ aggregates, initialBankroll }: Props) {
   const { finalBankroll, peakBankroll, rollsToPeak, winRate, ruinRate } = aggregates;
+  const hasTails = finalBankroll.p95 != null;
 
   const medianNet = finalBankroll.p50 - initialBankroll;
   const netSign = medianNet >= 0 ? '+' : '';
@@ -72,6 +75,22 @@ export function OutcomeSummary({ aggregates, initialBankroll }: Props) {
         value={`$${finalBankroll.p10} / $${finalBankroll.p90}`}
         sub="Bad vs. good session"
       />
+      {hasTails && (
+        <StatCard
+          label="P95 Final"
+          value={`$${finalBankroll.p95}`}
+          sub="Top-5% session outcome"
+          highlight="green"
+        />
+      )}
+      {hasTails && (
+        <StatCard
+          label="P99 Final"
+          value={`$${finalBankroll.p99}`}
+          sub="Top-1% session outcome"
+          highlight="green"
+        />
+      )}
     </div>
   );
 }
