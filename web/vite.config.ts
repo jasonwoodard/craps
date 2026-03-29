@@ -6,7 +6,17 @@ import path from 'path';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    proxy: { '/api': 'http://localhost:3001' },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/api/distribution/stream': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        headers: { 'Cache-Control': 'no-cache' },
+      },
+    },
   },
   resolve: {
     alias: { '@shared': path.resolve(__dirname, '../types') },

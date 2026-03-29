@@ -7,3 +7,4 @@ package-lock.json
 report.*.json
 craps-test-out.txt
 *-out.txt
+*.distribution.json

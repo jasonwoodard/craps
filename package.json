@@ -5,7 +5,7 @@
     "@types/lodash": "^4.14.138",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "jasmine": "^3.99.0",
+    "jasmine": "^6.1.0",
     "jasmine-ts": "^0.3.0",
     "lodash": "^4.17.15"
   },
