@@ -196,7 +196,7 @@ export function runSim(args: CliArgs): void {
   });
 
   engine.run();
-  logger.flush(args.output);
+  logger.flush(args.output as 'summary' | 'verbose' | 'json');
 }
 
 // ---------------------------------------------------------------------------
