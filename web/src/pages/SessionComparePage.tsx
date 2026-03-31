@@ -26,7 +26,7 @@ function SectionTitle({ title, sub }: { title: string; sub?: string }) {
   );
 }
 
-export function ComparePage() {
+export function SessionComparePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -48,7 +48,7 @@ export function ComparePage() {
     if (data?.seed != null && !searchParams.get('seed')) {
       const next = new URLSearchParams(searchParams);
       next.set('seed', String(data.seed));
-      navigate(`/compare?${next.toString()}`, { replace: true });
+      navigate(`/session-compare?${next.toString()}`, { replace: true });
     }
   }, [data]);
 
@@ -86,7 +86,7 @@ export function ComparePage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h2 className="text-xl font-mono font-bold mb-1">Strategy Comparison</h2>
+      <h2 className="text-xl font-mono font-bold mb-1">Session Compare</h2>
       <p className="text-sm text-gray-500 font-mono mb-5">
         {strategies[0]} vs {strategies[1]} · {rolls} rolls · ${bankroll} buy-in · seed {data.seed}
       </p>
@@ -178,12 +178,22 @@ export function ComparePage() {
               <StageBreakdown rolls={resultA.log} />
             </div>
           )}
+          {!hasStageA && hasStageB && (
+            <div className="text-xs font-mono text-gray-400 italic">
+              {strategies[0]} — no stage data
+            </div>
+          )}
           {hasStageB && (
             <div>
               <div className="text-xs font-mono font-semibold text-orange-500 uppercase tracking-wide mb-1">
                 {strategies[1]} — Stage Breakdown
               </div>
               <StageBreakdown rolls={resultB.log} />
+            </div>
+          )}
+          {hasStageA && !hasStageB && (
+            <div className="text-xs font-mono text-gray-400 italic">
+              {strategies[1]} — no stage data
             </div>
           )}
         </div>

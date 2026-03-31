@@ -24,14 +24,15 @@ export function RunControls() {
   const [errors, setErrors] = useState<FormErrors>({});
 
   const isDistribution = location.pathname === '/distribution';
-  const isCompare = location.pathname === '/compare';
+  const isCompare = location.pathname === '/session-compare';
+  const isDistributionCompare = location.pathname === '/distribution-compare';
 
   // Initialize form from URL params so sidebar reflects current page state.
   const [form, setForm] = useState<FormState>(() => {
     const strategiesParts = searchParams.get('strategies')?.split(',').map(s => s.trim()) ?? [];
     return {
       strategyA: searchParams.get('strategy') ?? strategiesParts[0] ?? 'CATS',
-      strategyB: strategiesParts[1] ?? 'ThreePointMolly3X',
+      strategyB: searchParams.get('test') ?? strategiesParts[1] ?? 'ThreePointMolly3X',
       rolls: searchParams.get('rolls') ?? '500',
       bankroll: searchParams.get('bankroll') ?? '300',
       seed: searchParams.get('seed') ?? '',
@@ -79,6 +80,10 @@ export function RunControls() {
     });
     if (isCompare) {
       params.set('strategies', `${form.strategyA},${form.strategyB}`);
+    } else if (isDistributionCompare) {
+      params.set('strategy', form.strategyA);
+      params.set('test', form.strategyB);
+      params.set('seeds', form.seeds);
     } else {
       params.set('strategy', form.strategyA);
       if (isDistribution) params.set('seeds', form.seeds);
@@ -100,10 +105,10 @@ export function RunControls() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-3">
-      {isCompare ? (
+      {(isCompare || isDistributionCompare) ? (
         <>
           <div>
-            <label className={labelClass}>Strategy A</label>
+            <label className={labelClass}>{isDistributionCompare ? 'Baseline' : 'Strategy A'}</label>
             <select
               value={form.strategyA}
               onChange={e => setField('strategyA', e.target.value)}
@@ -115,7 +120,7 @@ export function RunControls() {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Strategy B</label>
+            <label className={labelClass}>{isDistributionCompare ? 'Test' : 'Strategy B'}</label>
             <select
               value={form.strategyB}
               onChange={e => setField('strategyB', e.target.value)}
@@ -178,7 +183,7 @@ export function RunControls() {
         {errors.seed && <p className={errorClass}>{errors.seed}</p>}
       </div>
 
-      {isDistribution && (
+      {(isDistribution || isDistributionCompare) && (
         <div>
           <label className={labelClass}>Seeds</label>
           <input

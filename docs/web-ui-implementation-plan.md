@@ -4,7 +4,7 @@
 **Status:** Draft v1.6  
 **Scope:** Visualization layer — engine changes are minimal and surgical (M0 only)
 
-> **Completed milestones** (M0, M1, M2, M3) are documented in `docs/web-ui-completed-milestones.md`.
+> **Completed milestones** (M0–M5) are documented in `docs/web-ui-completed-milestones.md`.
 
 ---
 
@@ -35,9 +35,9 @@ This document follows the same milestone structure as `docs/implementation-plan.
 | Page | URL | Question | Status |
 |---|---|---|---|
 | Session | `/session` | What happened in this run? | Done (M3) |
-| Session Compare | `/session-compare` | Which strategy played these dice better? | M5a |
+| Session Compare | `/session-compare` | Which strategy played these dice better? | Done (M5a) |
 | Distribution | `/distribution` | What typically happens with this strategy? | Done (M4) |
-| Distribution Compare | `/distribution-compare` | How does this strategy's profile differ from that one's? | M5b |
+| Distribution Compare | `/distribution-compare` | How does this strategy's profile differ from that one's? | Done (M5b) |
 
 **Nav:** Session | Session Compare | Distribution | Distribution Compare
 
@@ -208,13 +208,13 @@ Shell nav updated to include Distribution.
 
 ---
 
-## Milestone 5 — Comparison Pages
+## Milestone 5 — Comparison Pages [DONE]
 
 **Theme:** Two focused comparison pages. Each has a single question and clean URL. The `/compare` route has been renamed to `/session-compare` for consistency with the four-page model.
 
 ---
 
-### M5a — Session Compare
+### M5a — Session Compare [DONE]
 
 **Question:** Which strategy played these dice better?
 
@@ -224,7 +224,7 @@ Shell nav updated to include Distribution.
 
 ---
 
-#### M5a.1 — Routing rename
+#### M5a.1 — Routing rename [DONE]
 
 Rename existing `/compare` route to `/session-compare` throughout:
 
@@ -239,7 +239,7 @@ No logic changes — rename only. The existing `useComparison` hook and `server/
 
 ---
 
-#### M5a.2 — Session Compare page
+#### M5a.2 — Session Compare page [DONE]
 
 **New file:** `web/src/pages/SessionComparePage.tsx`
 
@@ -269,7 +269,7 @@ If either strategy has `stageName` data, shows its `StageBreakdown` table alongs
 
 ---
 
-### M5b — Distribution Compare
+### M5b — Distribution Compare [DONE]
 
 **Question:** How does this strategy's variance profile differ from that one's?
 
@@ -279,7 +279,7 @@ If either strategy has `stageName` data, shows its `StageBreakdown` table alongs
 
 ---
 
-#### M5b.1 — Server: dual distribution SSE endpoint
+#### M5b.1 — Server: dual distribution SSE endpoint [DONE]
 
 **New file:** `server/routes/distribution-compare.ts`
 
@@ -330,7 +330,7 @@ Using `SharedTable` per seed is critical — it means the distributional compari
 
 ---
 
-#### M5b.2 — Client: dual distribution hook
+#### M5b.2 — Client: dual distribution hook [DONE]
 
 **New file:** `web/src/hooks/useDistributionCompare.ts`
 
@@ -362,7 +362,7 @@ export function useDistributionCompare(params: DistributionCompareParams) {
 
 ---
 
-#### M5b.3 — Distribution Compare page
+#### M5b.3 — Distribution Compare page [DONE]
 
 **New file:** `web/src/pages/DistributionComparePage.tsx`
 
@@ -407,21 +407,21 @@ After swap: all delta signs flip. The table reads correctly in either orientatio
 
 ---
 
-### M5 Review
+### M5 Review [DONE]
 
-- [ ] `/compare` fully renamed to `/session-compare` — no orphaned route references, no broken nav links
-- [ ] Nav shows four flat items: Session | Session Compare | Distribution | Distribution Compare
-- [ ] `RunControls` page-aware navigation handles all four routes correctly
-- [ ] `DistributionCompareChart` baseline/test distinction is visually unambiguous (solid+fill vs. dashed+no fill)
-- [ ] Delta table sign convention correct: positive delta = test better on that metric
-- [ ] Delta table reads correctly after swap in both orientations
-- [ ] `SharedTable` used per seed in M5b — dice controlled at seed level
-- [ ] SSE connection for distribution compare closes cleanly on unmount
-- [ ] `npm test` passes
+- [x] `/compare` fully renamed to `/session-compare` — no orphaned route references, no broken nav links
+- [x] Nav shows four flat items: Session | Session Compare | Distribution | Distribution Compare
+- [x] `RunControls` page-aware navigation handles all four routes correctly
+- [x] `DistributionCompareChart` baseline/test distinction is visually unambiguous (solid+fill vs. dashed+no fill)
+- [x] Delta table sign convention correct: positive delta = test better on that metric
+- [x] Delta table reads correctly after swap in both orientations
+- [x] `SharedTable` used per seed in M5b — dice controlled at seed level
+- [x] SSE connection for distribution compare closes cleanly on unmount
+- [x] `npm test` passes
 
 ---
 
-### M5 Demo
+### M5 Demo [DONE]
 
 **File:** `demo/web-compare.md`
 

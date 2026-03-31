@@ -8,8 +8,9 @@ interface ShellProps {
 
 const NAV_LINKS = [
   { to: '/session', label: 'Session', icon: '📈' },
+  { to: '/session-compare', label: 'Session Compare', icon: '⚖️' },
   { to: '/distribution', label: 'Distribution', icon: '📊' },
-  { to: '/compare', label: 'Compare', icon: '⚖️' },
+  { to: '/distribution-compare', label: 'Dist. Compare', icon: '📐' },
 ];
 
 export function Shell({ children }: ShellProps) {
