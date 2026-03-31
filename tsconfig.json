@@ -5,6 +5,13 @@
         "module": "commonjs",
         "rootDir": ".",
         "outDir": "bin",
-        "types": ["jasmine", "node"]
+        "types": ["jasmine", "node"],
+        "baseUrl": ".",
+        "paths": { "@shared/*": ["types/*"] }
+    },
+    "ts-node": {
+        "moduleTypes": {
+            "web/**/*": "cjs"
+        }
     }
 }

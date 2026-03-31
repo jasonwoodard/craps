@@ -5,9 +5,10 @@
     "@types/lodash": "^4.14.138",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "jasmine": "^6.1.0",
+    "jasmine": "^3.99.0",
     "jasmine-ts": "^0.3.0",
-    "lodash": "^4.17.15"
+    "lodash": "^4.17.15",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@types/jasmine": "^6.0.0",
@@ -15,7 +16,7 @@
     "ts-node": "^10.9.2"
   },
   "scripts": {
-    "test": "jasmine-ts --config=spec/support/jasmine.json",
+    "test": "jasmine-ts -r tsconfig-paths/register --config=spec/support/jasmine.json",
     "server": "ts-node server/server.ts"
   }
 }
