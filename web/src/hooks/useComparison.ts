@@ -20,7 +20,7 @@ export function useComparison(params: CompareParams): ComparisonState {
   useEffect(() => {
     setState({ data: null, loading: true, error: null });
 
-    fetch('/api/compare', {
+    fetch('/api/session-compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),

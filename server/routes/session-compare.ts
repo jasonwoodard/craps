@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { SharedTable } from '../../src/engine/shared-table';
 import { BUILT_IN_STRATEGIES } from '../../src/cli/strategy-registry';
 
-export function compareRoute(req: Request, res: Response): void {
+export function sessionCompareRoute(req: Request, res: Response): void {
   const { strategies, rolls, bankroll, seed } = req.body as {
     strategies?: unknown;
     rolls?: unknown;
