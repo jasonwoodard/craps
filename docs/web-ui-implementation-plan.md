@@ -209,7 +209,7 @@ Shell nav updated to include Distribution.
 
 ---
 
-## Milestone 3.5 — Session Heat Strip
+## Milestone 3.5 — Session Heat Strip [DONE]
 
 **Theme:** A compact visual summary of shooter heat across the session, placed between the stat
 cards and the session chart. Lets the user grok the overall texture of a session before reading
@@ -366,15 +366,15 @@ The strip is stateless — no controls, no filters, no interaction beyond hover 
 
 ### Acceptance criteria
 
-- [ ] Strip renders full width, colored region visually aligned with session chart X axis
-- [ ] Colors map correctly — deep green on long hands with point conversions, deep red on
+- [x] Strip renders full width, colored region visually aligned with session chart X axis
+- [x] Colors map correctly — deep green on long hands with point conversions, deep red on
       clusters of 7-outs, gray on choppy stretches with few resolutions
-- [ ] Window shrinks correctly at roll 0 and roll N-1 — no out-of-bounds errors
-- [ ] Hover tooltip shows correct roll range, shooter events, and score label
-- [ ] `computeHeatScores` has unit tests covering: come-out natural (+1), come-out craps (-1),
+- [x] Window shrinks correctly at roll 0 and roll N-1 — no out-of-bounds errors
+- [x] Hover tooltip shows correct roll range, shooter events, and score label
+- [x] `computeHeatScores` has unit tests covering: come-out natural (+1), come-out craps (-1),
       point made (+1), 7-out (-1), mixed window, edge roll 0, edge roll N-1
-- [ ] No new API calls — computed entirely from existing `EngineResult`
-- [ ] `npm test` passes
+- [x] No new API calls — computed entirely from existing `EngineResult`
+- [x] `npm test` passes
 
 ---
 

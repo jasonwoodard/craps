@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from '../hooks/useSimulation';
 import { SummaryPanel } from '../components/SummaryPanel';
 import { SessionChart } from '../components/SessionChart';
+import { HeatStrip } from '../components/HeatStrip';
 import { StageBreakdown } from '../components/StageBreakdown';
 import { StageOverlayChart } from '../components/StageOverlayChart';
 import { TrendPanel } from '../components/TrendPanel';
@@ -50,6 +51,7 @@ export function SessionPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <SummaryPanel result={data} params={params} />
+      <HeatStrip rolls={data.rolls} />
       <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
       <StageBreakdown rolls={data.rolls} />
       <StageOverlayChart rolls={data.rolls} />
