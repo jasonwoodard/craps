@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from '../hooks/useSimulation';
 import { SummaryPanel } from '../components/SummaryPanel';
@@ -37,6 +37,9 @@ export function SessionPage() {
 
   const { data, loading, error } = useSimulation(params);
 
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [chartOffsets, setChartOffsets] = useState({ left: 0, right: 0 });
+
   useEffect(() => {
     if (data?.seed != null && !searchParams.get('seed')) {
       const next = new URLSearchParams(searchParams);
@@ -45,14 +48,37 @@ export function SessionPage() {
     }
   }, [data]);
 
+  useEffect(() => {
+    const el = chartRef.current;
+    if (!el) return;
+
+    function measure() {
+      const surface = el!.querySelector<SVGElement>('.recharts-surface');
+      const plotArea = el!.querySelector<SVGGElement>('.recharts-plot-area');
+      if (!surface || !plotArea) return;
+      const surfaceRect = surface.getBoundingClientRect();
+      const plotRect = plotArea.getBoundingClientRect();
+      setChartOffsets({
+        left: plotRect.left - surfaceRect.left,
+        right: surfaceRect.right - plotRect.right,
+      });
+    }
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [data]);
+
   if (loading) return <SpinnerOverlay />;
   if (error || !data) return <ErrorState message={error} />;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <SummaryPanel result={data} params={params} />
-      <HeatStrip rolls={data.rolls} />
-      <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
+      <HeatStrip rolls={data.rolls} leftOffset={chartOffsets.left} rightOffset={chartOffsets.right} />
+      <div ref={chartRef}>
+        <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
+      </div>
       <StageBreakdown rolls={data.rolls} />
       <StageOverlayChart rolls={data.rolls} />
       <TrendPanel rolls={data.rolls} initialBankroll={data.initialBankroll} strategyName={params.strategy} />

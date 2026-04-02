@@ -19,12 +19,6 @@ const SCORE_LABELS: Record<number, string> = {
   [-2]: 'Cold',
 };
 
-// Left and right offsets approximating the Recharts ComposedChart Y-axis layout.
-// SessionChart uses margin={{ left: 8, right: 40 }} with two Y-axes (~60px each).
-// These values align the colored strip with the chart's data area visually.
-const CHART_LEFT_OFFSET = 68;   // 8px margin + ~60px Y-axis
-const CHART_RIGHT_OFFSET = 100; // 40px margin + ~60px right Y-axis
-
 interface TooltipData {
   rollIndex: number;
   x: number;
@@ -35,9 +29,11 @@ interface HeatStripProps {
   rolls: RollRecord[];
   height?: number;      // default 18
   halfWindow?: number;  // default 4 → 9-roll max window
+  leftOffset?: number;  // px from SVG left edge to first data cell
+  rightOffset?: number; // px from last data cell to SVG right edge
 }
 
-export function HeatStrip({ rolls, height = 18, halfWindow = 4 }: HeatStripProps) {
+export function HeatStrip({ rolls, height = 18, halfWindow = 4, leftOffset = 0, rightOffset = 0 }: HeatStripProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
@@ -56,7 +52,7 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4 }: HeatStripProps
   const n = rolls.length;
 
   // Width of the colored data region
-  const dataWidth = Math.max(0, containerWidth - CHART_LEFT_OFFSET - CHART_RIGHT_OFFSET);
+  const dataWidth = Math.max(0, containerWidth - leftOffset - rightOffset);
   const cellWidth = n > 0 ? dataWidth / n : 0;
 
   // Build tooltip content for hovered roll
@@ -92,7 +88,7 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4 }: HeatStripProps
   function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
     if (n === 0 || cellWidth === 0) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const xInData = e.clientX - rect.left - CHART_LEFT_OFFSET;
+    const xInData = e.clientX - rect.left - leftOffset;
     const rollIndex = Math.min(n - 1, Math.max(0, Math.floor(xInData / cellWidth)));
     setTooltip({ rollIndex, x: e.clientX - rect.left, y: e.clientY - rect.top });
   }
@@ -118,7 +114,7 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4 }: HeatStripProps
             {scores.map((score, i) => (
               <rect
                 key={i}
-                x={CHART_LEFT_OFFSET + i * cellWidth}
+                x={leftOffset + i * cellWidth}
                 y={0}
                 width={Math.ceil(cellWidth)}
                 height={height}
