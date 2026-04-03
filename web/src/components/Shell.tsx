@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
 import { RunControls } from './RunControls';
 
@@ -13,8 +13,12 @@ const NAV_LINKS = [
   { to: '/distribution-compare', label: 'Dist. Compare', icon: '📐' },
 ];
 
+const NAV_LINKS_SECONDARY = [
+  { to: '/strategies', label: 'Strategies', icon: '📋' },
+  { to: '/guide', label: 'Guide', icon: '📖' },
+];
+
 export function Shell({ children }: ShellProps) {
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [searchParams] = useSearchParams();
 
   const navTo = (path: string) => {
@@ -33,82 +37,66 @@ export function Shell({ children }: ShellProps) {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 text-gray-900">
-      {/* Top nav bar */}
-      <header className="fixed top-0 left-0 right-0 h-12 bg-gray-900 text-white flex items-center px-4 z-10">
-        <span className="font-mono font-bold text-base tracking-tight mr-8">Craps Simulator</span>
-        <nav className="flex gap-4">
-          {NAV_LINKS.map(({ to, label }) => (
+    <div className="flex min-h-screen bg-gray-50 text-gray-900">
+      {/* Sidebar — always expanded, fixed width */}
+      <aside className="fixed top-0 left-0 bottom-0 w-60 bg-gray-800 text-white flex flex-col z-10">
+        {/* App title */}
+        <div className="px-4 py-3 border-b border-gray-700">
+          <span className="font-mono font-bold text-sm tracking-tight">Craps Simulator</span>
+        </div>
+
+        {/* Primary nav links */}
+        <nav className="flex flex-col gap-1 p-2">
+          {NAV_LINKS.map(({ to, label, icon }) => (
             <NavLink
               key={to}
               to={navTo(to)}
               className={({ isActive }) =>
-                `font-mono text-sm px-2 py-1 rounded transition-colors ${
+                `flex items-center gap-3 px-2 py-2 rounded font-mono text-sm transition-colors whitespace-nowrap ${
                   isActive
-                    ? 'text-white bg-gray-700'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                    ? 'bg-gray-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                 }`
               }
             >
-              {label}
+              <span className="text-base flex-shrink-0">{icon}</span>
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
-      </header>
 
-      {/* Body below top nav */}
-      <div className="flex flex-1 pt-12">
-        {/* Sidebar */}
-        <aside
-          className="fixed top-12 left-0 bottom-0 bg-gray-800 text-white flex flex-col z-10 transition-all duration-200"
-          style={{ width: sidebarExpanded ? '240px' : '48px' }}
-        >
-          {/* Sidebar nav icons (always visible) */}
-          <nav className="flex flex-col gap-1 p-2 flex-1 overflow-hidden">
-            {NAV_LINKS.map(({ to, label, icon }) => (
-              <NavLink
-                key={to}
-                to={navTo(to)}
-                title={!sidebarExpanded ? label : undefined}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-2 py-2 rounded font-mono text-sm transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'bg-gray-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }`
-                }
-              >
-                <span className="text-base flex-shrink-0">{icon}</span>
-                {sidebarExpanded && <span>{label}</span>}
-              </NavLink>
-            ))}
-          </nav>
+        {/* Secondary nav — Strategies + Guide, with divider */}
+        <div className="border-t border-gray-700 mx-2 my-1" />
+        <nav className="flex flex-col gap-1 px-2 pb-2">
+          {NAV_LINKS_SECONDARY.map(({ to, label, icon }) => (
+            <NavLink
+              key={to}
+              to={navTo(to)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-2 py-2 rounded font-mono text-sm transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'bg-gray-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`
+              }
+            >
+              <span className="text-base flex-shrink-0">{icon}</span>
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
 
-          {/* Run controls — visible only when expanded */}
-          {sidebarExpanded && (
-            <div className="border-t border-gray-700">
-              <RunControls />
-            </div>
-          )}
+        {/* Run controls */}
+        <div className="flex-1" />
+        <div className="border-t border-gray-700">
+          <RunControls />
+        </div>
+      </aside>
 
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setSidebarExpanded((v) => !v)}
-            className="flex items-center justify-center h-10 border-t border-gray-700 text-gray-400 hover:text-white hover:bg-gray-700 transition-colors font-mono text-xs"
-            title={sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            {sidebarExpanded ? '← collapse' : '→'}
-          </button>
-        </aside>
-
-        {/* Main content */}
-        <main
-          className="flex-1 overflow-y-auto transition-all duration-200"
-          style={{ marginLeft: sidebarExpanded ? '240px' : '48px' }}
-        >
-          {children}
-        </main>
-      </div>
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto" style={{ marginLeft: '240px' }}>
+        {children}
+      </main>
     </div>
   );
 }

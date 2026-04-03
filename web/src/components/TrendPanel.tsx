@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { computeRollingPnL, computeConsecutiveSevenOuts } from '../lib/stats';
+import { InfoTip } from './InfoTip';
 import { computeThresholdProximity, isCATSStrategy } from '../lib/cats-thresholds';
 import { fmtPnL } from '../lib/stages';
 
@@ -47,7 +48,10 @@ export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded p-4 mt-6">
-      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-6">Trend Indicators</h2>
+      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-6 flex items-center">
+        Trend Indicators
+        <InfoTip text="Recent momentum signals. Rolling P&L shows the last 24 rolls. Threshold proximity shows how close the current bankroll is to a CATS stage transition. The 7-out counter tracks consecutive losses." />
+      </h2>
 
       <div className="mb-8">
         <h3 className="text-xs font-mono text-gray-600 font-medium mb-2">24-Roll Rolling P&amp;L</h3>

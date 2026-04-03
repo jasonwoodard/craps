@@ -6,7 +6,7 @@ independently implementable. No item requires architectural changes.
 
 ---
 
-## UX-1 — Remove top navigation and sidebar collapse
+## UX-1 — Remove top navigation and sidebar collapse [DONE]
 
 **Files:** `web/src/components/Shell.tsx`, related CSS/Tailwind
 
@@ -36,7 +36,7 @@ the nav adds chrome without adding utility.
 
 ---
 
-## UX-2 — Strategies page
+## UX-2 — Strategies page [DONE]
 
 **New file:** `web/src/pages/StrategiesPage.tsx`  
 **Route:** `/strategies`  
@@ -94,7 +94,7 @@ a retreat to the prior stage.
 
 ---
 
-## UX-3 — Section heading info icons
+## UX-3 — Section heading info icons [DONE]
 
 Add a small ⓘ icon after major section headings that reveals a plain-language explanation of
 the chart or panel on hover.
@@ -135,7 +135,7 @@ simple `useState` show/hide — no external tooltip library needed.
 
 ---
 
-## UX-4 — Page subtitle line
+## UX-4 — Page subtitle line [DONE]
 
 Add a single-line subtitle below the page heading and above the strategy/params statement on
 each page. Crisp, functional, tells the user what this page is for.
@@ -161,7 +161,7 @@ buy-in · seed 693414"). Same font size as the params line, `text-slate-500`.
 
 ---
 
-## UX-5 — Guide page
+## UX-5 — Guide page [DONE]
 
 **New file:** `web/src/pages/GuidePage.tsx`  
 **Route:** `/guide`  
@@ -186,3 +186,44 @@ formatted prose with section headings matching the app's typographic style.
 - Section headings styled consistently with app
 - Sidebar link label is "Guide", route is `/guide`
 - Readable at 1280px width
+
+---
+
+## Implementation Assumptions and Decisions
+
+**UX-1 — Shell simplification**
+
+- The app title "Craps Simulator" was moved into the top of the sidebar (was in the top nav). This preserves brand presence without requiring a separate nav bar.
+- Sidebar width set to `w-60` (240px), same as the previous expanded state — no visual change for users who kept the sidebar expanded.
+- Strategies and Guide links placed below a subtle divider in the sidebar, grouping the four analysis pages together and the two reference pages together. This mirrors the separation in the original spec ("separated by a subtle divider").
+
+**UX-2 — Strategies page: undocumented strategies**
+
+- The spec lists five strategy groups to document (PassLineOnly, ThreePointMolly 2X/3X, Place6And8, CATS). The actual `GET /api/strategies` endpoint returns eleven strategies: `ThreePointMolly1X`, `ThreePointMolly2X`, `ThreePointMolly3X`, `ThreePointMolly4X`, `ThreePointMolly5X`, `Place6And8`, `PlaceInside`, `PlaceAll`, `PassLineOnly`, `Place6And8Progressive`, `CATS`.
+- **Decision:** All eleven strategies are documented in API order, not just the five explicitly listed. Leaving strategies out of the Strategies page would create a confusing gap for users who select them from the dropdown. Content for the undocumented ones was inferred from their names and craps domain knowledge.
+- **Open question:** Is the content written for the undocumented strategies (ThreePointMolly1X, 4X, 5X, PlaceInside, PlaceAll, Place6And8Progressive) accurate enough for inclusion, or should those entries be reviewed/revised?
+
+**UX-3 — InfoTip: "Shooter Heat" heading**
+
+- "Shooter Heat" was not a rendered heading in the codebase — the `HeatStrip` component rendered directly below the "Session Chart" heading with no label. A small `text-xs uppercase tracking-wide` label was added above the HeatStrip to give the InfoTip an anchor. This matches the session manual's description of the heat strip as a distinct named element.
+- **Open question:** Should the "Shooter Heat" label sit at the same visual weight as the other section headings (`text-sm uppercase`), or is the lighter `text-xs` treatment appropriate given it labels a secondary element within the Session Chart section?
+
+**UX-3 — DistributionPage heading renames**
+
+- Three section titles in `DistributionPage` were renamed to match the InfoTip table's canonical heading names: "Bankroll Bands" → "Bankroll Percentile Bands", "Session Outcomes" → "Outcome Summary", "Ruin Probability" → "Ruin Curve". These are minimal, clarifying renames consistent with the headings used in DistributionComparePage and the manual.
+
+**UX-3 — InfoTip tooltip positioning**
+
+- Tooltip appears above the icon (`bottom-full`). No smart repositioning for icons near the top of the page — this is a polish step and full viewport-aware positioning felt like scope creep. If any heading sits too close to the top of the viewport on short screens, the tooltip may clip. This can be addressed if it becomes an issue.
+
+**UX-4 — SessionPage h1**
+
+- SessionPage had no page-level heading at all (only the SummaryPanel's params line). An `<h1>` "Session" and subtitle were added above the SummaryPanel. This does introduce a slight visual redundancy with the strategy/seed params already in SummaryPanel, but it makes the page consistent with the other pages' header structure.
+
+**UX-5 — GuidePage rendering approach**
+
+- The manual markdown was rendered as JSX rather than via a markdown-parsing library. Rationale: the project has no markdown-rendering dependency and adding one felt outside the "minimal necessary changes" mandate. The prose structure is stable and not subject to frequent edits. The JSX rendering preserves all section content from `docs/craps-simulator-user-manual.md` v2.0.
+
+**RunControls on static pages**
+
+- When the active page is `/strategies` or `/guide`, the Run button navigates to `/session` with the current sidebar configuration. This satisfies the UX-2 acceptance criterion without requiring a separate component or prop threading.

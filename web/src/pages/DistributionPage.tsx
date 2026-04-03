@@ -4,6 +4,7 @@ import { useDistribution } from '../hooks/useDistribution';
 import { BandChart } from '../components/BandChart';
 import { OutcomeSummary } from '../components/OutcomeSummary';
 import { RuinCurve } from '../components/RuinCurve';
+import { InfoTip } from '../components/InfoTip';
 import type { FullDistributionAggregates } from '../../../types/simulation';
 
 const SEED_PRESETS = [
@@ -103,6 +104,7 @@ export function DistributionPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-xl font-mono font-bold mb-1">Distribution Analysis</h2>
+      <p className="text-sm text-slate-500 font-mono mb-3">See the range of outcomes across hundreds of sessions.</p>
       {isLoaded ? (
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 bg-blue-50 border border-blue-200 rounded px-3 py-1.5 text-sm font-mono text-blue-800">
@@ -171,36 +173,45 @@ export function DistributionPage() {
         <>
           {/* Section 2 — Band chart */}
           <div className="bg-white border border-gray-200 rounded p-4 mb-6">
-            <SectionTitle
-              title="Bankroll Bands"
-              sub={
-                hasTails
+            <div className="mb-3">
+              <h3 className="font-mono font-semibold text-gray-800 flex items-center">
+                Bankroll Percentile Bands
+                <InfoTip text="Shows the range of bankroll outcomes across all simulated sessions. P10 = a bad session (only 10% did worse). P50 = the median session. P90 = a good session (only 10% did better)." />
+              </h3>
+              <p className="text-xs text-gray-500 font-mono">
+                {hasTails
                   ? 'P10 (red) / P50 (blue) / P90 (green) / P95 (amber) / P99 (purple) — loaded from file'
-                  : 'P10 (red) / P50 median (blue) / P90 (green) — watch bands stabilize as seeds accumulate'
-              }
-            />
+                  : 'P10 (red) / P50 median (blue) / P90 (green) — watch bands stabilize as seeds accumulate'}
+              </p>
+            </div>
             <BandChart aggregates={aggregates} initialBankroll={displayBankroll} />
           </div>
 
           {/* Section 3 — Outcome summary */}
           <div className="mb-6">
-            <SectionTitle
-              title="Session Outcomes"
-              sub={
-                isLoaded
+            <div className="mb-3">
+              <h3 className="font-mono font-semibold text-gray-800 flex items-center">
+                Outcome Summary
+                <InfoTip text="Aggregate statistics across all sessions. Win rate = sessions that ended above buy-in. Ruin rate = sessions that reached $0." />
+              </h3>
+              <p className="text-xs text-gray-500 font-mono">
+                {isLoaded
                   ? `Results across ${completed.toLocaleString()} seeds${hasTails ? ' · includes P95/P99 tail stats' : ''}`
-                  : `${done ? 'Final' : 'Partial'} results across ${completed} seeds`
-              }
-            />
+                  : `${done ? 'Final' : 'Partial'} results across ${completed} seeds`}
+              </p>
+            </div>
             <OutcomeSummary aggregates={aggregates} initialBankroll={displayBankroll} />
           </div>
 
           {/* Section 4 — Ruin curve */}
           <div className="bg-white border border-gray-200 rounded p-4">
-            <SectionTitle
-              title="Ruin Probability"
-              sub="Cumulative probability of reaching $0 by each roll"
-            />
+            <div className="mb-3">
+              <h3 className="font-mono font-semibold text-gray-800 flex items-center">
+                Ruin Curve
+                <InfoTip text="Probability of going broke by a given roll number. A steep early curve means the strategy is vulnerable to quick losses. A flat curve means it holds up over time." />
+              </h3>
+              <p className="text-xs text-gray-500 font-mono">Cumulative probability of reaching $0 by each roll</p>
+            </div>
             <RuinCurve aggregates={aggregates} />
           </div>
         </>

@@ -2,6 +2,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useDistributionCompare } from '../hooks/useDistributionCompare';
 import { DistributionCompareChart } from '../components/DistributionCompareChart';
 import { OutcomeDelta } from '../components/OutcomeDelta';
+import { InfoTip } from '../components/InfoTip';
 
 export function DistributionComparePage() {
   const [searchParams] = useSearchParams();
@@ -81,6 +82,7 @@ export function DistributionComparePage() {
           </button>
         </div>
       </div>
+      <p className="text-sm text-slate-500 font-mono mb-1">Compare how two strategies' outcome profiles differ.</p>
       <p className="text-sm text-gray-500 font-mono mb-5">
         <span className="text-blue-600">{strategy}</span> (baseline, solid)
         {' '}vs{' '}
@@ -114,7 +116,10 @@ export function DistributionComparePage() {
       {baseline && testAgg ? (
         <div className="bg-white border border-gray-200 rounded p-4 mb-6">
           <div className="mb-3">
-            <h3 className="font-mono font-semibold text-gray-800">Bankroll Percentile Bands</h3>
+            <h3 className="font-mono font-semibold text-gray-800 flex items-center">
+              Bankroll Percentile Bands
+              <InfoTip text="Shows the range of bankroll outcomes across all simulated sessions. P10 = a bad session (only 10% did worse). P50 = the median session. P90 = a good session (only 10% did better)." />
+            </h3>
             <p className="text-xs text-gray-500 font-mono">
               Solid + shaded = {strategy} (baseline) · Dashed = {test} (test) · P10 / P50 / P90
             </p>
@@ -139,7 +144,10 @@ export function DistributionComparePage() {
       {baseline && testAgg && (
         <div className="bg-white border border-gray-200 rounded p-4">
           <div className="mb-3">
-            <h3 className="font-mono font-semibold text-gray-800">Outcome Delta</h3>
+            <h3 className="font-mono font-semibold text-gray-800 flex items-center">
+              Outcome Delta
+              <InfoTip text="Side-by-side comparison of key stats. Green delta = the test strategy is better on this metric. Red delta = the baseline is better. A strategy can win on some metrics and lose on others." />
+            </h3>
             <p className="text-xs text-gray-500 font-mono">
               Green = test better · Red = baseline better · Based on {baseline.seedCount} seeds so far
             </p>
