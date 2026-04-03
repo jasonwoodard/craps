@@ -100,8 +100,7 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4, leftOffset = 0, 
   const tooltipData = tooltip != null ? buildTooltip(tooltip.rollIndex) : null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded px-4 pt-3 pb-2">
-      <h2 className="text-xs font-mono text-gray-400 uppercase tracking-wide mb-2">Shooter Heat</h2>
+    <div className="bg-white px-4 pt-2 pb-0">
       <div ref={containerRef} className="relative w-full">
         {containerWidth > 0 && (
           <svg

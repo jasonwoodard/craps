@@ -38,10 +38,10 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
   }));
 
   return (
-    <div className="bg-white border border-gray-200 rounded p-4">
+    <div className="bg-white p-4">
       <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4">Session Chart</h2>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={data} margin={{ top: 8, right: 40, bottom: 8, left: 8 }}>
+        <ComposedChart data={data} margin={{ top: 4, right: 40, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis
             dataKey="roll"

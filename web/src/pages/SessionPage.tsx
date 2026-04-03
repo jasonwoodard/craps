@@ -75,8 +75,8 @@ export function SessionPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <SummaryPanel result={data} params={params} />
-      <HeatStrip rolls={data.rolls} leftOffset={chartOffsets.left} rightOffset={chartOffsets.right} />
-      <div ref={chartRef}>
+      <div ref={chartRef} className="rounded border border-slate-200">
+        <HeatStrip rolls={data.rolls} leftOffset={chartOffsets.left} rightOffset={chartOffsets.right} />
         <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
       </div>
       <StageBreakdown rolls={data.rolls} />
