@@ -1,5 +1,7 @@
+import { useRef, useEffect, useState } from 'react';
 import type { RollRecord } from '@shared/simulation';
 import { computeStageSpans, hasStageData, STAGE_COLORS } from '../lib/stages';
+import { HeatStrip } from './HeatStrip';
 import {
   ComposedChart,
   Line,
@@ -27,6 +29,28 @@ interface ChartPoint {
 }
 
 export function SessionChart({ rolls, initialBankroll }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [chartOffsets, setChartOffsets] = useState({ left: 0, right: 0 });
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    function measure() {
+      const surface = el!.querySelector<SVGElement>('.recharts-surface');
+      const plotArea = el!.querySelector<SVGGElement>('.recharts-plot-area');
+      if (!surface || !plotArea) return;
+      const surfaceRect = surface.getBoundingClientRect();
+      const plotRect = plotArea.getBoundingClientRect();
+      setChartOffsets({
+        left: plotRect.left - surfaceRect.left,
+        right: surfaceRect.right - plotRect.right,
+      });
+    }
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const stageSpans = hasStageData(rolls) ? computeStageSpans(rolls) : [];
 
   const data: ChartPoint[] = rolls.map(r => ({
@@ -38,8 +62,9 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
   }));
 
   return (
-    <div className="bg-white p-4">
-      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4">Session Chart</h2>
+    <div ref={containerRef} className="bg-white p-4">
+      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-2">Session Chart</h2>
+      <HeatStrip rolls={rolls} leftOffset={chartOffsets.left} rightOffset={chartOffsets.right} />
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={data} margin={{ top: 4, right: 40, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

@@ -100,8 +100,7 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4, leftOffset = 0, 
   const tooltipData = tooltip != null ? buildTooltip(tooltip.rollIndex) : null;
 
   return (
-    <div className="bg-white px-4 pt-2 pb-0">
-      <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className="relative w-full mb-2">
         {containerWidth > 0 && (
           <svg
             width={containerWidth}
@@ -135,7 +134,6 @@ export function HeatStrip({ rolls, height = 18, halfWindow = 4, leftOffset = 0, 
             <div>{tooltipData.score}</div>
           </div>
         )}
-      </div>
     </div>
   );
 }
