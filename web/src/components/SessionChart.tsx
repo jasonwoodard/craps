@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from 'react';
 import type { RollRecord } from '@shared/simulation';
 import { computeStageSpans, hasStageData, STAGE_COLORS } from '../lib/stages';
 import { HeatStrip } from './HeatStrip';
+import { InfoTip } from './InfoTip';
 import {
   ComposedChart,
   Line,
@@ -64,6 +65,10 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
   return (
     <div ref={containerRef} className="bg-white p-4">
       <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-2">Session Chart</h2>
+      <div className="flex items-center mb-1">
+        <span className="text-xs font-mono text-gray-400 uppercase tracking-wide">Shooter Heat</span>
+        <InfoTip text="Dice heat by window of rolls, using a phantom pass-line rubric. Green = shooters were making points. Red = shooters were sevening out. Gray = choppy, no clear signal." />
+      </div>
       <HeatStrip rolls={rolls} leftOffset={chartOffsets.left} rightOffset={chartOffsets.right} />
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={data} margin={{ top: 4, right: 40, bottom: 8, left: 8 }}>

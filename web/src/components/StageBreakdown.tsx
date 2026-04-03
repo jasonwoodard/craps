@@ -1,5 +1,6 @@
 import type { RollRecord } from '@shared/simulation';
 import { computeStageVisitSummaries, fmtPnL, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
+import { InfoTip } from './InfoTip';
 
 interface Props {
   rolls: RollRecord[];
@@ -16,7 +17,10 @@ export function StageBreakdown({ rolls }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded p-4 mt-6">
-      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4">Stage Breakdown</h2>
+      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4 flex items-center">
+        Stage Breakdown
+        <InfoTip text="Every visit to every stage, in order. One row per visit. Shows how the strategy actually moved through its phases — which stages lasted longest, which were costly, which were productive." />
+      </h2>
       <div className="overflow-x-auto">
         <table className="w-full text-xs font-mono">
           <thead>

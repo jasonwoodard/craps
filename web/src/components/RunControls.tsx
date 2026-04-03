@@ -26,6 +26,7 @@ export function RunControls() {
   const isDistribution = location.pathname === '/distribution';
   const isCompare = location.pathname === '/session-compare';
   const isDistributionCompare = location.pathname === '/distribution-compare';
+  const isStaticPage = location.pathname === '/strategies' || location.pathname === '/guide';
 
   // Initialize form from URL params so sidebar reflects current page state.
   const [form, setForm] = useState<FormState>(() => {
@@ -72,7 +73,7 @@ export function RunControls() {
       return;
     }
     setErrors({});
-    const base = location.pathname;
+    const base = isStaticPage ? '/session' : location.pathname;
     const params = new URLSearchParams({
       rolls: form.rolls,
       bankroll: form.bankroll,

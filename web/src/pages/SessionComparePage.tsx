@@ -87,6 +87,7 @@ export function SessionComparePage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <h2 className="text-xl font-mono font-bold mb-1">Session Compare</h2>
+      <p className="text-sm text-slate-500 font-mono mb-1">Compare two strategies on identical dice.</p>
       <p className="text-sm text-gray-500 font-mono mb-5">
         {strategies[0]} vs {strategies[1]} · {rolls} rolls · ${bankroll} buy-in · seed {data.seed}
       </p>

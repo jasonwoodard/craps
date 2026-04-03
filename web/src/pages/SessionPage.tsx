@@ -49,6 +49,8 @@ export function SessionPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      <h1 className="text-xl font-mono font-bold mb-1">Session</h1>
+      <p className="text-sm text-slate-500 font-mono mb-4">See how a strategy plays out over a single session.</p>
       <SummaryPanel result={data} params={params} />
       <div className="rounded border border-slate-200">
         <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />

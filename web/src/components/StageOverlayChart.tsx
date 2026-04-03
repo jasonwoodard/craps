@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { fmtPnL, hasStageData, normalizeStageVisits, STAGE_COLORS, STAGE_LABELS, uniqueStages } from '../lib/stages';
+import { InfoTip } from './InfoTip';
 
 const VISIT_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
@@ -94,7 +95,10 @@ export function StageOverlayChart({ rolls }: Props) {
 
   return (
     <div className="bg-white border border-gray-200 rounded p-4 mt-6">
-      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4">Stage Overlay</h2>
+      <h2 className="text-sm font-mono text-gray-500 uppercase tracking-wide mb-4 flex items-center">
+        Stage Overlay
+        <InfoTip text="All visits to each stage aligned to a common start point (T0). A tight cluster means the stage behaves consistently. A wide fan means high variance between visits." />
+      </h2>
       <p className="text-xs text-gray-400 font-mono mb-4">
         Each chart overlays all visits to that stage aligned to T0. Y axis is ±$ from stage entry bankroll.
       </p>
