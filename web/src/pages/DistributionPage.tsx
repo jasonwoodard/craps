@@ -13,15 +13,6 @@ const SEED_PRESETS = [
   { label: 'Deep', seeds: 1000 },
 ];
 
-function SectionTitle({ title, sub }: { title: string; sub?: string }) {
-  return (
-    <div className="mb-3">
-      <h3 className="font-mono font-semibold text-gray-800">{title}</h3>
-      {sub && <p className="text-xs text-gray-500 font-mono">{sub}</p>}
-    </div>
-  );
-}
-
 function ProgressBar({ progress, completed, total }: { progress: number; completed: number; total: number }) {
   const pct = Math.round(progress * 100);
   return (
