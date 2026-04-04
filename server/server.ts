@@ -6,7 +6,7 @@ import { distributionStreamRoute } from './routes/distribution';
 import { sessionCompareRoute } from './routes/session-compare';
 import { distributionCompareStreamRoute } from './routes/distribution-compare';
 
-const PORT = 3001;
+const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
 const app = express();
 app.use(cors());

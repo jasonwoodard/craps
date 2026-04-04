@@ -8,3 +8,5 @@ report.*.json
 craps-test-out.txt
 *-out.txt
 *.distribution.json
+.firebase/
+.DS_Store
