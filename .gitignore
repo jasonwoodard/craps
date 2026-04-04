@@ -1,8 +1,6 @@
 /.vscode/
 /node_modules/**
 
-package-lock.json
-
 *.js
 report.*.json
 craps-test-out.txt
