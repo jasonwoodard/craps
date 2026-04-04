@@ -94,9 +94,16 @@ export function Shell({ children }: ShellProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ marginLeft: '240px' }}>
-        {children}
-      </main>
+      <div className="flex flex-col flex-1" style={{ marginLeft: '240px' }}>
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+        <footer className="py-4 border-t border-slate-100 px-6">
+          <p className="text-xs text-slate-400 text-center">
+            Craps Simulator is an analytical tool for educational purposes only. It does not constitute gambling advice. No strategy eliminates the house edge.&nbsp;&nbsp;·&nbsp;&nbsp;MIT License&nbsp;&nbsp;·&nbsp;&nbsp;© 2026 Jason Woodard
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
