@@ -7,6 +7,7 @@ import { BaseBet } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
+import { FieldBet } from '../bets/field-bet';
 import { RunLogger, SummaryRecord } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -251,6 +252,8 @@ export class SharedTable {
       case 'place':
         if (point == null) return null;
         return new PlaceBet(amount, point, playerId);
+      case 'field':
+        return new FieldBet(amount, playerId);
       default:
         return null;
     }

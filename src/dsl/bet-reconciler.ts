@@ -27,6 +27,7 @@ const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
   [BetTypes.PASS_LINE]: 'passLine',
   [BetTypes.COME]: 'come',
   [BetTypes.PLACE]: 'place',
+  [BetTypes.FIELD]: 'field',
 };
 
 const STRING_TO_BET_TYPE = new Map<string, BetTypes>(

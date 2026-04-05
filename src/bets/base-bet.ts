@@ -5,7 +5,8 @@ export enum BetTypes {
   UNKNOWN,
   PASS_LINE,
   COME,
-  PLACE
+  PLACE,
+  FIELD,
 }
 
 export abstract class BaseBet {
