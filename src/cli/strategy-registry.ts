@@ -21,26 +21,27 @@ import {
 } from '../dsl/strategies';
 import { CATS } from '../dsl/strategies-staged';
 
+// Keep in alphabetical order
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
-  'PassLineWithOdds1X': PassLineWithOdds1X,
-  'PassLineWithOdds2X': PassLineWithOdds2X,
-  'PassLineWithOdds3X': PassLineWithOdds3X,
-  'PassLineWithOdds4X': PassLineWithOdds4X,
-  'PassLineWithOdds5X': PassLineWithOdds5X,
-  'ThreePointMolly1X': ThreePointMolly1X,
-  'ThreePointMolly2X': ThreePointMolly2X,
-  'ThreePointMolly3X': ThreePointMolly3X,
-  'ThreePointMolly4X': ThreePointMolly4X,
-  'ThreePointMolly5X': ThreePointMolly5X,
-  'Place6And8':        Place6And8,
-  'PlaceInside':       PlaceInside,
-  'PlaceAll':          PlaceAll,
-  'PassLineOnly':      PassLineOnly,
+  'CATS':                  CATS(),
+  'IronCross':             IronCross,
+  'JustField':             JustField,
+  'MartingaleField':       MartingaleField,
+  'PassLineOnly':          PassLineOnly,
+  'PassLineWithOdds1X':    PassLineWithOdds1X,
+  'PassLineWithOdds2X':    PassLineWithOdds2X,
+  'PassLineWithOdds3X':    PassLineWithOdds3X,
+  'PassLineWithOdds4X':    PassLineWithOdds4X,
+  'PassLineWithOdds5X':    PassLineWithOdds5X,
+  'Place6And8':            Place6And8,
   'Place6And8Progressive': Place6And8Progressive,
-  'CATS':              CATS(),
-  'JustField':         JustField,
-  'IronCross':         IronCross,
-  'MartingaleField':   MartingaleField,
+  'PlaceAll':              PlaceAll,
+  'PlaceInside':           PlaceInside,
+  'ThreePointMolly1X':     ThreePointMolly1X,
+  'ThreePointMolly2X':     ThreePointMolly2X,
+  'ThreePointMolly3X':     ThreePointMolly3X,
+  'ThreePointMolly4X':     ThreePointMolly4X,
+  'ThreePointMolly5X':     ThreePointMolly5X,
 };
 
 /**

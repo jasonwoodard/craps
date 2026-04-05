@@ -5,6 +5,101 @@ export function StrategiesPage() {
       <p className="text-sm text-slate-500 font-mono mb-6">Understand what each strategy bets and how it escalates.</p>
 
       <StrategySection
+        name="CATS"
+        tagline="Five-stage escalating strategy. Starts conservative and escalates as session profit grows."
+        houseEdge="Accumulator: pass line 1.41% · Molly stages: come bets with odds ~0.5–0.8%"
+        stages={CATS_STAGES}
+      >
+        <p>
+          CATS (Conservative Accumulator → Three-point Strategy) is a stage machine: it defines
+          five distinct betting modes and rules for moving between them based on session profit
+          and recent seven-out history. The strategy starts in its most conservative state and
+          escalates only when the session is winning, retreating automatically when it isn't.
+        </p>
+        <p>
+          The Accumulator stages use flat pass line bets with minimal odds. The Molly stages
+          add come bets and increase odds as profit milestones are reached. Step-down rules
+          mirror step-up thresholds — two consecutive seven-outs at any Molly stage triggers a
+          retreat to the prior stage, protecting gains rather than pressing through cold dice.
+        </p>
+        <p>
+          CATS is the only strategy in the simulator with stage data. The Session page's Stage
+          Breakdown table, Stage Overlay charts, and Trend Indicators are all designed around
+          CATS's structure. Running CATS on Session gives the fullest picture of how the
+          strategy moves through its phases over the course of a real session.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="IronCross"
+        tagline="Field plus place bets on 5, 6, and 8. Wins on every number except 7 once a point is set."
+        houseEdge="Field: 2.78% · Place 5: 4.0% · Place 6/8: 1.52%"
+      >
+        <p>
+          IronCross combines a $10 field bet with place bets on the 5 ($10), 6 ($12), and 8
+          ($12), for a total table load of $44 while a point is established. Together these bets
+          cover every possible roll outcome except the 7: the 5, 6, and 8 pay their place odds;
+          the 2, 3, 4, 9, 10, 11, and 12 pay the field.
+        </p>
+        <p>
+          There is no pass line, so the strategy accepts come-out 7s as a necessary cost of
+          maintaining full coverage during the point phase. Place bets are off during the
+          come-out, but the field stays active — the come-out 7 and 11 still resolve the field
+          bet (losing on 7, winning on 11).
+        </p>
+        <p>
+          The high hit frequency feels exciting during hot streaks, but the blended house edge
+          across all active bets is higher than simpler strategies. A seven-out clears all four
+          bets at once, making the loss event steep relative to a single-bet approach. Compare
+          against Place6And8 on Distribution to evaluate the risk-reward tradeoff.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="JustField"
+        tagline="Single $10 field bet on every roll. Simple, high-frequency action."
+        houseEdge="Field: 2.78% (standard 2× on 2, 2× on 12)"
+      >
+        <p>
+          JustField places a flat $10 field bet before every roll. The field wins on 2, 3, 4, 9,
+          10, 11, and 12 (16 of 36 combinations) and loses on 5, 6, 7, and 8. Because the bet
+          resolves on every roll, the strategy generates constant action regardless of whether a
+          point is established.
+        </p>
+        <p>
+          The house edge on the field is approximately 2.78% under standard casino rules (2× payout
+          on both 2 and 12). Some tables pay 3× on the 12, which reduces the edge to 1.39%. The
+          flat bet and single-bet structure make variance easy to model — use Distribution to see
+          the ruin curve at your buy-in before playing.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="MartingaleField"
+        tagline="Field bet with Martingale progression. Doubles on loss, resets on win. Capped at $160."
+        houseEdge="Field: 2.78% — edge is unchanged; progression shifts variance, not expectation"
+      >
+        <p>
+          MartingaleField applies the classic Martingale doubling system to the field bet. It
+          starts at $10 and doubles after each loss: $10 → $20 → $40 → $80 → $160. After any
+          win the bet resets to $10. The progression is capped at $160 (four doublings from
+          base), preventing unlimited exposure.
+        </p>
+        <p>
+          The Martingale does not change the house edge — every field bet, regardless of size,
+          carries the same 2.78% disadvantage. What the progression does is trade frequent small
+          wins against occasional large losses. Runs of five or more consecutive field losses
+          (which occur with meaningful probability) strand the strategy at its cap and absorb
+          all prior gains.
+        </p>
+        <p>
+          Use Distribution Compare against JustField to see the Martingale failure profile
+          directly: MartingaleField will show a similar median outcome but a fatter left tail,
+          reflecting the sessions where the losing streak exceeds the cap.
+        </p>
+      </StrategySection>
+
+      <StrategySection
         name="PassLineOnly"
         tagline="The simplest possible craps strategy. Useful as a baseline for comparison."
         houseEdge="Pass line: 1.41%"
@@ -20,6 +115,87 @@ export function StrategiesPage() {
           compared to strategies that add come bets or odds. It is the natural benchmark: any
           more complex strategy should be evaluated against what PassLineOnly would have returned
           on the same dice.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="Place6And8"
+        tagline="Place bets on 6 and 8 only. No pass line, no come bets."
+        houseEdge="Place 6/8: 1.52%"
+      >
+        <p>
+          Place6And8 skips the pass line entirely and places fixed bets directly on the 6 and
+          8 after a point is established. The 6 and 8 are the most frequently rolled point
+          numbers (five ways to make each out of 36 combinations), giving this strategy a high
+          hit frequency relative to other place numbers.
+        </p>
+        <p>
+          Because there is no pass line and no come bet phase, table load is constant while the
+          two bets are working. The strategy takes no action on come-out rolls, waiting instead
+          for a point to be set before activating. Seven-outs clear both place bets; points made
+          on numbers other than 6 or 8 do not directly pay but do keep the shooter rolling.
+        </p>
+        <p>
+          House edge on Place 6/8 is 1.52%, slightly higher than the pass line at 1.41%, but
+          the consistent table structure makes variance easy to reason about. Ruin risk at a
+          given bankroll is straightforward to model using Distribution.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="Place6And8Progressive"
+        tagline="Place 6 and 8 with progressive press on wins."
+        houseEdge="Place 6/8: 1.52%"
+      >
+        <p>
+          Place6And8Progressive starts with the same 6 and 8 place bets as Place6And8 but adds
+          a press mechanic: after a win, the bet size increases according to a preset progression
+          rather than staying flat. A session with a sustained hot streak will see the bet size
+          step up repeatedly, amplifying returns while the roll stays hot.
+        </p>
+        <p>
+          The house edge per bet is unchanged from Place6And8. The difference is variance: a
+          seven-out at the top of a progression wipes out a much larger bet than the opening
+          size. The Stage Breakdown view (where available) is useful for tracking where the
+          progression was at each transition point.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="PlaceAll"
+        tagline="Place bets on all six point numbers: 4, 5, 6, 8, 9, and 10."
+        houseEdge="4/10: 6.67% · 5/9: 4.0% · 6/8: 1.52%"
+      >
+        <p>
+          PlaceAll covers every point number with a place bet. This maximises hit frequency —
+          24 of 36 possible rolls will pay something while all bets are working — but also
+          maximises exposure on seven-outs. The 4 and 10 carry the highest house edge in the
+          place-bet family (6.67%), which drags on the strategy's long-run performance.
+        </p>
+        <p>
+          Sessions with extended point-making runs will look impressive on PlaceAll because
+          something hits on nearly every non-seven point roll. The Distribution page, however,
+          will show a wider ruin envelope than the tighter place strategies due to the larger
+          table load and the high-edge bets on the 4 and 10.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="PlaceInside"
+        tagline="Place bets on 5, 6, 8, and 9 — the four inside numbers."
+        houseEdge="Place 5/9: 4.0% · Place 6/8: 1.52%"
+      >
+        <p>
+          PlaceInside extends the place-bet approach to cover all four inside numbers: 5, 6, 8,
+          and 9. The 5 and 9 each have four ways to roll (out of 36); the 6 and 8 each have
+          five. Together these four numbers account for 18 of 36 possible roll combinations —
+          exactly half — giving the strategy the highest hit frequency of any standard
+          place-bet configuration.
+        </p>
+        <p>
+          The tradeoff is that the 5 and 9 carry a higher house edge (4.0%) than the 6 and 8
+          (1.52%), so the blended edge is higher than Place6And8. Table load is also higher,
+          which increases both win potential and seven-out exposure.
         </p>
       </StrategySection>
 
@@ -112,182 +288,6 @@ export function StrategiesPage() {
           still carries 1.41% and there are no strategies that overcome the house edge over
           time. What 5X odds provides is a more favorable variance structure for bankrolls
           large enough to weather the swings.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="Place6And8"
-        tagline="Place bets on 6 and 8 only. No pass line, no come bets."
-        houseEdge="Place 6/8: 1.52%"
-      >
-        <p>
-          Place6And8 skips the pass line entirely and places fixed bets directly on the 6 and
-          8 after a point is established. The 6 and 8 are the most frequently rolled point
-          numbers (five ways to make each out of 36 combinations), giving this strategy a high
-          hit frequency relative to other place numbers.
-        </p>
-        <p>
-          Because there is no pass line and no come bet phase, table load is constant while the
-          two bets are working. The strategy takes no action on come-out rolls, waiting instead
-          for a point to be set before activating. Seven-outs clear both place bets; points made
-          on numbers other than 6 or 8 do not directly pay but do keep the shooter rolling.
-        </p>
-        <p>
-          House edge on Place 6/8 is 1.52%, slightly higher than the pass line at 1.41%, but
-          the consistent table structure makes variance easy to reason about. Ruin risk at a
-          given bankroll is straightforward to model using Distribution.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="PlaceInside"
-        tagline="Place bets on 5, 6, 8, and 9 — the four inside numbers."
-        houseEdge="Place 5/9: 4.0% · Place 6/8: 1.52%"
-      >
-        <p>
-          PlaceInside extends the place-bet approach to cover all four inside numbers: 5, 6, 8,
-          and 9. The 5 and 9 each have four ways to roll (out of 36); the 6 and 8 each have
-          five. Together these four numbers account for 18 of 36 possible roll combinations —
-          exactly half — giving the strategy the highest hit frequency of any standard
-          place-bet configuration.
-        </p>
-        <p>
-          The tradeoff is that the 5 and 9 carry a higher house edge (4.0%) than the 6 and 8
-          (1.52%), so the blended edge is higher than Place6And8. Table load is also higher,
-          which increases both win potential and seven-out exposure.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="PlaceAll"
-        tagline="Place bets on all six point numbers: 4, 5, 6, 8, 9, and 10."
-        houseEdge="4/10: 6.67% · 5/9: 4.0% · 6/8: 1.52%"
-      >
-        <p>
-          PlaceAll covers every point number with a place bet. This maximises hit frequency —
-          24 of 36 possible rolls will pay something while all bets are working — but also
-          maximises exposure on seven-outs. The 4 and 10 carry the highest house edge in the
-          place-bet family (6.67%), which drags on the strategy's long-run performance.
-        </p>
-        <p>
-          Sessions with extended point-making runs will look impressive on PlaceAll because
-          something hits on nearly every non-seven point roll. The Distribution page, however,
-          will show a wider ruin envelope than the tighter place strategies due to the larger
-          table load and the high-edge bets on the 4 and 10.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="Place6And8Progressive"
-        tagline="Place 6 and 8 with progressive press on wins."
-        houseEdge="Place 6/8: 1.52%"
-      >
-        <p>
-          Place6And8Progressive starts with the same 6 and 8 place bets as Place6And8 but adds
-          a press mechanic: after a win, the bet size increases according to a preset progression
-          rather than staying flat. A session with a sustained hot streak will see the bet size
-          step up repeatedly, amplifying returns while the roll stays hot.
-        </p>
-        <p>
-          The house edge per bet is unchanged from Place6And8. The difference is variance: a
-          seven-out at the top of a progression wipes out a much larger bet than the opening
-          size. The Stage Breakdown view (where available) is useful for tracking where the
-          progression was at each transition point.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="JustField"
-        tagline="Single $10 field bet on every roll. Simple, high-frequency action."
-        houseEdge="Field: 2.78% (standard 2× on 2, 2× on 12)"
-      >
-        <p>
-          JustField places a flat $10 field bet before every roll. The field wins on 2, 3, 4, 9,
-          10, 11, and 12 (16 of 36 combinations) and loses on 5, 6, 7, and 8. Because the bet
-          resolves on every roll, the strategy generates constant action regardless of whether a
-          point is established.
-        </p>
-        <p>
-          The house edge on the field is approximately 2.78% under standard casino rules (2× payout
-          on both 2 and 12). Some tables pay 3× on the 12, which reduces the edge to 1.39%. The
-          flat bet and single-bet structure make variance easy to model — use Distribution to see
-          the ruin curve at your buy-in before playing.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="IronCross"
-        tagline="Field plus place bets on 5, 6, and 8. Wins on every number except 7 once a point is set."
-        houseEdge="Field: 2.78% · Place 5: 4.0% · Place 6/8: 1.52%"
-      >
-        <p>
-          IronCross combines a $10 field bet with place bets on the 5 ($10), 6 ($12), and 8
-          ($12), for a total table load of $44 while a point is established. Together these bets
-          cover every possible roll outcome except the 7: the 5, 6, and 8 pay their place odds;
-          the 2, 3, 4, 9, 10, 11, and 12 pay the field.
-        </p>
-        <p>
-          There is no pass line, so the strategy accepts come-out 7s as a necessary cost of
-          maintaining full coverage during the point phase. Place bets are off during the
-          come-out, but the field stays active — the come-out 7 and 11 still resolve the field
-          bet (losing on 7, winning on 11).
-        </p>
-        <p>
-          The high hit frequency feels exciting during hot streaks, but the blended house edge
-          across all active bets is higher than simpler strategies. A seven-out clears all four
-          bets at once, making the loss event steep relative to a single-bet approach. Compare
-          against Place6And8 on Distribution to evaluate the risk-reward tradeoff.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="MartingaleField"
-        tagline="Field bet with Martingale progression. Doubles on loss, resets on win. Capped at $160."
-        houseEdge="Field: 2.78% — edge is unchanged; progression shifts variance, not expectation"
-      >
-        <p>
-          MartingaleField applies the classic Martingale doubling system to the field bet. It
-          starts at $10 and doubles after each loss: $10 → $20 → $40 → $80 → $160. After any
-          win the bet resets to $10. The progression is capped at $160 (four doublings from
-          base), preventing unlimited exposure.
-        </p>
-        <p>
-          The Martingale does not change the house edge — every field bet, regardless of size,
-          carries the same 2.78% disadvantage. What the progression does is trade frequent small
-          wins against occasional large losses. Runs of five or more consecutive field losses
-          (which occur with meaningful probability) strand the strategy at its cap and absorb
-          all prior gains.
-        </p>
-        <p>
-          Use Distribution Compare against JustField to see the Martingale failure profile
-          directly: MartingaleField will show a similar median outcome but a fatter left tail,
-          reflecting the sessions where the losing streak exceeds the cap.
-        </p>
-      </StrategySection>
-
-      <StrategySection
-        name="CATS"
-        tagline="Five-stage escalating strategy. Starts conservative and escalates as session profit grows."
-        houseEdge="Accumulator: pass line 1.41% · Molly stages: come bets with odds ~0.5–0.8%"
-        stages={CATS_STAGES}
-      >
-        <p>
-          CATS (Conservative Accumulator → Three-point Strategy) is a stage machine: it defines
-          five distinct betting modes and rules for moving between them based on session profit
-          and recent seven-out history. The strategy starts in its most conservative state and
-          escalates only when the session is winning, retreating automatically when it isn't.
-        </p>
-        <p>
-          The Accumulator stages use flat pass line bets with minimal odds. The Molly stages
-          add come bets and increase odds as profit milestones are reached. Step-down rules
-          mirror step-up thresholds — two consecutive seven-outs at any Molly stage triggers a
-          retreat to the prior stage, protecting gains rather than pressing through cold dice.
-        </p>
-        <p>
-          CATS is the only strategy in the simulator with stage data. The Session page's Stage
-          Breakdown table, Stage Overlay charts, and Trend Indicators are all designed around
-          CATS's structure. Running CATS on Session gives the fullest picture of how the
-          strategy moves through its phases over the course of a real session.
         </p>
       </StrategySection>
     </div>
