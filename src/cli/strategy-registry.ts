@@ -21,6 +21,7 @@ import {
 } from '../dsl/strategies';
 import { CATS } from '../dsl/strategies-staged';
 
+// Keep in alphabetical order
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'CATS':                  CATS(),
   'IronCross':             IronCross,
