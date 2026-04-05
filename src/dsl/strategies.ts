@@ -86,10 +86,10 @@ export const IronCross: StrategyDefinition = ({ bets }) => {
 };
 
 export const MartingaleField: StrategyDefinition = ({ bets, track }) => {
-  // Double on loss, reset to base on win. Cap at $160 (4 doublings from $10).
+  // Double on consecutive losses, reset to base on win. Cap at $160 (4 doublings from $10).
   // Use Distribution Compare against JustField to see Martingale failure profile.
-  const losses = track<number>('losses', 0);
-  const amount = Math.min(10 * Math.pow(2, losses), 160);
+  const consecutiveLosses = track<number>('consecutiveLosses', 0);
+  const amount = Math.min(10 * Math.pow(2, consecutiveLosses), 160);
   bets.field(amount);
 };
 
