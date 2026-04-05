@@ -1,5 +1,6 @@
 import { CrapsTable } from "../craps-table";
 import { BaseBet, BetTypes } from "./base-bet";
+import { DiceRoll } from '../dice/dice';
 
 /**
  *  Pass line or come line bet
@@ -32,7 +33,8 @@ export class PassLineBet extends BaseBet {
     return this.amount + this.oddsAmount;
   }
 
-  evaluateDiceRoll(rollValue: number, table: CrapsTable) {
+  evaluateDiceRoll(diceRoll: DiceRoll, table: CrapsTable) {
+    const rollValue = diceRoll.sum;
     // If there is a point and it's hit, the bet wins.
     if (table.isPointOn && rollValue == table.currentPoint) {
       this.win(table);

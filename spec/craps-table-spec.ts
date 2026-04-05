@@ -1,6 +1,7 @@
 import { CrapsTable } from '../src/craps-table';
 import { PassLineBet } from '../src/bets/pass-line-bet';
 import { TableMaker } from './table-maker/table-maker';
+import { DiceRoll } from '../src/dice/dice';
 import * as _ from 'lodash';
 
 describe('CrapsGame', (): void => {
@@ -41,7 +42,7 @@ describe('CrapsGame', (): void => {
   it('should take bets on 2,3,12 when point is off', ()=> {
     let crapsRolled = function(rollValue : number) {
       table.placeBet(new PassLineBet(1, ''));
-      table.resolveBets(rollValue);
+      table.resolveBets({ die1: 1, die2: rollValue - 1, sum: rollValue });
       expect(table.bets.length).toBe(0);
     }
 

@@ -22,7 +22,7 @@ milestones depend on its refactor being in place.
 
 ---
 
-## M1 — Foundational Refactor: Thread `DiceRoll` Through `evaluateDiceRoll`
+## M1 — Foundational Refactor: Thread `DiceRoll` Through `evaluateDiceRoll` [DONE]
 
 **Goal:** Change `evaluateDiceRoll(rollValue: number, table)` to
 `evaluateDiceRoll(diceRoll: DiceRoll, table)` across the engine. Pure signature
