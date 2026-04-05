@@ -27,6 +27,28 @@ export const PlaceAll: StrategyDefinition = ({ bets }) => {
   bets.place(10, 10);
 };
 
+// Pass Line with Odds: simple pass line + odds only (no come bets).
+// The [1-5]X suffix denotes the odds multiplier on a $10 flat bet.
+export const PassLineWithOdds1X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(10);
+};
+
+export const PassLineWithOdds2X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(20);
+};
+
+export const PassLineWithOdds3X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(30);
+};
+
+export const PassLineWithOdds4X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(40);
+};
+
+export const PassLineWithOdds5X: StrategyDefinition = ({ bets }) => {
+  bets.passLine(10).withOdds(50);
+};
+
 // Three-Point Molly: pass line + 2 come bets, always trying to keep 3 numbers
 // working. The [1-5]X suffix denotes the odds multiplier on a $10 flat bet.
 export const ThreePointMolly1X: StrategyDefinition = ({ bets }) => {

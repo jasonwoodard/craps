@@ -1,5 +1,10 @@
 import { StrategyDefinition } from '../dsl/strategy';
 import {
+  PassLineWithOdds1X,
+  PassLineWithOdds2X,
+  PassLineWithOdds3X,
+  PassLineWithOdds4X,
+  PassLineWithOdds5X,
   ThreePointMolly1X,
   ThreePointMolly2X,
   ThreePointMolly3X,
@@ -17,6 +22,11 @@ import {
 import { CATS } from '../dsl/strategies-staged';
 
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
+  'PassLineWithOdds1X': PassLineWithOdds1X,
+  'PassLineWithOdds2X': PassLineWithOdds2X,
+  'PassLineWithOdds3X': PassLineWithOdds3X,
+  'PassLineWithOdds4X': PassLineWithOdds4X,
+  'PassLineWithOdds5X': PassLineWithOdds5X,
   'ThreePointMolly1X': ThreePointMolly1X,
   'ThreePointMolly2X': ThreePointMolly2X,
   'ThreePointMolly3X': ThreePointMolly3X,
