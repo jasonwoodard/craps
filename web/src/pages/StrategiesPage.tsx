@@ -197,6 +197,75 @@ export function StrategiesPage() {
       </StrategySection>
 
       <StrategySection
+        name="JustField"
+        tagline="Single $10 field bet on every roll. Simple, high-frequency action."
+        houseEdge="Field: 2.78% (standard 2× on 2, 2× on 12)"
+      >
+        <p>
+          JustField places a flat $10 field bet before every roll. The field wins on 2, 3, 4, 9,
+          10, 11, and 12 (16 of 36 combinations) and loses on 5, 6, 7, and 8. Because the bet
+          resolves on every roll, the strategy generates constant action regardless of whether a
+          point is established.
+        </p>
+        <p>
+          The house edge on the field is approximately 2.78% under standard casino rules (2× payout
+          on both 2 and 12). Some tables pay 3× on the 12, which reduces the edge to 1.39%. The
+          flat bet and single-bet structure make variance easy to model — use Distribution to see
+          the ruin curve at your buy-in before playing.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="IronCross"
+        tagline="Field plus place bets on 5, 6, and 8. Wins on every number except 7 once a point is set."
+        houseEdge="Field: 2.78% · Place 5: 4.0% · Place 6/8: 1.52%"
+      >
+        <p>
+          IronCross combines a $10 field bet with place bets on the 5 ($10), 6 ($12), and 8
+          ($12), for a total table load of $44 while a point is established. Together these bets
+          cover every possible roll outcome except the 7: the 5, 6, and 8 pay their place odds;
+          the 2, 3, 4, 9, 10, 11, and 12 pay the field.
+        </p>
+        <p>
+          There is no pass line, so the strategy accepts come-out 7s as a necessary cost of
+          maintaining full coverage during the point phase. Place bets are off during the
+          come-out, but the field stays active — the come-out 7 and 11 still resolve the field
+          bet (losing on 7, winning on 11).
+        </p>
+        <p>
+          The high hit frequency feels exciting during hot streaks, but the blended house edge
+          across all active bets is higher than simpler strategies. A seven-out clears all four
+          bets at once, making the loss event steep relative to a single-bet approach. Compare
+          against Place6And8 on Distribution to evaluate the risk-reward tradeoff.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="MartingaleField"
+        tagline="Field bet with Martingale progression. Doubles on loss, resets on win. Capped at $160."
+        houseEdge="Field: 2.78% — edge is unchanged; progression shifts variance, not expectation"
+      >
+        <p>
+          MartingaleField applies the classic Martingale doubling system to the field bet. It
+          starts at $10 and doubles after each loss: $10 → $20 → $40 → $80 → $160. After any
+          win the bet resets to $10. The progression is capped at $160 (four doublings from
+          base), preventing unlimited exposure.
+        </p>
+        <p>
+          The Martingale does not change the house edge — every field bet, regardless of size,
+          carries the same 2.78% disadvantage. What the progression does is trade frequent small
+          wins against occasional large losses. Runs of five or more consecutive field losses
+          (which occur with meaningful probability) strand the strategy at its cap and absorb
+          all prior gains.
+        </p>
+        <p>
+          Use Distribution Compare against JustField to see the Martingale failure profile
+          directly: MartingaleField will show a similar median outcome but a fatter left tail,
+          reflecting the sessions where the losing streak exceeds the cap.
+        </p>
+      </StrategySection>
+
+      <StrategySection
         name="CATS"
         tagline="Five-stage escalating strategy. Starts conservative and escalates as session profit grows."
         houseEdge="Accumulator: pass line 1.41% · Molly stages: come bets with odds ~0.5–0.8%"

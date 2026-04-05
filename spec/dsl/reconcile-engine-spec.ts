@@ -1,6 +1,6 @@
 import { ReconcileEngine } from '../../src/dsl/strategy';
 import { GameState } from '../../src/dsl/game-state';
-import { PassLineAndPlace68, Place6And8Progressive } from '../../src/dsl/strategies';
+import { PassLineAndPlace68, Place6And8Progressive, MartingaleField } from '../../src/dsl/strategies';
 import { CrapsTable } from '../../src/craps-table';
 import { RiggedDice } from '../dice/rigged-dice';
 import { PassLineBet } from '../../src/bets/pass-line-bet';
@@ -196,6 +196,86 @@ describe('ReconcileEngine', () => {
         trackedWins = track<number>('wins', 0);
       });
       expect(trackedWins).toBe(2);
+    });
+
+    describe('consecutiveLosses tracker', () => {
+      it('increments on loss', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        engine.postRoll([lossOutcome()]);
+
+        let val = -1;
+        engine.reconcile(({ track }) => { val = track<number>('consecutiveLosses', 0); });
+        expect(val).toBe(1);
+      });
+
+      it('resets to 0 on win', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        engine.postRoll([lossOutcome()]);
+        engine.postRoll([lossOutcome()]);
+        engine.postRoll([winOutcome()]);
+
+        let val = -1;
+        engine.reconcile(({ track }) => { val = track<number>('consecutiveLosses', 0); });
+        expect(val).toBe(0);
+      });
+
+      it('does not affect cumulative losses counter', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        engine.postRoll([lossOutcome()]);
+        engine.postRoll([winOutcome()]);  // win resets consecutiveLosses but not losses
+        engine.postRoll([lossOutcome()]);
+
+        let cumulative = -1;
+        let consecutive = -1;
+        engine.reconcile(({ track }) => {
+          cumulative = track<number>('losses', 0);
+          consecutive = track<number>('consecutiveLosses', 0);
+        });
+        expect(cumulative).toBe(2);
+        expect(consecutive).toBe(1);
+      });
+    });
+
+    describe('MartingaleField bet sizing', () => {
+      it('starts at $10 with no losses', () => {
+        const { engine } = makeEngine();
+        const cmds = engine.reconcile(MartingaleField);
+        const field = cmds.find(c => c.betType === 'field');
+        expect((field as any).amount).toBe(10);
+      });
+
+      it('doubles to $20 after one loss', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        engine.postRoll([lossOutcome()]);
+        const cmds = engine.reconcile(MartingaleField);
+        const field = cmds.find(c => c.betType === 'field');
+        expect((field as any).amount).toBe(20);
+      });
+
+      it('resets to $10 after a win', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        engine.postRoll([lossOutcome()]);
+        engine.postRoll([lossOutcome()]);
+        engine.reconcile(MartingaleField);  // at $40
+        engine.postRoll([winOutcome()]);
+        const cmds = engine.reconcile(MartingaleField);
+        const field = cmds.find(c => c.betType === 'field');
+        expect((field as any).amount).toBe(10);
+      });
+
+      it('caps at $160 after four or more consecutive losses', () => {
+        const { engine } = makeEngine();
+        engine.reconcile(MartingaleField);
+        for (let i = 0; i < 5; i++) engine.postRoll([lossOutcome()]);
+        const cmds = engine.reconcile(MartingaleField);
+        const field = cmds.find(c => c.betType === 'field');
+        expect((field as any).amount).toBe(160);
+      });
     });
   });
 });
