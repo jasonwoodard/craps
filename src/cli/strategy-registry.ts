@@ -19,11 +19,12 @@ import {
   IronCross,
   MartingaleField,
 } from '../dsl/strategies';
-import { CATS } from '../dsl/strategies-staged';
+import { CATS, CATSAccumulatorOnly } from '../dsl/strategies-staged';
 
 // Keep in alphabetical order
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'CATS':                  CATS(),
+  'CATSAccumulatorOnly':   CATSAccumulatorOnly(),
   'IronCross':             IronCross,
   'JustField':             JustField,
   'MartingaleField':       MartingaleField,
