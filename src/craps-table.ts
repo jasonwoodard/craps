@@ -50,8 +50,8 @@ export class CrapsTable {
   rollDice(): DiceRoll {
     const diceRoll = this.dice.roll();
 
-    // Resolve the bets using the sum
-    this.resolveBets(diceRoll.sum);
+    // Resolve the bets using the full dice roll
+    this.resolveBets(diceRoll);
 
     // 'Handle' the on/off puck table state.
     if (this.isPointOn) {
@@ -70,9 +70,9 @@ export class CrapsTable {
     return diceRoll;
   }
 
-  resolveBets(rollValue: number) {
+  resolveBets(diceRoll: DiceRoll) {
     this._bets.forEach(bet => {
-      bet.evaluateDiceRoll(rollValue, this);
+      bet.evaluateDiceRoll(diceRoll, this);
     });
 
     // Remove zero'd out bets.

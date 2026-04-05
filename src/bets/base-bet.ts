@@ -1,4 +1,5 @@
 import { CrapsTable } from "../craps-table";
+import { DiceRoll } from '../dice/dice';
 
 export enum BetTypes {
   UNKNOWN,
@@ -34,7 +35,7 @@ export abstract class BaseBet {
   }
 
   abstract isOkayToPlace(crapsTable : CrapsTable) : boolean
-  abstract evaluateDiceRoll(rollValue: number, table: CrapsTable): void;
+  abstract evaluateDiceRoll(diceRoll: DiceRoll, table: CrapsTable): void;
   abstract win(table: CrapsTable): void;
   abstract lose(): void;
 }

@@ -1,5 +1,6 @@
 import { PlaceBet } from "../src/bets/place-bet";
 import { TableMaker } from "./table-maker/table-maker";
+import { DiceRoll } from "../src/dice/dice";
 
 describe("PlaceBet", () => {
 
@@ -25,7 +26,7 @@ describe("PlaceBet", () => {
     it("should have no action when point is off, even if bet number rolled", () => {
       const table = TableMaker.getTable().value(); // point is OFF
       const bet = new PlaceBet(10, 6, "player1");
-      bet.evaluateDiceRoll(6, table);
+      bet.evaluateDiceRoll({ die1: 1, die2: 5, sum: 6 }, table);
       expect(bet.amount).toBe(10);
       expect(bet.payOut).toBeUndefined();
     });
@@ -33,7 +34,7 @@ describe("PlaceBet", () => {
     it("should have no action on 7 when point is off", () => {
       const table = TableMaker.getTable().value(); // point is OFF
       const bet = new PlaceBet(10, 6, "player1");
-      bet.evaluateDiceRoll(7, table);
+      bet.evaluateDiceRoll({ die1: 1, die2: 6, sum: 7 }, table);
       expect(bet.amount).toBe(10);
     });
   });
@@ -42,7 +43,7 @@ describe("PlaceBet", () => {
     it("should win when bet number is rolled", () => {
       const table = TableMaker.getTable().withPoint(8).value(); // establishes any point
       const bet = new PlaceBet(12, 6, "player1");
-      bet.evaluateDiceRoll(6, table);
+      bet.evaluateDiceRoll({ die1: 1, die2: 5, sum: 6 }, table);
       // 7:6 payout on 6: profit = floor(12 * 7/6) = 14, payOut = 12 + 14 = 26
       expect(bet.payOut).toBe(26);
       expect(bet.amount).toBe(12); // amount unchanged until table clears it
@@ -51,7 +52,7 @@ describe("PlaceBet", () => {
     it("should lose (amount = 0) on 7-out", () => {
       const table = TableMaker.getTable().withPoint(8).value();
       const bet = new PlaceBet(10, 6, "player1");
-      bet.evaluateDiceRoll(7, table);
+      bet.evaluateDiceRoll({ die1: 1, die2: 6, sum: 7 }, table);
       expect(bet.amount).toBe(0);
     });
 
@@ -59,7 +60,7 @@ describe("PlaceBet", () => {
       const table = TableMaker.getTable().withPoint(8).value();
       const bet = new PlaceBet(10, 6, "player1");
       [2, 3, 4, 5, 8, 9, 10, 11, 12].forEach(roll => {
-        bet.evaluateDiceRoll(roll, table);
+        bet.evaluateDiceRoll({ die1: 1, die2: roll - 1, sum: roll }, table);
         expect(bet.amount).toBe(10, `should be unchanged on roll ${roll}`);
         expect(bet.payOut).toBeUndefined(`should have no payout on roll ${roll}`);
       });

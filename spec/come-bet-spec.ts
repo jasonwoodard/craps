@@ -1,6 +1,7 @@
 import { ComeBet } from '../src/bets/come-bet';
 import { CrapsTable } from '../src/craps-table';
 import { TableMaker } from './table-maker/table-maker';
+import { DiceRoll } from '../src/dice/dice';
 
 describe('ComeBet', () => {
   let comeBet: ComeBet;
@@ -14,7 +15,7 @@ describe('ComeBet', () => {
   it('should not set the ComeBet point unless the table point is on', () => {
     let table: CrapsTable = TableMaker.getTable().value();
     expect(comeBet.point).toBeUndefined();
-    comeBet.evaluateDiceRoll(5, table);
+    comeBet.evaluateDiceRoll({ die1: 2, die2: 3, sum: 5 }, table);
     // Rolling a valid point should not cause the point to set if the table 
     // point is not set.
     expect(comeBet.point).toBeUndefined();

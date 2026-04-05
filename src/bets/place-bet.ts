@@ -1,5 +1,6 @@
 import { CrapsTable } from "../craps-table";
 import { BaseBet, BetTypes } from "./base-bet";
+import { DiceRoll } from '../dice/dice';
 
 const VALID_PLACE_POINTS = [4, 5, 6, 8, 9, 10];
 
@@ -13,7 +14,8 @@ export class PlaceBet extends BaseBet {
     return VALID_PLACE_POINTS.includes(this.point!);
   }
 
-  evaluateDiceRoll(rollValue: number, table: CrapsTable): void {
+  evaluateDiceRoll(diceRoll: DiceRoll, table: CrapsTable): void {
+    const rollValue = diceRoll.sum;
     // Place bets are "off" during the come-out roll (point not established).
     if (!table.isPointOn) return;
 
