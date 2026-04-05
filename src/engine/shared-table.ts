@@ -8,6 +8,8 @@ import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
 import { FieldBet } from '../bets/field-bet';
+import { DontPassBet } from '../bets/dont-pass-bet';
+import { DontComeBet } from '../bets/dont-come-bet';
 import { RunLogger, SummaryRecord } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -239,6 +241,21 @@ export class SharedTable {
           }
           break;
         }
+      } else if (bet instanceof DontPassBet) {
+        const typeStr = betTypeToString(bet.betType);
+        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
+          const oldLay = bet.layOddsAmount;
+          const newLay = cmd.amount;
+          const diff = newLay - oldLay;
+          if (diff > 0 && slot.bankroll >= diff) {
+            slot.bankroll -= diff;
+            bet.layOddsAmount = newLay;
+          } else if (diff < 0) {
+            slot.bankroll += Math.abs(diff);
+            bet.layOddsAmount = newLay;
+          }
+          break;
+        }
       }
     }
   }
@@ -254,6 +271,10 @@ export class SharedTable {
         return new PlaceBet(amount, point, playerId);
       case 'field':
         return new FieldBet(amount, playerId);
+      case 'dontPass':
+        return new DontPassBet(amount, playerId);
+      case 'dontCome':
+        return new DontComeBet(amount, playerId);
       default:
         return null;
     }
@@ -263,7 +284,9 @@ export class SharedTable {
     return this.table.getPlayerBets(playerId).map(bet => ({
       bet,
       amount: bet.amount,
-      oddsAmount: (bet instanceof PassLineBet) ? bet.oddsAmount : 0,
+      oddsAmount: (bet instanceof PassLineBet) ? bet.oddsAmount
+               : (bet instanceof DontPassBet)  ? bet.layOddsAmount
+               : 0,
     }));
   }
 
@@ -294,7 +317,7 @@ export class SharedTable {
   private settleBets(snapshots: BetSnapshot[], slot: PlayerSlot): void {
     for (const { bet, amount, oddsAmount } of snapshots) {
       if ((bet.payOut ?? 0) > 0) {
-        if (bet instanceof PassLineBet) {
+        if (bet instanceof PassLineBet || bet instanceof DontPassBet) {
           slot.bankroll += amount + oddsAmount + (bet.payOut ?? 0);
         } else {
           slot.bankroll += bet.payOut ?? 0;
@@ -303,6 +326,7 @@ export class SharedTable {
         bet.payOut = 0;
         bet.amount = 0;
         if (bet instanceof PassLineBet) bet.oddsAmount = 0;
+        if (bet instanceof DontPassBet) bet.layOddsAmount = 0;
 
         this.table.removeBet(bet);
       }
