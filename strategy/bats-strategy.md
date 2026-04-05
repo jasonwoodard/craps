@@ -270,7 +270,12 @@ behavior is consistent enough to justify the full Dolly's load variance.
 | $10 | $10 | $10 | ~$30 avg | ~$70 |
 | $15 | $15 | $15 | ~$45 avg | ~$105 |
 
-**Blended HE:** `[RECOMPUTE — $20 × 1.364% + $40 × 0%) / $60]`
+**Blended HE: ~0.341%** (weighted average across point combinations)
+> ($20 × 1.364% + $60 × 0.00%) ÷ $80 = **0.341%** — weighted by point probability.
+> Range: 0.273% (both points on 4/10) to 0.401% (both on 6/8). Unlike CATS where
+> 2× odds cost the same regardless of number, BATS load — and therefore blended HE —
+> varies by which points get established. Higher-leverage points (4/10) cost more to
+> lay against but produce a lower blended HE because the odds proportion is larger.
 
 **What you are watching:** Are shooters establishing points and sevening out within
 3–5 rolls? Are come-out 7s appearing at normal frequency (not a streak)? Is the table
@@ -642,6 +647,15 @@ BATS vs. CATS (head-to-head), BATS vs. PassLine+Odds, BATS vs. DontPass+MaxOdds
 median final, median peak, roll-to-peak.]`
 
 ---
+
+
+
+
+---
+
+> **Implementation notes for the coding agent** are in a separate document:
+> `bats-implementation.md`. That document covers engine extensions required,
+> lay odds DSL usage, stage machine structure, and the implementation checklist.
 
 *— End of working draft v1.0 —*
 
