@@ -95,6 +95,8 @@ describe('stageMachine() builder', () => {
         bets: {
           passLine: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
           come: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+          dontPass: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+          dontCome: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
           place: () => {},
           field: () => {},
           hardways: () => {},

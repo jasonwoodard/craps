@@ -12,8 +12,8 @@
 |---|---|---|---|
 | M1 | Foundational refactor | — | — |
 | M2 | Field bet | `FieldBet` | `JustField`, `IronCross`, `MartingaleField` |
-| M3 | Don't Pass | `DontPassBet` | `DontPassOnly`, `DontPassWithOdds` |
-| M4 | Don't Come | `DontComeBet` | `DarkSideMolly2X`, `DarkSideMolly3X` |
+| M3 | Don't Pass | `DontPassBet` | `DontPassLineOnly`, `DontPassLineWithOdds[1-5]X` | [DONE] |
+| M4 | Don't Come | `DontComeBet` | `ThreePointDolly[1-5]X` | [DONE] |
 | M5 | Hardways | `HardwaysBet` | `HardwaysHedge`, `PassAndHards` |
 | M6 | C&E | `CEBet` | `IronCrossWithCE`, come-out insurance variants |
 
@@ -295,7 +295,7 @@ Register all three in `src/cli/strategy-registry.ts`.
 
 ---
 
-## M3 — Don't Pass Bet [PENDING]
+## M3 — Don't Pass Bet [DONE]
 
 **Goal:** Implement `DontPassBet` with lay odds. Unlocks the darkside.
 
@@ -322,7 +322,7 @@ chosen behavior in a code comment.
 
 ---
 
-## M4 — Don't Come Bet [PENDING]
+## M4 — Don't Come Bet [DONE]
 
 **Goal:** Implement `DontComeBet`. Completes the darkside toolkit alongside Don't Pass.
 

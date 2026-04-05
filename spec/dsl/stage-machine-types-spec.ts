@@ -24,6 +24,8 @@ describe('StageContext type contract', () => {
       bets: {
         passLine: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
         come: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+        dontPass: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+        dontCome: () => ({ withOdds: () => {}, withMaxOdds: () => {} }),
         place: () => {},
         field: () => {},
         hardways: () => {},
@@ -53,6 +55,8 @@ describe('StageContext type contract', () => {
       bets: {
         passLine: (amount: number) => ({ withOdds: () => {}, withMaxOdds: () => {} }),
         come: (amount: number) => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+        dontPass: (amount: number) => ({ withOdds: () => {}, withMaxOdds: () => {} }),
+        dontCome: (amount: number) => ({ withOdds: () => {}, withMaxOdds: () => {} }),
         place: (point: number, amount: number) => {},
         field: (amount: number) => {},
         hardways: (point: number, amount: number) => {},

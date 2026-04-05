@@ -32,6 +32,8 @@ const NOOP_BET_WITH_ODDS: BetWithOdds = { withOdds: () => {}, withMaxOdds: () =>
 const NOOP_BET_RECONCILER: BetReconciler = {
   passLine: () => NOOP_BET_WITH_ODDS,
   come: () => NOOP_BET_WITH_ODDS,
+  dontPass: () => NOOP_BET_WITH_ODDS,
+  dontCome: () => NOOP_BET_WITH_ODDS,
   place: () => {},
   field: () => {},
   hardways: () => {},

@@ -8,6 +8,8 @@ import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
 import { PlaceBet } from '../bets/place-bet';
 import { FieldBet } from '../bets/field-bet';
+import { DontPassBet } from '../bets/dont-pass-bet';
+import { DontComeBet } from '../bets/dont-come-bet';
 import { RunLogger } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -208,6 +210,21 @@ export class CrapsEngine {
           }
           break;
         }
+      } else if (bet instanceof DontPassBet) {
+        const typeStr = betTypeToString(bet.betType);
+        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
+          const oldLay = bet.layOddsAmount;
+          const newLay = cmd.amount;
+          const diff = newLay - oldLay;
+          if (diff > 0 && this.bankroll >= diff) {
+            this.bankroll -= diff;
+            bet.layOddsAmount = newLay;
+          } else if (diff < 0) {
+            this.bankroll += Math.abs(diff);
+            bet.layOddsAmount = newLay;
+          }
+          break;
+        }
       }
     }
   }
@@ -223,6 +240,10 @@ export class CrapsEngine {
         return new PlaceBet(amount, point, this.playerId);
       case 'field':
         return new FieldBet(amount, this.playerId);
+      case 'dontPass':
+        return new DontPassBet(amount, this.playerId);
+      case 'dontCome':
+        return new DontComeBet(amount, this.playerId);
       default:
         return null;
     }
@@ -232,7 +253,9 @@ export class CrapsEngine {
     return this.table.getPlayerBets(this.playerId).map(bet => ({
       bet,
       amount: bet.amount,
-      oddsAmount: (bet instanceof PassLineBet) ? bet.oddsAmount : 0,
+      oddsAmount: (bet instanceof PassLineBet) ? bet.oddsAmount
+               : (bet instanceof DontPassBet)  ? bet.layOddsAmount
+               : 0,
     }));
   }
 
@@ -266,11 +289,11 @@ export class CrapsEngine {
         // Collect winnings — payOut semantics differ by bet type:
         // PassLine/Come: payOut = profit only (even money + odds payout)
         // PlaceBet: payOut = original amount + profit
-        if (bet instanceof PassLineBet) {
-          // Return original flat bet + odds + profit
+        if (bet instanceof PassLineBet || bet instanceof DontPassBet) {
+          // Return original flat bet + odds/layOdds + profit
           this.bankroll += amount + oddsAmount + (bet.payOut ?? 0);
         } else {
-          // PlaceBet: payOut already includes original
+          // PlaceBet/FieldBet: payOut already includes original
           this.bankroll += bet.payOut ?? 0;
         }
 
@@ -278,6 +301,7 @@ export class CrapsEngine {
         bet.payOut = 0;
         bet.amount = 0;
         if (bet instanceof PassLineBet) bet.oddsAmount = 0;
+        if (bet instanceof DontPassBet) bet.layOddsAmount = 0;
 
         this.table.removeBet(bet);
       }

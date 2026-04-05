@@ -81,6 +81,67 @@ export const ThreePointMolly5X: StrategyDefinition = ({ bets }) => {
   bets.come(10).withOdds(50);
 };
 
+// --- Don't Pass strategies ---
+
+export const DontPassLineOnly: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10);
+};
+
+// Don't Pass with lay odds: $10 flat + lay odds. The [1-5]X suffix denotes the
+// odds multiplier on a $10 flat bet (matching the PassLineWithOdds convention).
+export const DontPassLineWithOdds1X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(10);
+};
+
+export const DontPassLineWithOdds2X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(20);
+};
+
+export const DontPassLineWithOdds3X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(30);
+};
+
+export const DontPassLineWithOdds4X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(40);
+};
+
+export const DontPassLineWithOdds5X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(50);
+};
+
+// Three-Point Dolly: darkside equivalent of Three-Point Molly.
+// Don't Pass + 2 Don't Come bets with lay odds, always trying to keep
+// 3 dark-side numbers working. The [1-5]X suffix denotes the odds multiplier.
+export const ThreePointDolly1X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(10);
+  bets.dontCome(10).withOdds(10);
+  bets.dontCome(10).withOdds(10);
+};
+
+export const ThreePointDolly2X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(20);
+  bets.dontCome(10).withOdds(20);
+  bets.dontCome(10).withOdds(20);
+};
+
+export const ThreePointDolly3X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(30);
+  bets.dontCome(10).withOdds(30);
+  bets.dontCome(10).withOdds(30);
+};
+
+export const ThreePointDolly4X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(40);
+  bets.dontCome(10).withOdds(40);
+  bets.dontCome(10).withOdds(40);
+};
+
+export const ThreePointDolly5X: StrategyDefinition = ({ bets }) => {
+  bets.dontPass(10).withOdds(50);
+  bets.dontCome(10).withOdds(50);
+  bets.dontCome(10).withOdds(50);
+};
+
 // Place 6 & 8 progressive: flat $12 on win 1, then press $6 per subsequent win.
 // Cap at wins=3 ($24) — covers 90% of sessions (P(≥3 wins) = (5/11)^3 ≈ 9.4%).
 export const Place6And8Progressive: StrategyDefinition = ({ bets, track }) => {

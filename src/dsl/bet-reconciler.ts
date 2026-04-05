@@ -1,5 +1,6 @@
 import { BaseBet as TableBaseBet, BetTypes } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
+import { DontPassBet } from '../bets/dont-pass-bet';
 
 export interface BetWithOdds {
   withOdds(amount: number): void;
@@ -9,6 +10,8 @@ export interface BetWithOdds {
 export interface BetReconciler {
   passLine(amount: number): BetWithOdds;
   come(amount: number): BetWithOdds;
+  dontPass(amount: number): BetWithOdds;
+  dontCome(amount: number): BetWithOdds;
   place(point: number, amount: number): void;
   field(amount: number): void;
   hardways(point: number, amount: number): void;
@@ -28,6 +31,8 @@ const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
   [BetTypes.COME]: 'come',
   [BetTypes.PLACE]: 'place',
   [BetTypes.FIELD]: 'field',
+  [BetTypes.DONT_PASS]: 'dontPass',
+  [BetTypes.DONT_COME]: 'dontCome',
 };
 
 const STRING_TO_BET_TYPE = new Map<string, BetTypes>(
@@ -51,6 +56,9 @@ export function tableBetToDesired(bet: TableBaseBet): DesiredBet {
   if (bet instanceof PassLineBet && bet.oddsAmount > 0) {
     desired.odds = bet.oddsAmount;
   }
+  if (bet instanceof DontPassBet && bet.layOddsAmount > 0) {
+    desired.odds = bet.layOddsAmount;
+  }
   return desired;
 }
 
@@ -72,6 +80,14 @@ export class SimpleBetReconciler implements BetReconciler {
 
   come(amount: number): BetWithOdds {
     return this.add('come', amount);
+  }
+
+  dontPass(amount: number): BetWithOdds {
+    return this.add('dontPass', amount);
+  }
+
+  dontCome(amount: number): BetWithOdds {
+    return this.add('dontCome', amount);
   }
 
   place(point: number, amount: number): void {
