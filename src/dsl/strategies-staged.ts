@@ -113,6 +113,47 @@ export function CATS() {
 }
 
 /**
+ * Creates a fresh CATSAccumulatorOnly strategy.
+ *
+ * This is the Accumulator component of CATS in isolation — Place 6/8 at $18,
+ * then de-leverage to $12 on the first 6 or 8 hit. No further advancement.
+ *
+ * Register in StrategyRegistry as: `'CATSAccumulatorOnly': CATSAccumulatorOnly()`
+ */
+export function CATSAccumulatorOnly() {
+  return stageMachine('CATSAccumulatorOnly')
+    .startingAt('accumulatorFull')
+
+    // --- Stage 1: Full ---
+    // Place 6/8 at $18 each. On first hit of 6 or 8, de-leverage to regressed.
+    .stage('accumulatorFull', {
+      board: ({ bets }: StageContext) => {
+        bets.place(6, 18);
+        bets.place(8, 18);
+      },
+      canAdvanceTo: () => true,
+      on: {
+        numberHit: ({ number }, { advanceTo }) => {
+          if (number === 6 || number === 8) {
+            advanceTo('accumulatorRegressed');
+          }
+        },
+      },
+    })
+
+    // --- Stage 2: Regressed (terminal) ---
+    // Place 6/8 at $12 each. No further advancement — grind indefinitely.
+    .stage('accumulatorRegressed', {
+      board: ({ bets }: StageContext) => {
+        bets.place(6, 12);
+        bets.place(8, 12);
+      },
+    })
+
+    .build();
+}
+
+/**
  * Tiered odds for ThreePtMollyTight based on coverage.
  *
  * Sweet spot (6/8 + 5/9 covered): 3×/2×/1× = $30/$20/$10
