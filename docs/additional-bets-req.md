@@ -117,7 +117,7 @@ Same mechanical change.
 
 ---
 
-## M2 — Field Bet
+## M2 — Field Bet [DONE]
 
 **Goal:** Implement `FieldBet` and register `JustField`, `IronCross`, and
 `MartingaleField` strategies. Field is the simplest new bet: one-roll, always active,

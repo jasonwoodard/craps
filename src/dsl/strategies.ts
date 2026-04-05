@@ -69,6 +69,30 @@ export const Place6And8Progressive: StrategyDefinition = ({ bets, track }) => {
   bets.place(8, amount);
 };
 
+// --- Field strategies ---
+
+export const JustField: StrategyDefinition = ({ bets }) => {
+  bets.field(10);
+};
+
+export const IronCross: StrategyDefinition = ({ bets }) => {
+  // Wins on every roll except 7 once point is established.
+  // Place 5/6/8 are off during come-out; Field stays active.
+  // No pass line — accepts come-out 7 losses as cost of coverage.
+  bets.field(10);
+  bets.place(5, 10);
+  bets.place(6, 12);
+  bets.place(8, 12);
+};
+
+export const MartingaleField: StrategyDefinition = ({ bets, track }) => {
+  // Double on loss, reset to base on win. Cap at $160 (4 doublings from $10).
+  // Use Distribution Compare against JustField to see Martingale failure profile.
+  const losses = track<number>('losses', 0);
+  const amount = Math.min(10 * Math.pow(2, losses), 160);
+  bets.field(amount);
+};
+
 // --- Legacy aliases ---
 
 export const PassLineAndPlace68: StrategyDefinition = ({ bets }) => {
