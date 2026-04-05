@@ -63,6 +63,8 @@ export class ReconcileEngine {
       if (outcome.result === 'win') {
         const current = this.trackers.get('wins') ?? 0;
         this.trackers.set('wins', current + 1);
+        // Reset consecutive-loss counter so Martingale-style strategies return to base bet.
+        this.trackers.set('losses', 0);
       } else if (outcome.result === 'loss') {
         const current = this.trackers.get('losses') ?? 0;
         this.trackers.set('losses', current + 1);
