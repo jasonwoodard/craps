@@ -654,7 +654,7 @@ median final, median peak, roll-to-peak.]`
 ---
 
 > **Implementation notes for the coding agent** are in a separate document:
-> `bats-implementation.md`. That document covers engine extensions required,
+> `docs/bats-implementation.md`. That document covers engine extensions required,
 > lay odds DSL usage, stage machine structure, and the implementation checklist.
 
 *— End of working draft v1.0 —*
