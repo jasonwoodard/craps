@@ -112,5 +112,17 @@ describe('ComeBet', () => {
       expect(bet.payOut).toBeUndefined();
       expect(bet.amount).toBe(10); // still alive
     });
+
+    it('should lose base bet on come-out 7, but return odds', () => {
+      // Table point is OFF (come-out phase) — established come bets are contract
+      // bets and survive, but odds are OFF during come-out and returned, not lost.
+      const table = TableMaker.getTable().value(); // point OFF
+      const bet = new ComeBet(10, playerId);
+      bet.point = 9; // simulate already-traveled bet
+      bet.oddsAmount = 20;
+      bet.evaluateDiceRoll({ die1: 0, die2: 7, sum: 7 }, table);
+      expect(bet.amount).toBe(0);      // base lost
+      expect(bet.oddsAmount).toBe(20); // odds returned, not lost
+    });
   });
 });

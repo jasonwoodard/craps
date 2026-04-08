@@ -19,13 +19,14 @@ export class ComeBet extends PassLineBet {
   }
 
   evaluateDiceRoll(diceRoll: DiceRoll, table: CrapsTable): void {
-    // Come bets are only active when the table point is ON.
-    if (!table.isPointOn) return;
-
     const rollValue = diceRoll.sum;
 
     if (this.point === undefined) {
-      // Transit phase: behaves like a come-out for the come bet.
+      // Transit phase: a come bet in transit is only active when the table
+      // point is ON (placement is already blocked during come-out, so this
+      // guard is a safety net for direct evaluateDiceRoll calls).
+      if (!table.isPointOn) return;
+
       // 7/11 → natural win; 2/3/12 → craps loss; point number → travel.
       switch (rollValue) {
         case 7:
@@ -44,12 +45,19 @@ export class ComeBet extends PassLineBet {
           }
       }
     } else {
-      // Established phase: the bet has its own point.
-      // Win only on the bet's OWN point; lose on 7; all else → no action.
+      // Established phase: contract bet — always active regardless of
+      // whether the table point is ON or OFF (new come-out).
       if (rollValue === this.point) {
         this.win(table);
       } else if (rollValue === 7) {
-        this.lose();
+        if (table.isPointOn) {
+          // Seven-out: base AND odds both lose.
+          this.lose();
+        } else {
+          // Come-out 7: base loses, odds are OFF and returned to player.
+          this.amount = 0;
+          // oddsAmount intentionally preserved — odds were not at risk.
+        }
       }
     }
   }
