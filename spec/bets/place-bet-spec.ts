@@ -1,6 +1,6 @@
-import { PlaceBet } from "../src/bets/place-bet";
-import { TableMaker } from "./table-maker/table-maker";
-import { DiceRoll } from "../src/dice/dice";
+import { PlaceBet } from "../../src/bets/place-bet";
+import { TableMaker } from "../table-maker/table-maker";
+import { DiceRoll } from "../../src/dice/dice";
 
 describe("PlaceBet", () => {
 

@@ -1,6 +1,6 @@
-import { PassLineBet } from "../src/bets/pass-line-bet";
-import { TableMaker } from "./table-maker/table-maker";
-import { ComeBet } from "../src/bets/come-bet";
+import { PassLineBet } from "../../src/bets/pass-line-bet";
+import { TableMaker } from "../table-maker/table-maker";
+import { ComeBet } from "../../src/bets/come-bet";
 
 describe("PassLineBet", () => {
   it("should pay pass line only bets", () => {
