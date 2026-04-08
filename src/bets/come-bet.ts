@@ -3,6 +3,8 @@ import { BetTypes } from "./base-bet";
 import { CrapsTable } from "../craps-table";
 import { DiceRoll } from "../dice/dice";
 
+const BOX_NUMBERS = new Set([4, 5, 6, 8, 9, 10]);
+
 export class ComeBet extends PassLineBet {
   constructor(amount: number, playerId: string) {
     super(amount, playerId);
@@ -39,8 +41,9 @@ export class ComeBet extends PassLineBet {
           this.lose();
           break;
         default:
-          // 4, 5, 6, 8, 9, 10 — the bet travels to this number.
-          if ((rollValue >= 4 && rollValue <= 6) || (rollValue >= 8 && rollValue <= 10)) {
+          // After handling 2, 3, 7, 11, 12 above, the only remaining
+          // values are the box numbers — the bet travels to this number.
+          if (BOX_NUMBERS.has(rollValue)) {
             this.point = rollValue;
           }
       }
@@ -48,7 +51,15 @@ export class ComeBet extends PassLineBet {
       // Established phase: contract bet — always active regardless of
       // whether the table point is ON or OFF (new come-out).
       if (rollValue === this.point) {
-        this.win(table);
+        if (table.isPointOn) {
+          // Normal point-phase win: base pays 1:1, odds pay true odds.
+          this.win(table);
+        } else {
+          // Come-out: own point rolled while odds are OFF.
+          // Base wins 1:1; odds returned (not paid, not lost).
+          this.payOut = this.amount;
+          // oddsAmount preserved — returned to player, not paid as winnings.
+        }
       } else if (rollValue === 7) {
         if (table.isPointOn) {
           // Seven-out: base AND odds both lose.

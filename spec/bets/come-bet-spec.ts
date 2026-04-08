@@ -113,6 +113,18 @@ describe('ComeBet', () => {
       expect(bet.amount).toBe(10); // still alive
     });
 
+    it('should win base 1:1 on come-out own-point, but return odds (not pay them)', () => {
+      // Table point is OFF — odds are OFF during come-out. Base wins 1:1,
+      // odds are handed back, not paid as winnings.
+      const table = TableMaker.getTable().value(); // point OFF
+      const bet = new ComeBet(10, playerId);
+      bet.point = 9;
+      bet.oddsAmount = 20;
+      bet.evaluateDiceRoll({ die1: 0, die2: 9, sum: 9 }, table);
+      expect(bet.payOut).toBe(10);    // 1:1 flat win only
+      expect(bet.oddsAmount).toBe(20); // odds returned, not included in payOut
+    });
+
     it('should lose base bet on come-out 7, but return odds', () => {
       // Table point is OFF (come-out phase) — established come bets are contract
       // bets and survive, but odds are OFF during come-out and returned, not lost.
