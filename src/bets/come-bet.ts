@@ -6,6 +6,11 @@ import { DiceRoll } from "../dice/dice";
 const BOX_NUMBERS = new Set([4, 5, 6, 8, 9, 10]);
 
 export class ComeBet extends PassLineBet {
+  // Player may declare odds working during the come-out roll (§5.1).
+  // Default: false (odds are OFF during come-out — §1.1).
+  // NOTE: evaluateDiceRoll does not yet read this flag; §5 behavior is pending.
+  oddsWorking: boolean = false;
+
   constructor(amount: number, playerId: string) {
     super(amount, playerId);
     this.betType = BetTypes.COME;
