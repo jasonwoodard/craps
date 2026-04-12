@@ -23,6 +23,26 @@ export class ComeBet extends PassLineBet {
     return cb.isOkayToPlace(table);
   }
 
+  // Override: compute odds from this.point (the come bet's own point),
+  // not table.currentPoint. Also applies during come-out when oddsWorking=true,
+  // so we guard on this.point !== undefined rather than table.isPointOn.
+  win(table: CrapsTable): void {
+    this.payOut = this.amount;
+    if (this.point !== undefined) {
+      this.payOut += ComeBet.computeOddsPayoutForPoint(this.oddsAmount, this.point);
+    }
+  }
+
+  private static computeOddsPayoutForPoint(oddsAmount: number, point: number): number {
+    if (!oddsAmount) return 0;
+    switch (point) {
+      case 4: case 10: return oddsAmount * 2;
+      case 5: case 9:  return Math.floor(oddsAmount / 2) * 3;
+      case 6: case 8:  return Math.floor(oddsAmount / 5) * 6;
+      default:         return 0;
+    }
+  }
+
   evaluateDiceRoll(diceRoll: DiceRoll, table: CrapsTable): void {
     const rollValue = diceRoll.sum;
 
@@ -57,19 +77,30 @@ export class ComeBet extends PassLineBet {
           // Normal point-phase win: base pays 1:1, odds pay true odds.
           this.win(table);
         } else {
-          // Come-out: own point rolled while odds are OFF.
-          // Base wins 1:1; odds returned (not paid, not lost).
-          this.payOut = this.amount;
-          // oddsAmount preserved — returned to player, not paid as winnings.
+          // Come-out: own point rolled.
+          if (this.oddsWorking) {
+            // Odds declared working: flat 1:1 + true odds (§5.2).
+            this.win(table);
+          } else {
+            // Odds OFF (default): base wins 1:1, odds returned intact (§2.1–2.3).
+            this.payOut = this.amount;
+            // oddsAmount preserved — returned to player, not paid as winnings.
+          }
         }
       } else if (rollValue === 7) {
         if (table.isPointOn) {
           // Seven-out: base AND odds both lose.
           this.lose();
         } else {
-          // Come-out 7: base loses, odds are OFF and returned to player.
-          this.amount = 0;
-          // oddsAmount intentionally preserved — odds were not at risk.
+          // Come-out 7.
+          if (this.oddsWorking) {
+            // Odds declared working: both flat and odds lose (§5.3).
+            this.lose();
+          } else {
+            // Odds OFF (default): base loses, odds returned intact (§3.1–3.3).
+            this.amount = 0;
+            // oddsAmount intentionally preserved — odds were not at risk.
+          }
         }
       }
     }
