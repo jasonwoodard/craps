@@ -3,8 +3,6 @@ import { BetTypes } from "./base-bet";
 import { CrapsTable } from "../craps-table";
 import { DiceRoll } from "../dice/dice";
 
-const BOX_NUMBERS = new Set([4, 5, 6, 8, 9, 10]);
-
 export class ComeBet extends PassLineBet {
   // Player may declare odds working during the come-out roll (§5.1).
   // Default: false (odds are OFF during come-out — §1.1).
@@ -47,10 +45,9 @@ export class ComeBet extends PassLineBet {
           break;
         default:
           // After handling 2, 3, 7, 11, 12 above, the only remaining
-          // values are the box numbers — the bet travels to this number.
-          if (BOX_NUMBERS.has(rollValue)) {
-            this.point = rollValue;
-          }
+          // values from a valid dice roll (2–12) are 4, 5, 6, 8, 9, 10.
+          // The bet travels to this number.
+          this.point = rollValue;
       }
     } else {
       // Established phase: contract bet — always active regardless of
