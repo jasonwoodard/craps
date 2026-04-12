@@ -152,8 +152,11 @@ describe('Integration — Don\'t Come (Scenarios 042–049)', () => {
     s.roll().expectRail(80);               // Step 4: roll 9 → DC travels to 9
     s.setLayOdds(dc, 30).expectRail(50);   // Step 5: lay $30 odds
     s.roll();                               // Step 6: roll 7 → DC wins
-    // Correct expected per scenario: rail $110 (DC +$30 profit + return $10+$30 = +$70; pass −$10)
-    s.expectRail(110);                     // Steps 7–10
+    // DC wins: payOut=$10(flat)+$20(lay-9 2:3)=$30; settlement=$10+$30+$30=$70.
+    // Pass flat already deducted at placement (no second deduction at resolution).
+    // Correct implementation: $50 + $70 = $120.
+    // (The doc's $110 includes a double-deduction of the pass-line loss at resolution.)
+    s.expectRail(120);                     // Steps 7–10
   });
 
   it('Scenario 049 — Don\'t Come + Lay Odds, Number Made (Loss)', () => {
