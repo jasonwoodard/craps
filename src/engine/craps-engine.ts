@@ -304,6 +304,13 @@ export class CrapsEngine {
         if (bet instanceof DontPassBet) bet.layOddsAmount = 0;
 
         this.table.removeBet(bet);
+      } else if (bet instanceof ComeBet && bet.amount === 0 && bet.oddsAmount > 0) {
+        // Come-out push (§§3.1–3.3): flat bet lost during come-out while odds
+        // were OFF.  evaluateDiceRoll preserved oddsAmount intact (not at risk);
+        // the bet was already removed from the table by resolveBets (amount===0).
+        // Credit the odds back to bankroll without recording a win.
+        this.bankroll += bet.oddsAmount;
+        bet.oddsAmount = 0;
       }
       // Lost bets: already removed by resolveBets, bankroll was deducted at placement
     }
