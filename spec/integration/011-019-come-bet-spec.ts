@@ -114,15 +114,15 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
   });
 
   it('Scenario 017 — Come Bet + Odds, Come-Out Hits Come Point (Odds Off)', () => {
-    // Seven-out ends shooter. New come-out rolls 9 → hits come-9 point.
-    // Come flat wins $10. Come odds pushed (not paid). Net $10 come profit.
+    // Seven-out ends shooter. Come flat LOST (flat always lost on seven).
+    // Come odds OFF → returned as push (+$30). New come-out rolls 9.
+    // cm was removed from table after seven-out (amount=0), so roll 9 only
+    // establishes pl2's point — no come win fires.
     //
-    // Correct implementation accounting (no double-deduction):
-    //   Seven-out: come flat SURVIVES (not at risk); come odds pushed (+$30) → rail $80.
+    // Correct implementation accounting:
+    //   Seven-out: come flat taken; come odds returned (+$30) → rail $50+$30=$80.
     //   Bet new pass line: −$10 → rail $70.
-    //   Roll 9 (come-out): cm-9 hit — settlement returns amount(10)+oddsAmount(0)+payOut(10)=$20.
-    //   pl2 establishes at 9 (unresolved, still live). Correct final rail: $90.
-    //   (The doc's $110 includes a double-deduction of the pass-line loss at resolution.)
+    //   Roll 9 (come-out): no cm on table; pl2 establishes at 9. Rail stays $70.
     const s = new ScenarioTable(100, [8, 9, 7, 9]);
     const pl1 = new PassLineBet(10, 'player');
     const cm = new ComeBet(10, 'player');
@@ -134,16 +134,15 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
     s.setOdds(cm, 30).expectRail(50);     // Step 5: place $30 odds (OFF)
 
     s.roll();                              // Step 6: roll 7 → seven-out
-    // come flat survives (payOut=0 signal), come odds returned (+$30)
+    // come flat taken (amount=0); come odds returned (+$30)
     s.expectRail(80);                      // after seven-out: rail $80
 
     // New come-out: place new pass line
     const pl2 = new PassLineBet(10, 'player');
     s.bet(pl2).expectRail(70);             // Step 10: bet $10 PL → rail $70
 
-    s.roll();                              // Step 11: roll 9 → cm-9 hits on come-out
-    // come flat wins: settlement = amount(10)+oddsAmount(0)+payOut(10)=20
-    s.expectRail(90);
+    s.roll();                              // Step 11: roll 9 → pl2 point 9 established; no cm on table
+    s.expectRail(70);                      // no come win; rail unchanged
   });
 
   it('Scenario 018 — Two Come Bets, Seven-Out (Both Odds Off)', () => {

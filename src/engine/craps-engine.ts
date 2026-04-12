@@ -304,14 +304,9 @@ export class CrapsEngine {
         if (bet instanceof DontPassBet) bet.layOddsAmount = 0;
 
         this.table.removeBet(bet);
-      } else if (bet instanceof ComeBet && bet.payOut === 0 && bet.oddsAmount > 0) {
-        // Seven-out with odds OFF: flat survives on the table; return odds only.
-        this.bankroll += bet.oddsAmount;
-        bet.oddsAmount = 0;
-        bet.payOut = undefined; // reset signal
       } else if (bet instanceof ComeBet && bet.amount === 0 && bet.oddsAmount > 0) {
-        // Come-out push: flat lost during come-out while odds were OFF.
-        // Credit the odds back to bankroll without recording a win.
+        // Any seven with odds OFF: flat always lost; credit odds back to bankroll
+        // without recording a win (odds were never at risk).
         this.bankroll += bet.oddsAmount;
         bet.oddsAmount = 0;
       } else if (bet instanceof DontPassBet && bet.payOut === 0) {

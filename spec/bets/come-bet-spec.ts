@@ -134,18 +134,18 @@ describe('ComeBet', () => {
       expect(bet.amount).toBe(10);
     });
 
-    it('should preserve flat and signal odds push on seven-out (odds OFF)', () => {
-      // Odds are OFF (default): flat is not at risk on seven-out — it survives
-      // on the table so the bet can win if the come point hits on a come-out.
-      // payOut = 0 signals settlement to return the odds without removing the bet.
+    it('should lose flat and push odds on seven-out (odds OFF)', () => {
+      // Flat is ALWAYS lost when seven is rolled after the bet has traveled.
+      // Odds that are OFF are returned as a push — they were never at risk.
+      // Settlement detects amount===0 && oddsAmount>0 and credits odds back.
       const table = TableMaker.getTable().withPoint(6).value();
       const bet = new ComeBet(10, playerId);
       bet.evaluateDiceRoll({ die1: 0, die2: 9, sum: 9 }, table); // travels to 9
       bet.oddsAmount = 50;
       bet.evaluateDiceRoll({ die1: 0, die2: 7, sum: 7 }, table); // seven-out
-      expect(bet.amount).toBe(10);     // flat survives — still on the table
-      expect(bet.oddsAmount).toBe(50); // odds preserved for settlement to return
-      expect(bet.payOut).toBe(0);      // push signal: return odds, keep flat alive
+      expect(bet.amount).toBe(0);          // flat lost — taken by the house
+      expect(bet.oddsAmount).toBe(50);     // odds preserved for settlement to return
+      expect(bet.payOut).toBeUndefined();  // no win signal; settlement uses amount===0 path
     });
   });
 
