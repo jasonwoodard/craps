@@ -33,6 +33,8 @@ const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
   [BetTypes.FIELD]: 'field',
   [BetTypes.DONT_PASS]: 'dontPass',
   [BetTypes.DONT_COME]: 'dontCome',
+  [BetTypes.BUY]: 'buy',
+  [BetTypes.LAY]: 'lay',
 };
 
 const STRING_TO_BET_TYPE = new Map<string, BetTypes>(
