@@ -26,6 +26,7 @@ export function SummaryPanel({ result, params }: Props) {
         <StatCard label="Total Rolls" value={String(stats.totalRolls)} />
         <StatCard label="Win Rolls" value={String(stats.winRolls)} />
         <StatCard label="Loss Rolls" value={String(stats.lossRolls)} />
+        <StatCard label="Push Rolls" value={String(stats.pushRolls)} />
         <StatCard label="No Action" value={String(stats.noActionRolls)} />
         <StatCard label="Avg Table Load" value={`$${stats.avgTableLoad}`} />
       </div>

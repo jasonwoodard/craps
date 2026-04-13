@@ -8,6 +8,7 @@ export interface SessionStats {
   maxDrawdown: number;
   winRolls: number;
   lossRolls: number;
+  pushRolls: number;
   noActionRolls: number;
   avgTableLoad: number;
   maxTableLoad: number;
@@ -78,6 +79,8 @@ export function computeSessionStats(result: EngineResult): SessionStats {
   let maxDrawdown = 0;
   let winRolls = 0;
   let lossRolls = 0;
+  let pushRolls = 0;
+  let noActionRolls = 0;
   let totalTableLoad = 0;
   let maxTableLoad = 0;
 
@@ -89,17 +92,22 @@ export function computeSessionStats(result: EngineResult): SessionStats {
     const drawdown = lastPeak - roll.bankrollAfter;
     if (drawdown > maxDrawdown) maxDrawdown = drawdown;
 
+    // Each flag is independent — a roll can count in multiple categories
+    // (e.g. loss + push on a ComeBet seven-out with odds OFF). noAction is strict:
+    // only rolls with zero outcomes of any kind.
     const hasWin = roll.outcomes.some(o => o.result === 'win');
     const hasLoss = roll.outcomes.some(o => o.result === 'loss');
+    const hasPush = roll.outcomes.some(o => o.result === 'push');
     if (hasWin) winRolls++;
     if (hasLoss) lossRolls++;
+    if (hasPush) pushRolls++;
+    if (!hasWin && !hasLoss && !hasPush) noActionRolls++;
 
     totalTableLoad += roll.tableLoadBefore;
     if (roll.tableLoadBefore > maxTableLoad) maxTableLoad = roll.tableLoadBefore;
   }
 
   const totalRolls = rolls.length;
-  const noActionRolls = totalRolls - winRolls - lossRolls;
   const avgTableLoad = totalRolls > 0 ? Math.round((totalTableLoad / totalRolls) * 100) / 100 : 0;
 
   return {
@@ -110,6 +118,7 @@ export function computeSessionStats(result: EngineResult): SessionStats {
     maxDrawdown,
     winRolls,
     lossRolls,
+    pushRolls,
     noActionRolls,
     avgTableLoad,
     maxTableLoad,

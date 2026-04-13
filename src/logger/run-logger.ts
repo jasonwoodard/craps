@@ -59,9 +59,11 @@ export interface SummaryRecord {
   activity: {
     rollsWithWin: number;
     rollsWithLoss: number;
+    rollsWithPush: number;
     rollsNoAction: number;
     winRate: number;
     lossRate: number;
+    pushRate: number;
   };
   diceDistribution: {
     bySum: Record<string, number>;
@@ -81,6 +83,8 @@ export class RunLogger {
   private maxDrawdown = 0;
   private rollsWithWin = 0;
   private rollsWithLoss = 0;
+  private rollsWithPush = 0;
+  private rollsNoAction = 0;
   private totalTableLoad = 0;
   private maxTableLoad = 0;
   private minTableLoad = Infinity;
@@ -158,11 +162,16 @@ export class RunLogger {
     const drawdown = this.lastPeak - record.bankrollAfter;
     if (drawdown > this.maxDrawdown) this.maxDrawdown = drawdown;
 
-    // Activity
+    // Activity — each flag is independent; a roll can count in multiple categories
+    // (e.g. loss + push on a ComeBet seven-out with odds OFF). noAction is strict:
+    // only rolls with zero outcomes of any kind.
     const hasWin = record.outcomes.some(o => o.result === 'win');
     const hasLoss = record.outcomes.some(o => o.result === 'loss');
+    const hasPush = record.outcomes.some(o => o.result === 'push');
     if (hasWin) this.rollsWithWin++;
     if (hasLoss) this.rollsWithLoss++;
+    if (hasPush) this.rollsWithPush++;
+    if (!hasWin && !hasLoss && !hasPush) this.rollsNoAction++;
 
     // Table load
     const load = record.tableLoadBefore;
@@ -189,7 +198,6 @@ export class RunLogger {
 
   buildSummary(): SummaryRecord {
     const totalRolls = this.rollEntries.length;
-    const rollsNoAction = totalRolls - this.rollsWithWin - this.rollsWithLoss;
     const avgTableLoad = totalRolls > 0 ? this.totalTableLoad / totalRolls : 0;
     const avgWhenActive = this.rollsWithActiveBets > 0
       ? this.totalTableLoadWhenActive / this.rollsWithActiveBets
@@ -220,9 +228,11 @@ export class RunLogger {
       activity: {
         rollsWithWin: this.rollsWithWin,
         rollsWithLoss: this.rollsWithLoss,
-        rollsNoAction,
+        rollsWithPush: this.rollsWithPush,
+        rollsNoAction: this.rollsNoAction,
         winRate: totalRolls > 0 ? round4(this.rollsWithWin / totalRolls) : 0,
         lossRate: totalRolls > 0 ? round4(this.rollsWithLoss / totalRolls) : 0,
+        pushRate: totalRolls > 0 ? round4(this.rollsWithPush / totalRolls) : 0,
       },
       diceDistribution: {
         bySum: { ...this.bySum },
@@ -287,6 +297,7 @@ export class RunLogger {
     console.log('');
     console.log(`Win rolls:    ${a.rollsWithWin} (${(a.winRate * 100).toFixed(1)}%)`);
     console.log(`Loss rolls:   ${a.rollsWithLoss} (${(a.lossRate * 100).toFixed(1)}%)`);
+    console.log(`Push rolls:   ${a.rollsWithPush} (${(a.pushRate * 100).toFixed(1)}%)`);
     console.log(`No action:    ${a.rollsNoAction}`);
     console.log('');
     console.log(`Table load:   avg $${tl.avg}  max $${tl.max}  avg-when-active $${tl.avgWhenActive}`);
