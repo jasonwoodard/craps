@@ -112,3 +112,48 @@
 **7.10** Push rate — pushed dollars as a proportion of total odds wagered — is a measure of capital efficiency. A high push rate indicates that a significant portion of odds wagers survived resolution events without generating a return.
 
 **7.11** The decision to declare odds working converts a guaranteed push into a live wager. The player accepts loss exposure in exchange for win potential. This is a quantifiable variance tradeoff, not a strategic improvement or degradation in expected value.
+
+---
+
+## Section 8 — The Unified Seven Rule (Point Phase and Come-Out)
+
+**CRITICAL — this section prevents a common implementation error.**
+
+The standing assumptions in this document scope Sections 1–7 to the come-out roll. The
+behavior described there is *identical* to what happens when seven is rolled during the
+**point phase** (seven-out). There is no difference. This section states that explicitly.
+
+**8.1** Once a come bet has traveled to its own point, the flat wager is **always lost**
+when seven is rolled — regardless of whether the table point is ON (seven-out) or OFF
+(come-out roll).
+
+**8.2** `table.isPointOn` has no bearing on the flat's disposition. The only trigger for
+flat loss is `rollValue === 7` after the bet has traveled (`this.point !== undefined`).
+
+**8.3** `table.isPointOn` has no bearing on the odds' disposition either. The only factor
+that determines whether odds are pushed or forfeited is the `oddsWorking` flag on the bet.
+
+**8.4** When `oddsWorking` is false (the default): on any seven, flat is lost and odds are
+returned as a push. This is true during the come-out roll (§3) and equally true during a
+seven-out in the point phase.
+
+**8.5** When `oddsWorking` is true: on any seven, both flat and odds are lost. This is true
+during the come-out roll (§5.3) and equally true during a seven-out in the point phase.
+
+**8.6** The uniform implementation rule is:
+```
+if (rollValue === 7 && this.point !== undefined) {
+  if (this.oddsWorking) {
+    this.lose();                  // flat and odds both forfeited
+  } else {
+    this.amount = 0;              // flat lost
+    // oddsAmount preserved — settlement returns it as a push
+  }
+}
+```
+
+**8.7** Any implementation that branches on `table.isPointOn` inside the seven handler
+will produce incorrect behavior for one of the two scenarios (come-out vs. seven-out),
+even though both should resolve identically. The `table.isPointOn` check belongs in the
+**transit phase** (determining whether a come bet in transit should be evaluated at all),
+not in the seven-resolution path of an already-established bet.

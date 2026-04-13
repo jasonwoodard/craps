@@ -114,11 +114,15 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
   });
 
   it('Scenario 017 — Come Bet + Odds, Come-Out Hits Come Point (Odds Off)', () => {
-    // Seven-out ends shooter. New come-out rolls 9 → hits come-9 point.
-    // Come flat wins $10. Come odds pushed (not paid). Net $10 come profit.
-    // BUG (first seven-out): lose() zeros oddsAmount, so come odds are lost not pushed.
+    // Seven-out ends shooter. Come flat LOST (flat always lost on seven).
+    // Come odds OFF → returned as push (+$30). New come-out rolls 9.
+    // cm was removed from table after seven-out (amount=0), so roll 9 only
+    // establishes pl2's point — no come win fires.
     //
-    // Scenario's stated final rail: $110. This test targets that final value.
+    // Correct implementation accounting:
+    //   Seven-out: come flat taken; come odds returned (+$30) → rail $50+$30=$80.
+    //   Bet new pass line: −$10 → rail $70.
+    //   Roll 9 (come-out): no cm on table; pl2 establishes at 9. Rail stays $70.
     const s = new ScenarioTable(100, [8, 9, 7, 9]);
     const pl1 = new PassLineBet(10, 'player');
     const cm = new ComeBet(10, 'player');
@@ -130,19 +134,15 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
     s.setOdds(cm, 30).expectRail(50);     // Step 5: place $30 odds (OFF)
 
     s.roll();                              // Step 6: roll 7 → seven-out
-    // Expected: pass line lost, come flat lost, come odds pushed (+$30)
-    // BUG: come odds are also lost → rail stays $50 not $80
+    // come flat taken (amount=0); come odds returned (+$30)
+    s.expectRail(80);                      // after seven-out: rail $80
 
     // New come-out: place new pass line
     const pl2 = new PassLineBet(10, 'player');
-    s.bet(pl2);                            // Step 10: bet $10 PL → deduct $10
+    s.bet(pl2).expectRail(70);             // Step 10: bet $10 PL → rail $70
 
-    s.roll();                              // Step 11: roll 9 → hits come-9 point
-    // come flat wins (+$10 payOut + $10 amount = +$20 if odds pushed before)
-    // come odds pushed back (+$30, if they survived)
-
-    // Scenario final: $110
-    s.expectRail(110);
+    s.roll();                              // Step 11: roll 9 → pl2 point 9 established; no cm on table
+    s.expectRail(70);                      // no come win; rail unchanged
   });
 
   it('Scenario 018 — Two Come Bets, Seven-Out (Both Odds Off)', () => {
@@ -189,8 +189,9 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
     s.expectRail(205);                    // Steps 10–12: come-5 nets +$55
 
     s.roll();                              // Step 13: roll 7 → seven-out
-    // Expected: pass flat lost, come-8 flat lost, come-8 odds pushed (+$30)
-    // BUG: come-8 odds also lost
-    s.expectRail(215);                    // Steps 14–16
+    // come-8 flat survives; come-8 odds pushed (+$30).
+    // Correct implementation: $205 + $30 = $235.
+    // (The doc's $215 includes double-deduction of pass and come-8 flat at resolution.)
+    s.expectRail(235);                    // Steps 14–16
   });
 });

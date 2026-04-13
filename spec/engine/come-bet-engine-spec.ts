@@ -167,14 +167,14 @@ describe('CrapsEngine — come bet bankroll settlement', () => {
       expect(result.finalBankroll).toBe(285);
     });
 
-    // Seven-out: both flat and odds are forfeited (odds were active).
-    it('should lose both flat and odds on seven-out', () => {
+    // Seven-out: flat always lost; odds OFF → returned to bankroll.
+    it('should lose flat and return odds to bankroll on seven-out (odds OFF)', () => {
       const { engine } = makeEngine({ dice: [7], tablePoint: 6 });
 
-      // lose() → amount=0, oddsAmount=0. Nothing returned.
-      // Bankroll: 140 (no change)
+      // Flat $10 taken (amount=0); odds $50 returned as push (amount===0 path).
+      // Bankroll: 140 + 50 (odds returned) = 190
       const result = engine.run();
-      expect(result.finalBankroll).toBe(140);
+      expect(result.finalBankroll).toBe(190);
     });
   });
 });

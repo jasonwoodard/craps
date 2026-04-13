@@ -134,16 +134,18 @@ describe('ComeBet', () => {
       expect(bet.amount).toBe(10);
     });
 
-    it('should lose both base and odds on seven-out (table point ON)', () => {
-      // Table point is ON: odds are active and at risk. Seven-out forfeits both.
+    it('should lose flat and push odds on seven-out (odds OFF)', () => {
+      // Flat is ALWAYS lost when seven is rolled after the bet has traveled.
+      // Odds that are OFF are returned as a push — they were never at risk.
+      // Settlement detects amount===0 && oddsAmount>0 and credits odds back.
       const table = TableMaker.getTable().withPoint(6).value();
       const bet = new ComeBet(10, playerId);
       bet.evaluateDiceRoll({ die1: 0, die2: 9, sum: 9 }, table); // travels to 9
       bet.oddsAmount = 50;
       bet.evaluateDiceRoll({ die1: 0, die2: 7, sum: 7 }, table); // seven-out
-      expect(bet.amount).toBe(0);      // base lost
-      expect(bet.oddsAmount).toBe(0);  // odds lost — they were active
-      expect(bet.payOut).toBeUndefined();
+      expect(bet.amount).toBe(0);          // flat lost — taken by the house
+      expect(bet.oddsAmount).toBe(50);     // odds preserved for settlement to return
+      expect(bet.payOut).toBeUndefined();  // no win signal; settlement uses amount===0 path
     });
   });
 

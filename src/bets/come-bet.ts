@@ -88,19 +88,16 @@ export class ComeBet extends PassLineBet {
           }
         }
       } else if (rollValue === 7) {
-        if (table.isPointOn) {
-          // Seven-out: base AND odds both lose.
+        if (this.oddsWorking) {
+          // Odds declared working: flat and odds both lose.
           this.lose();
         } else {
-          // Come-out 7.
-          if (this.oddsWorking) {
-            // Odds declared working: both flat and odds lose (§5.3).
-            this.lose();
-          } else {
-            // Odds OFF (default): base loses, odds returned intact (§3.1–3.3).
-            this.amount = 0;
-            // oddsAmount intentionally preserved — odds were not at risk.
-          }
+          // Flat is ALWAYS lost when seven is rolled after the bet has traveled.
+          // Odds that are OFF (not working) are returned as a push — they were
+          // never at risk.  Settlement detects amount===0 && oddsAmount>0 and
+          // credits the odds back to the player without recording a win.
+          this.amount = 0;
+          // oddsAmount intentionally preserved — odds were not at risk.
         }
       }
     }

@@ -125,9 +125,13 @@ export class ScenarioTable {
           this.table.removeBet(bet);
         }
       } else if (bet instanceof ComeBet && bet.amount === 0 && bet.oddsAmount > 0) {
-        // Come-out 7 with odds OFF: flat lost, odds returned intact.
+        // Any seven with odds OFF: flat always lost, odds returned intact.
         this.rail += bet.oddsAmount;
         bet.oddsAmount = 0;
+      } else if (bet instanceof DontPassBet && bet.payOut === 0) {
+        // DC bar-12 push in transit: return original flat stake, no profit.
+        this.rail += amount;
+        this.table.removeBet(bet);
       }
       // Losses: amount already zeroed by evaluateDiceRoll; table auto-removes them.
     }
