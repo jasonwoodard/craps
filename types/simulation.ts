@@ -11,7 +11,7 @@ export interface ActiveBetInfo {
 }
 
 export interface Outcome {
-  result: 'win' | 'loss';
+  result: 'win' | 'loss' | 'push';
   betType: number;
   point?: number;
   amount: number;
@@ -67,9 +67,11 @@ export interface SummaryRecord {
   activity: {
     rollsWithWin: number;
     rollsWithLoss: number;
+    rollsWithPush: number;
     rollsNoAction: number;
     winRate: number;
     lossRate: number;
+    pushRate: number;
   };
   diceDistribution: {
     bySum: Record<string, number>;

@@ -292,7 +292,7 @@ export class SharedTable {
 
   private collectOutcomes(snapshots: BetSnapshot[]): Outcome[] {
     const outcomes: Outcome[] = [];
-    for (const { bet, amount } of snapshots) {
+    for (const { bet, amount, oddsAmount } of snapshots) {
       if ((bet.payOut ?? 0) > 0) {
         outcomes.push({
           result: 'win',
@@ -300,6 +300,16 @@ export class SharedTable {
           point: bet.point,
           amount,
           payout: bet.payOut ?? 0,
+        });
+      } else if (bet instanceof DontPassBet && bet.payOut === 0 && bet.amount === 0) {
+        // DontCome bar-12 transit push: payOut explicitly set to 0 (not undefined, which
+        // signals a loss from lose()). The flat stake is returned intact — no win, no loss.
+        outcomes.push({
+          result: 'push',
+          betType: bet.betType,
+          point: bet.point,
+          amount,
+          payout: 0,
         });
       } else if (bet.amount === 0) {
         outcomes.push({
@@ -309,6 +319,17 @@ export class SharedTable {
           amount,
           payout: 0,
         });
+        // ComeBet seven-out with odds OFF: flat is lost (above), but odds were never
+        // at risk — they are returned to the player. Record as a separate push outcome.
+        if (bet instanceof ComeBet && oddsAmount > 0) {
+          outcomes.push({
+            result: 'push',
+            betType: bet.betType,
+            point: bet.point,
+            amount: oddsAmount,
+            payout: 0,
+          });
+        }
       }
     }
     return outcomes;
