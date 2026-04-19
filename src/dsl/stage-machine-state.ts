@@ -37,6 +37,7 @@ const NOOP_BET_RECONCILER: BetReconciler = {
   place: () => {},
   field: () => {},
   hardways: () => {},
+  ce: () => {},
   remove: () => {},
 };
 

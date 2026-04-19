@@ -25,6 +25,7 @@ import { PassLineBet } from '../../../src/bets/pass-line-bet';
 import { ComeBet } from '../../../src/bets/come-bet';
 import { PlaceBet } from '../../../src/bets/place-bet';
 import { DontPassBet } from '../../../src/bets/dont-pass-bet';
+import { HardwaysBet } from '../../../src/bets/hardways-bet';
 
 interface BetSnapshot {
   bet: BaseBet;
@@ -104,8 +105,8 @@ export class ScenarioTable {
       const payout = bet.payOut ?? 0;
 
       if (payout > 0) {
-        if (bet instanceof PlaceBet) {
-          // PlaceBet: payOut = original + profit; bet stays on table for re-hit.
+        if (bet instanceof PlaceBet || bet instanceof HardwaysBet) {
+          // Multi-roll bets: payOut = original + profit; bet stays on table for re-hit.
           this.rail += payout;
           bet.payOut = undefined;
         } else if (bet instanceof PassLineBet || bet instanceof DontPassBet) {

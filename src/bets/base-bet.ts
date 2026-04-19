@@ -11,6 +11,8 @@ export enum BetTypes {
   DONT_COME,
   BUY,
   LAY,
+  HARDWAYS,
+  CE,
 }
 
 export abstract class BaseBet {

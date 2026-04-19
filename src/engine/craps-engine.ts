@@ -10,6 +10,8 @@ import { PlaceBet } from '../bets/place-bet';
 import { FieldBet } from '../bets/field-bet';
 import { DontPassBet } from '../bets/dont-pass-bet';
 import { DontComeBet } from '../bets/dont-come-bet';
+import { HardwaysBet } from '../bets/hardways-bet';
+import { CEBet } from '../bets/ce-bet';
 import { RunLogger } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -244,6 +246,11 @@ export class CrapsEngine {
         return new DontPassBet(amount, this.playerId);
       case 'dontCome':
         return new DontComeBet(amount, this.playerId);
+      case 'hardways':
+        if (point == null) return null;
+        return new HardwaysBet(amount, point, this.playerId);
+      case 'ce':
+        return new CEBet(amount, this.playerId);
       default:
         return null;
     }
