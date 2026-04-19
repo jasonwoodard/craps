@@ -15,6 +15,7 @@ export interface BetReconciler {
   place(point: number, amount: number): void;
   field(amount: number): void;
   hardways(point: number, amount: number): void;
+  ce(amount: number): void;
   remove(type: string, point?: number): void;
 }
 
@@ -35,6 +36,8 @@ const BET_TYPE_TO_STRING: Record<BetTypes, string> = {
   [BetTypes.DONT_COME]: 'dontCome',
   [BetTypes.BUY]: 'buy',
   [BetTypes.LAY]: 'lay',
+  [BetTypes.HARDWAYS]: 'hardways',
+  [BetTypes.CE]: 'ce',
 };
 
 const STRING_TO_BET_TYPE = new Map<string, BetTypes>(
@@ -102,6 +105,10 @@ export class SimpleBetReconciler implements BetReconciler {
 
   hardways(point: number, amount: number): void {
     this.add('hardways', amount, point);
+  }
+
+  ce(amount: number): void {
+    this.add('ce', amount);
   }
 
   remove(type: string, point?: number): void {
