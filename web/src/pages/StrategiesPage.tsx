@@ -31,6 +31,34 @@ export function StrategiesPage() {
       </StrategySection>
 
       <StrategySection
+        name="BATS"
+        tagline="Darkside five-stage strategy. Mirrors CATS but bets against the shooter using Don't Pass and Don't Come."
+        houseEdge="Accumulator: 0.546% · Little Dolly: ~0.341% · 3-Point Dolly: 0.134–0.182%"
+        stages={BATS_STAGES}
+      >
+        <p>
+          BATS (Bearish Alpha-Transition Strategy) is the darkside companion to CATS. Like CATS,
+          it is a five-stage machine that escalates as session profit grows and retreats when
+          conditions turn unfavorable. Unlike CATS, BATS bets against the shooter: Don't Pass
+          and Don't Come bets win on seven-outs, while natural wins (7/11 on come-out) are the
+          primary hazard.
+        </p>
+        <p>
+          Lay odds work in reverse of take odds: the player lays more to win less. A 5× lay on
+          a point of 4 means laying $100 to win $50 (2:1 ratio). This is mathematically equivalent
+          in edge terms — lay odds carry zero house edge — but the asymmetry changes the bankroll
+          dynamics significantly versus the passside equivalent.
+        </p>
+        <p>
+          The two unique step-down triggers distinguish BATS from CATS. Little Dolly retreats on
+          two consecutive come-out losses (natural wins hurt the don't side). Three-Point Dolly
+          retreats on two consecutive point-makes (a hot shooter is the enemy of darkside coverage).
+          Stages 4 and 5 add Lay bets on 4, 5, 9, and 10 to supplement Don't Come coverage, with
+          the Swap Rule ensuring Lay bets are removed when a Don't Come bet already covers that number.
+        </p>
+      </StrategySection>
+
+      <StrategySection
         name="HardwaysHedge"
         tagline="Pass line hedged with hardways bets on 6 and 8. Adds a speculative overlay to the core bet."
         houseEdge="Pass line: 1.41% · Hard 6/8: 9.09% each"
@@ -392,6 +420,14 @@ const CATS_STAGES = [
   { stage: 'Little Molly', entry: '+$70 net', bets: 'Pass line + 1 come + odds' },
   { stage: 'Three Point Molly Tight', entry: '+$150 net', bets: 'Pass line + 2 come + odds' },
   { stage: 'Three Point Molly Loose', entry: '+$250 net', bets: 'Pass line + 2 come + max odds' },
+];
+
+const BATS_STAGES = [
+  { stage: 'Bearish Accumulator', entry: 'Session start',   bets: "Don't Pass + 1× lay odds" },
+  { stage: 'Little Dolly',        entry: '+$120 net',        bets: "DP + 1 DC + 2× lay odds" },
+  { stage: 'Three-Point Dolly',   entry: '+$225 net',        bets: "DP + 2 DC + 5× lay odds" },
+  { stage: 'Expanded Dark Alpha', entry: '+$350 net',        bets: "Dolly + Lay 4/10 (Swap Rule)" },
+  { stage: 'Max Dark Alpha',      entry: '+$500 net',        bets: "Dolly + Lay 4/5/9/10 (Swap Rule)" },
 ];
 
 function StrategySection({ name, tagline, houseEdge, stages, children }: StrategySectionProps) {

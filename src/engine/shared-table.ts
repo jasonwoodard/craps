@@ -12,6 +12,7 @@ import { DontPassBet } from '../bets/dont-pass-bet';
 import { DontComeBet } from '../bets/dont-come-bet';
 import { HardwaysBet } from '../bets/hardways-bet';
 import { CEBet } from '../bets/ce-bet';
+import { LayBet } from '../bets/lay-bet';
 import { RunLogger, SummaryRecord } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -282,6 +283,9 @@ export class SharedTable {
         return new HardwaysBet(amount, point, playerId);
       case 'ce':
         return new CEBet(amount, playerId);
+      case 'lay':
+        if (point == null) return null;
+        return new LayBet(amount, point, playerId);
       default:
         return null;
     }

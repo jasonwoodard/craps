@@ -48,6 +48,10 @@ export interface SessionState {
   readonly consecutiveSevenOuts: number;
   /** Total hands played (seven-outs + points made). */
   readonly handsPlayed: number;
+  /** Consecutive come-out natural wins (7 or 11). Resets on any non-natural come-out outcome. */
+  readonly consecutiveComeOutLosses: number;
+  /** Consecutive hands where the shooter made their point. Resets on any seven-out. */
+  readonly pointRepeaterStreak: number;
 }
 
 /** Table/coverage state — read-only in strategy code. */
@@ -60,6 +64,10 @@ export interface TableReadView {
   readonly hasSixOrEight: boolean;
   /** Come bets not yet settled on a number. */
   readonly comeBetsInTransit: number;
+  /** Numbers currently covered by Don't Pass and traveled Don't Come bets. */
+  readonly dontCoverage: ReadonlySet<number>;
+  /** Don't Come bets placed but not yet traveled to a point. */
+  readonly dontComeBetsInTransit: number;
 }
 
 // ---------------------------------------------------------------------------
