@@ -1,5 +1,7 @@
 import { CEBet } from '../../src/bets/ce-bet';
 import { TableMaker } from '../table-maker/table-maker';
+import { CrapsEngine } from '../../src/engine/craps-engine';
+import { IronCrossWithCE } from '../../src/dsl/strategies';
 
 describe('CEBet', () => {
 
@@ -78,6 +80,13 @@ describe('CEBet', () => {
     it('starts undefined', () => {
       const bet = new CEBet(10, 'p1');
       expect(bet.payOut).toBeUndefined();
+    });
+  });
+
+  describe('endurance', () => {
+    it('IronCrossWithCE runs 500 rolls without error (seed 42, $500 bankroll)', () => {
+      const engine = new CrapsEngine({ strategy: IronCrossWithCE, bankroll: 500, rolls: 500, seed: 42 });
+      expect(() => engine.run()).not.toThrow();
     });
   });
 });
