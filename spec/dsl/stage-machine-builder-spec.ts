@@ -101,6 +101,7 @@ describe('stageMachine() builder', () => {
           field: () => {},
           hardways: () => {},
           ce: () => {},
+          lay: () => {},
           remove: () => {},
         },
         track: <T>(_k: string, i?: T) => i as T,

@@ -30,15 +30,18 @@ describe('StageContext type contract', () => {
         field: () => {},
         hardways: () => {},
         ce: () => {},
+        lay: () => {},
         remove: () => {},
       },
       track: <T>(key: string, initial?: T) => initial as T,
-      session: { profit: 0, stage: 'test', consecutiveSevenOuts: 0, handsPlayed: 0 },
+      session: { profit: 0, stage: 'test', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
       table: {
         point: null,
         coverage: new Set<number>(),
         hasSixOrEight: false,
         comeBetsInTransit: 0,
+        dontCoverage: new Set<number>(),
+        dontComeBetsInTransit: 0,
       },
       advanceTo: (_name: string) => {},
     };
@@ -62,11 +65,12 @@ describe('StageContext type contract', () => {
         field: (amount: number) => {},
         hardways: (point: number, amount: number) => {},
         ce: (amount: number) => {},
+        lay: (point: number, amount: number) => {},
         remove: (type: string, point?: number) => {},
       },
       track: <T>(_k: string, i?: T) => i as T,
-      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0 },
-      table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0 },
+      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
+      table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0, dontCoverage: new Set(), dontComeBetsInTransit: 0 },
       advanceTo: () => {},
     };
 
@@ -84,6 +88,8 @@ describe('StageContext type contract', () => {
       stage: 'stage1',
       consecutiveSevenOuts: 2,
       handsPlayed: 5,
+      consecutiveComeOutLosses: 1,
+      pointRepeaterStreak: 0,
     };
 
     // Verify all fields are readable
@@ -91,6 +97,8 @@ describe('StageContext type contract', () => {
     expect(session.stage).toBe('stage1');
     expect(session.consecutiveSevenOuts).toBe(2);
     expect(session.handsPlayed).toBe(5);
+    expect(session.consecutiveComeOutLosses).toBe(1);
+    expect(session.pointRepeaterStreak).toBe(0);
   });
 
   it('table fields are all readonly', () => {
@@ -99,12 +107,16 @@ describe('StageContext type contract', () => {
       coverage: new Set([6, 8]),
       hasSixOrEight: true,
       comeBetsInTransit: 1,
+      dontCoverage: new Set([4]),
+      dontComeBetsInTransit: 0,
     };
 
     expect(table.point).toBe(6);
     expect(table.coverage.has(6)).toBe(true);
     expect(table.hasSixOrEight).toBe(true);
     expect(table.comeBetsInTransit).toBe(1);
+    expect(table.dontCoverage.has(4)).toBe(true);
+    expect(table.dontComeBetsInTransit).toBe(0);
   });
 
   it('advanceTo accepts a string stage name', () => {
@@ -112,8 +124,8 @@ describe('StageContext type contract', () => {
     const ctx: StageContext = {
       bets: {} as any,
       track: <T>(_k: string, i?: T) => i as T,
-      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0 },
-      table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0 },
+      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
+      table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0, dontCoverage: new Set(), dontComeBetsInTransit: 0 },
       advanceTo: (name: string) => { calledWith = name; },
     };
 

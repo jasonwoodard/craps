@@ -12,6 +12,8 @@ import { Outcome } from './outcome';
 import { BetTypes } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
 import { ComeBet } from '../bets/come-bet';
+import { DontPassBet } from '../bets/dont-pass-bet';
+import { DontComeBet } from '../bets/dont-come-bet';
 import { BetReconciler, BetWithOdds } from './bet-reconciler';
 
 /** Mutable session state owned by the runtime. */
@@ -20,6 +22,8 @@ interface MutableSessionState {
   stage: string;
   consecutiveSevenOuts: number;
   handsPlayed: number;
+  consecutiveComeOutLosses: number;
+  pointRepeaterStreak: number;
 }
 
 /** Box numbers / point numbers — the six numbers that can be a point. */
@@ -38,6 +42,7 @@ const NOOP_BET_RECONCILER: BetReconciler = {
   field: () => {},
   hardways: () => {},
   ce: () => {},
+  lay: () => {},
   remove: () => {},
 };
 
@@ -63,6 +68,8 @@ export class StageMachineRuntime {
       stage: startingStage,
       consecutiveSevenOuts: 0,
       handsPlayed: 0,
+      consecutiveComeOutLosses: 0,
+      pointRepeaterStreak: 0,
     };
   }
 
@@ -149,6 +156,23 @@ export class StageMachineRuntime {
       this.sessionState.consecutiveSevenOuts = 0;
     }
     // No-action rolls do not reset consecutiveSevenOuts
+
+    // Come-out loss tracking (natural win = bad for don't side)
+    const isComeOut = pointBefore == null;
+    const isComeOutLoss = isComeOut && (rollValue === 7 || rollValue === 11);
+    if (isComeOutLoss) {
+      this.sessionState.consecutiveComeOutLosses++;
+    } else if (isComeOut) {
+      this.sessionState.consecutiveComeOutLosses = 0;
+    }
+
+    // Point repeater streak tracking
+    if (hadSevenOut) {
+      this.sessionState.pointRepeaterStreak = 0;
+    }
+    if (pointMade) {
+      this.sessionState.pointRepeaterStreak++;
+    }
 
     // Fire events for the current stage
     this.fireEvents(outcomes, pointBefore, pointAfter, rollValue);
@@ -280,33 +304,44 @@ export class StageMachineRuntime {
         coverage: new Set<number>(),
         hasSixOrEight: false,
         comeBetsInTransit: 0,
+        dontCoverage: new Set<number>(),
+        dontComeBetsInTransit: 0,
       };
     }
 
     const point = this.table.currentPoint ?? null;
     const coverage = new Set<number>();
     let comeBetsInTransit = 0;
+    const dontCoverage = new Set<number>();
+    let dontComeBetsInTransit = 0;
 
     const bets = this.table.getPlayerBets(this.playerId);
     for (const bet of bets) {
       if (bet instanceof ComeBet) {
-        // Come bet — contributes to coverage only if it has traveled to a number
         if (bet.point != null && bet.point > 0) {
           coverage.add(bet.point);
         } else {
           comeBetsInTransit++;
         }
       } else if (bet instanceof PassLineBet) {
-        // Pass line bet — contributes to coverage when point is ON
-        // PassLineBet doesn't store its own point; the table's currentPoint IS the pass line point
         if (this.table.isPointOn && this.table.currentPoint != null) {
           coverage.add(this.table.currentPoint);
+        }
+      } else if (bet instanceof DontComeBet) {
+        if (bet.point != null && bet.point > 0) {
+          dontCoverage.add(bet.point);
+        } else {
+          dontComeBetsInTransit++;
+        }
+      } else if (bet instanceof DontPassBet) {
+        if (this.table.isPointOn && this.table.currentPoint != null) {
+          dontCoverage.add(this.table.currentPoint);
         }
       }
     }
 
     const hasSixOrEight = coverage.has(6) || coverage.has(8);
 
-    return { point, coverage, hasSixOrEight, comeBetsInTransit };
+    return { point, coverage, hasSixOrEight, comeBetsInTransit, dontCoverage, dontComeBetsInTransit };
   }
 }
