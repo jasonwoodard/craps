@@ -176,6 +176,41 @@ export const MartingaleField: StrategyDefinition = ({ bets, track }) => {
   bets.field(amount);
 };
 
+// --- M5: Hardways strategies ---
+
+export const HardwaysHedge: StrategyDefinition = ({ bets }) => {
+  // Pass line hedged with H6 and H8 — the most likely hardways points.
+  bets.passLine(10);
+  bets.hardways(6, 5);
+  bets.hardways(8, 5);
+};
+
+export const PassAndHards: StrategyDefinition = ({ bets }) => {
+  // Pass line + all four hardways. Covers every hard number simultaneously.
+  bets.passLine(10);
+  bets.hardways(4, 5);
+  bets.hardways(6, 5);
+  bets.hardways(8, 5);
+  bets.hardways(10, 5);
+};
+
+// --- M6: C&E strategies ---
+
+export const IronCrossWithCE: StrategyDefinition = ({ bets }) => {
+  // IronCross (field + place 5/6/8) plus C&E for come-out insurance.
+  bets.field(10);
+  bets.place(5, 10);
+  bets.place(6, 12);
+  bets.place(8, 12);
+  bets.ce(10);
+};
+
+export const PassWithCEInsurance: StrategyDefinition = ({ bets }) => {
+  // Pass line backed by C&E every roll — CE pays if craps hits on come-out.
+  bets.passLine(10);
+  bets.ce(10);
+};
+
 // --- Legacy aliases ---
 
 export const PassLineAndPlace68: StrategyDefinition = ({ bets }) => {

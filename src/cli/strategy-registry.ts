@@ -29,6 +29,10 @@ import {
   ThreePointDolly3X,
   ThreePointDolly4X,
   ThreePointDolly5X,
+  HardwaysHedge,
+  PassAndHards,
+  IronCrossWithCE,
+  PassWithCEInsurance,
 } from '../dsl/strategies';
 import { CATS, CATSAccumulatorOnly } from '../dsl/strategies-staged';
 
@@ -42,9 +46,12 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'DontPassLineWithOdds3X':  DontPassLineWithOdds3X,
   'DontPassLineWithOdds4X':  DontPassLineWithOdds4X,
   'DontPassLineWithOdds5X':  DontPassLineWithOdds5X,
+  'HardwaysHedge':           HardwaysHedge,
   'IronCross':               IronCross,
+  'IronCrossWithCE':         IronCrossWithCE,
   'JustField':               JustField,
   'MartingaleField':         MartingaleField,
+  'PassAndHards':            PassAndHards,
   'PassLineOnly':            PassLineOnly,
   'PassLineWithOdds1X':      PassLineWithOdds1X,
   'PassLineWithOdds2X':      PassLineWithOdds2X,
@@ -54,6 +61,7 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'Place6And8':              Place6And8,
   'Place6And8Progressive':   Place6And8Progressive,
   'PlaceAll':                PlaceAll,
+  'PassWithCEInsurance':     PassWithCEInsurance,
   'PlaceInside':             PlaceInside,
   'ThreePointDolly1X':       ThreePointDolly1X,
   'ThreePointDolly2X':       ThreePointDolly2X,

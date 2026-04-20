@@ -1,5 +1,7 @@
 import { HardwaysBet } from '../../src/bets/hardways-bet';
 import { TableMaker } from '../table-maker/table-maker';
+import { CrapsEngine } from '../../src/engine/craps-engine';
+import { PassAndHards } from '../../src/dsl/strategies';
 
 describe('HardwaysBet', () => {
 
@@ -163,6 +165,13 @@ describe('HardwaysBet', () => {
     it('starts undefined', () => {
       const bet = new HardwaysBet(10, 6, 'p1');
       expect(bet.payOut).toBeUndefined();
+    });
+  });
+
+  describe('endurance', () => {
+    it('PassAndHards runs 500 rolls without error (seed 42, $500 bankroll)', () => {
+      const engine = new CrapsEngine({ strategy: PassAndHards, bankroll: 500, rolls: 500, seed: 42 });
+      expect(() => engine.run()).not.toThrow();
     });
   });
 });

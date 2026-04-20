@@ -1,3 +1,5 @@
+> **ARCHIVED — All milestones complete (April 2026)**
+
 # Craps Simulator — Additional Bets Spec
 
 **Date:** April 2026  
@@ -14,8 +16,8 @@
 | M2 | Field bet | `FieldBet` | `JustField`, `IronCross`, `MartingaleField` |
 | M3 | Don't Pass | `DontPassBet` | `DontPassLineOnly`, `DontPassLineWithOdds[1-5]X` | [DONE] |
 | M4 | Don't Come | `DontComeBet` | `ThreePointDolly[1-5]X` | [DONE] |
-| M5 | Hardways | `HardwaysBet` | `HardwaysHedge`, `PassAndHards` |
-| M6 | C&E | `CEBet` | `IronCrossWithCE`, come-out insurance variants |
+| M5 | Hardways | `HardwaysBet` | `HardwaysHedge`, `PassAndHards` | [DONE] |
+| M6 | C&E | `CEBet` | `IronCrossWithCE`, `PassWithCEInsurance` | [DONE] |
 
 Each milestone is independently executable. Complete M1 first — all subsequent
 milestones depend on its refactor being in place.
@@ -344,7 +346,7 @@ The darkside equivalent of Three Point Molly. BATS framework foundation.
 
 ---
 
-## M5 — Hardways (4, 6, 8, 10) [PENDING]
+## M5 — Hardways (4, 6, 8, 10) [DONE]
 
 **Goal:** Implement `HardwaysBet`. First bet to use both `die1` and `die2`.
 
@@ -377,11 +379,11 @@ evaluateDiceRoll(diceRoll: DiceRoll, _table: CrapsTable): void {
 Without the M1 refactor, distinguishing hard 6 (3+3) from easy 6 (5+1) would require
 reaching into `table.dice.rollHistory` — a backdoor into dice internals.
 
-*Full spec TBD when M5 is next up.*
+**Strategies implemented:** `HardwaysHedge` (pass line + H6/H8), `PassAndHards` (pass line + all four hardways).
 
 ---
 
-## M6 — C&E (Craps/Eleven) [PENDING]
+## M6 — C&E (Craps/Eleven) [DONE]
 
 **Goal:** Implement `CEBet`. One-roll prop bet, come-out insurance play.
 
@@ -403,7 +405,7 @@ Consider a general `PropBet` base class at this point. C&E, Any Craps, Yo, and
 Any Seven are all one-roll props with the same lifecycle. A shared base avoids
 duplicating resolution logic as prop bets accumulate.
 
-*Full spec TBD when M6 is next up.*
+**Strategies implemented:** `IronCrossWithCE` (field + place 5/6/8 + CE), `PassWithCEInsurance` (pass line + CE on every roll).
 
 ---
 
