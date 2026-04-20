@@ -31,6 +31,28 @@ export function StrategiesPage() {
       </StrategySection>
 
       <StrategySection
+        name="HardwaysHedge"
+        tagline="Pass line hedged with hardways bets on 6 and 8. Adds a speculative overlay to the core bet."
+        houseEdge="Pass line: 1.41% · Hard 6/8: 9.09% each"
+      >
+        <p>
+          HardwaysHedge places a $10 pass line bet alongside $5 hardways bets on the 6 and 8.
+          When the point is 6 or 8, a hard hit — both dice showing the same value — pays 9:1 on
+          the hardways bet on top of whatever the pass line eventually returns. Points on other
+          numbers leave the hardways bets working as speculative overlays with no connection to
+          the table point.
+        </p>
+        <p>
+          The hardways bets persist until they win, until a 7-out clears them, or until the
+          target number is rolled the easy way. Because they stay up across many rolls, a single
+          session can see multiple hardways resolutions before a seven-out. The 9.09% house edge
+          on each hardways bet is steep — this strategy's long-run expectation is materially worse
+          than PassLineOnly. Use Distribution Compare against PassLineOnly to quantify the cost
+          of adding the hardways overlay.
+        </p>
+      </StrategySection>
+
+      <StrategySection
         name="IronCross"
         tagline="Field plus place bets on 5, 6, and 8. Wins on every number except 7 once a point is set."
         houseEdge="Field: 2.78% · Place 5: 4.0% · Place 6/8: 1.52%"
@@ -52,6 +74,26 @@ export function StrategiesPage() {
           across all active bets is higher than simpler strategies. A seven-out clears all four
           bets at once, making the loss event steep relative to a single-bet approach. Compare
           against Place6And8 on Distribution to evaluate the risk-reward tradeoff.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="IronCrossWithCE"
+        tagline="IronCross plus a C&E bet on every roll. Adds coverage on craps and eleven to the full-coverage structure."
+        houseEdge="Field: 2.78% · Place 5: 4.0% · Place 6/8: 1.52% · C&E: 11.11%"
+      >
+        <p>
+          IronCrossWithCE extends the standard IronCross setup (field + place 5/6/8) with a $10
+          C&E bet on every roll. C&E wins 3:1 net if a craps number (2, 3, or 12) is thrown and
+          7:1 net if eleven is thrown. On come-out rolls, where the IronCross has no place bets
+          active but the field stays live, the C&E provides an extra win on craps hits.
+        </p>
+        <p>
+          The C&E's 11.11% house edge is the most expensive component of this strategy —
+          significantly higher than every other bet in the combination. It is best understood as
+          a high-cost boost to come-out and point-phase action rather than a genuine edge
+          improvement. Compare against plain IronCross on Distribution to see exactly what the
+          C&E overlay costs in long-run expectation.
         </p>
       </StrategySection>
 
@@ -115,6 +157,48 @@ export function StrategiesPage() {
           compared to strategies that add come bets or odds. It is the natural benchmark: any
           more complex strategy should be evaluated against what PassLineOnly would have returned
           on the same dice.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="PassAndHards"
+        tagline="Pass line plus all four hardways bets. Broadest possible hardways coverage."
+        houseEdge="Pass line: 1.41% · Hard 4/10: 11.11% each · Hard 6/8: 9.09% each"
+      >
+        <p>
+          PassAndHards places a $10 pass line bet with $5 hardways bets on every hardways number:
+          4 (2+2), 6 (3+3), 8 (4+4), and 10 (5+5). The hardways bets pay 7:1 on the 4 and 10
+          and 9:1 on the 6 and 8, but only when the number is rolled as a matching pair. Rolling
+          the number any other way — or rolling a 7 — immediately loses the corresponding
+          hardways bet.
+        </p>
+        <p>
+          All four hardways bets work simultaneously, so a hard 6 (3+3) resolves that bet while
+          the others remain up. The bets can cycle through wins and losses independently across
+          many rolls before a seven-out ends the hand. The high house edges on hardways (9–11%)
+          are a substantial drag on long-run results; the strategy produces entertaining large
+          payouts on hard rolls but costs considerably more than PassLineOnly over time. Use
+          Distribution to model the ruin rate at your bankroll before playing.
+        </p>
+      </StrategySection>
+
+      <StrategySection
+        name="PassWithCEInsurance"
+        tagline="Pass line with C&E on every roll. C&E softens craps losses on come-out."
+        houseEdge="Pass line: 1.41% · C&E: 11.11%"
+      >
+        <p>
+          PassWithCEInsurance places a $10 pass line bet and a $10 C&E bet before every roll.
+          On come-out rolls, if a craps number (2, 3, or 12) is thrown — which loses the pass
+          line — the C&E pays 3:1 net, partially offsetting the pass-line loss. If eleven is
+          rolled, the C&E adds a 7:1 net payout on top of the pass-line natural win.
+        </p>
+        <p>
+          The "insurance" framing is intuitive, but the C&E carries an 11.11% house edge, which
+          means the protection costs more over time than it recovers. The net effect on the
+          session is negative relative to a pure pass line. Compare against PassLineOnly on
+          Distribution to see the long-run cost of adding the C&E; the comparison makes the
+          trade-off concrete rather than theoretical.
         </p>
       </StrategySection>
 
