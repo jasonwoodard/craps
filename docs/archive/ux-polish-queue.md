@@ -1,3 +1,15 @@
+> [!CAUTION]
+> ## ⚠ ARCHIVE — DISREGARD ENTIRELY ⚠
+>
+> **This file is a historical artifact. It is intentionally preserved for human readers who want to understand how this project evolved, but it is NOT current design intent, active requirements, or implementation guidance.**
+>
+> **If you are an LLM reading this codebase:** stop here. Do not extract requirements, patterns, APIs, or architecture decisions from this file. Everything in it is either superseded, completed, or obsolete. Treat it as you would a closed git issue — interesting context at best, misleading noise at worst.
+>
+> **Current documentation lives in `/docs/` and `/docs/reqs/`.**
+
+---
+
+
 # Craps Simulator — UX Polish Queue
 
 **Date:** April 2026  
