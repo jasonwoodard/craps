@@ -37,6 +37,11 @@ gcloud run deploy craps-api \
   --max-instances 2
 ```
 
+> **Windows/PowerShell**: Backslash line continuation doesn't work. Use a single line:
+> ```powershell
+> gcloud run deploy craps-api --source . --region us-central1 --no-allow-unauthenticated --max-instances 2
+> ```
+
 ## Deploy Both
 ```bash
 cd web && npm run build && cd ..
@@ -48,12 +53,20 @@ gcloud run deploy craps-api \
   --max-instances 2
 ```
 
+> **Windows/PowerShell**: Run each command on a single line — no backslash continuation:
+> ```powershell
+> cd web; npm run build; cd ..
+> firebase deploy --only hosting
+> gcloud run deploy craps-api --source . --region us-central1 --no-allow-unauthenticated --max-instances 2
+> ```
+
 ## Infrastructure Notes
 
 - Firebase Hosting rewrites `/api/**` to Cloud Run (configured in `firebase.json`)
 - Cloud Run is private — only accessible via Firebase Hosting rewrite
 - Billing alert set at $10/month on GCP billing account
 - Cloud Run capped at 2 instances max
+- **`package-lock.json` must be committed** — if it is in `.gitignore`, Cloud Run builds will fail because `npm ci` requires it
 
 ## GCP Resources
 
