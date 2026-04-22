@@ -59,6 +59,31 @@ export function StrategiesPage() {
       </StrategySection>
 
       <StrategySection
+        name="BATSAccumulatorOnly"
+        tagline="Darkside accumulator in isolation. Don't Pass with 2× lay odds, then de-leverage to 1× on first 7-out."
+        houseEdge="Don't Pass: 0.546% · Lay odds: 0%"
+        stages={BATS_ACCUMULATOR_STAGES}
+      >
+        <p>
+          BATSAccumulatorOnly is the Accumulator component of BATS extracted as a standalone
+          strategy. It mirrors CATSAccumulatorOnly on the darkside: start with Don't Pass $10
+          backed by 2× lay odds (sized to win $20), then de-leverage to 1× lay odds (sized to
+          win $10) after the first 7-out confirms the session is profitable.
+        </p>
+        <p>
+          The full stage takes on more lay exposure to maximize the first win. Once the shooter
+          sevens out and the Don't Pass resolves, the strategy steps down to the conservative
+          1× lay — protecting the gain while continuing to bet darkside. There is no further
+          advancement; this is a two-stage grind designed as a low-variance darkside foundation.
+        </p>
+        <p>
+          Use this strategy to isolate the accumulator mechanic from the full BATS escalation
+          sequence, or as a conservative darkside starting point before layering in Little Dolly
+          and beyond.
+        </p>
+      </StrategySection>
+
+      <StrategySection
         name="HardwaysHedge"
         tagline="Pass line hedged with hardways bets on 6 and 8. Adds a speculative overlay to the core bet."
         houseEdge="Pass line: 1.41% · Hard 6/8: 9.09% each"
@@ -420,6 +445,11 @@ const CATS_STAGES = [
   { stage: 'Little Molly', entry: '+$70 net', bets: 'Pass line + 1 come + odds' },
   { stage: 'Three Point Molly Tight', entry: '+$150 net', bets: 'Pass line + 2 come + odds' },
   { stage: 'Three Point Molly Loose', entry: '+$250 net', bets: 'Pass line + 2 come + max odds' },
+];
+
+const BATS_ACCUMULATOR_STAGES = [
+  { stage: 'Bearish Accumulator Full',       entry: 'Session start',  bets: "Don't Pass + 2× lay odds" },
+  { stage: 'Bearish Accumulator Regressed',  entry: 'First 7-out',    bets: "Don't Pass + 1× lay odds (terminal)" },
 ];
 
 const BATS_STAGES = [

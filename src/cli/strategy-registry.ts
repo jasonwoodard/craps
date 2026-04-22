@@ -34,11 +34,12 @@ import {
   IronCrossWithCE,
   PassWithCEInsurance,
 } from '../dsl/strategies';
-import { BATS, CATS, CATSAccumulatorOnly } from '../dsl/strategies-staged';
+import { BATS, BATSAccumulatorOnly, CATS, CATSAccumulatorOnly } from '../dsl/strategies-staged';
 
 // Keep in alphabetical order
 export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
   'BATS':                    BATS(),
+  'BATSAccumulatorOnly':     BATSAccumulatorOnly(),
   'CATS':                    CATS(),
   'CATSAccumulatorOnly':     CATSAccumulatorOnly(),
   'DontPassLineOnly':        DontPassLineOnly,
