@@ -7,7 +7,7 @@ export function StrategiesPage() {
       <StrategySection
         name="CATS"
         tagline="Five-stage escalating strategy. Starts conservative and escalates as session profit grows."
-        houseEdge="Accumulator: pass line 1.41% · Molly stages: come bets with odds ~0.5–0.8%"
+        houseEdge="Accumulator: Place 6/8 ~1.52% · Molly stages: come bets with odds ~0.5–0.8%"
         stages={CATS_STAGES}
       >
         <p>
@@ -17,9 +17,10 @@ export function StrategiesPage() {
           escalates only when the session is winning, retreating automatically when it isn't.
         </p>
         <p>
-          The Accumulator stages use flat pass line bets with minimal odds. The Molly stages
-          add come bets and increase odds as profit milestones are reached. Step-down rules
-          mirror step-up thresholds — two consecutive seven-outs at any Molly stage triggers a
+          The Accumulator stages use Place 6 and Place 8 bets — full at $18 each, then
+          regressed to $12 after the first hit. The Molly stages switch to pass line and come
+          bets with increasing odds as profit milestones are reached. Step-down rules mirror
+          step-up thresholds — two consecutive seven-outs at any Molly stage triggers a
           retreat to the prior stage, protecting gains rather than pressing through cold dice.
         </p>
         <p>
@@ -440,11 +441,11 @@ interface StrategySectionProps {
 }
 
 const CATS_STAGES = [
-  { stage: 'Accumulator Full', entry: 'Session start', bets: 'Pass line + 1X odds' },
-  { stage: 'Accumulator Regressed', entry: 'After first point made', bets: 'Pass line + 1X odds, regressed' },
-  { stage: 'Little Molly', entry: '+$70 net', bets: 'Pass line + 1 come + odds' },
-  { stage: 'Three Point Molly Tight', entry: '+$150 net', bets: 'Pass line + 2 come + odds' },
-  { stage: 'Three Point Molly Loose', entry: '+$250 net', bets: 'Pass line + 2 come + max odds' },
+  { stage: 'Accumulator Full', entry: 'Session start', bets: 'Place 6 + Place 8' },
+  { stage: 'Accumulator Regressed', entry: 'After first 6 or 8 hit', bets: 'Place 6 + Place 8 (regressed)' },
+  { stage: 'Little Molly', entry: '+$70 net', bets: 'Pass line + 1 come + 2× odds' },
+  { stage: 'Three Point Molly Tight', entry: '+$150 net', bets: 'Pass line + 2 come + tiered odds' },
+  { stage: 'Three Point Molly Loose', entry: '+$200 net w/ 6 or 8 covered', bets: 'Pass line + 2 come + 5× odds' },
 ];
 
 const BATS_ACCUMULATOR_STAGES = [
