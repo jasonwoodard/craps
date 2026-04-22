@@ -12,12 +12,20 @@
  *   threePtMollyTight  → Pass + 2 Come + tiered odds. Shifts to Loose at +$200 w/ 6/8.
  *   threePtMollyLoose  → Pass + 2 Come + 5× odds. Terminal stage (no further advance).
  *
+ * CATSAccumulatorOnly stages:
+ *   accumulatorFull    → Place 6/8 at $18 each. Transitions on first 6/8 hit.
+ *   accumulatorRegressed → Place 6/8 at $12 each. Terminal stage (grind indefinitely).
+ *
  * BATS stages:
  *   bearishAccumulator → Don't Pass $10 + 1× lay odds. Advances at profit ≥ +$120.
  *   littleDolly        → DP + 1 DC + 2× lay odds. Advances at +$225.
  *   threePtDolly       → DP + 2 DC + 5× lay odds. Advances at +$350.
  *   expandedDarkAlpha  → Dolly + Lay 4/10 (if not DC-covered). Advances at +$500.
  *   maxDarkAlpha       → Dolly + Lay 4/5/9/10. Terminal stage.
+ *
+ * BATSAccumulatorOnly stages:
+ *   bearishAccumulatorFull       → Don't Pass $10 + 2× lay odds. Transitions on first 7-out.
+ *   bearishAccumulatorRegressed  → Don't Pass $10 + 1× lay odds. Terminal stage (grind indefinitely).
  */
 
 import { stageMachine } from './stage-machine';
@@ -316,6 +324,52 @@ export function BATS() {
       mustRetreatTo: (session) => {
         if (session.profit < 500) return 'expandedDarkAlpha';
         return undefined;
+      },
+    })
+
+    .build();
+}
+
+/**
+ * Creates a fresh BATSAccumulatorOnly strategy.
+ *
+ * This is the Accumulator component of BATS in isolation — Don't Pass $10 with
+ * 2× lay odds (sized to win $20), then de-leverage to 1× lay odds (sized to win $10)
+ * on the first 7-out. No further advancement. Darkside mirror of CATSAccumulatorOnly.
+ *
+ * Register in StrategyRegistry as: `'BATSAccumulatorOnly': BATSAccumulatorOnly()`
+ */
+export function BATSAccumulatorOnly() {
+  return stageMachine('BATSAccumulatorOnly')
+    .startingAt('bearishAccumulatorFull')
+
+    // --- Stage 1: Full ---
+    // Don't Pass $10 + 2× lay odds. On first 7-out, de-leverage to regressed.
+    .stage('bearishAccumulatorFull', {
+      board: ({ bets, table }: StageContext) => {
+        if (!table.point) {
+          bets.dontPass(10);
+        } else {
+          bets.dontPass(10).withOdds(layAmountToWin(table.point, 20));
+        }
+      },
+      canAdvanceTo: () => true,
+      on: {
+        sevenOut: (_, { advanceTo }) => {
+          advanceTo('bearishAccumulatorRegressed');
+        },
+      },
+    })
+
+    // --- Stage 2: Regressed (terminal) ---
+    // Don't Pass $10 + 1× lay odds. No further advancement — grind indefinitely.
+    .stage('bearishAccumulatorRegressed', {
+      board: ({ bets, table }: StageContext) => {
+        if (!table.point) {
+          bets.dontPass(10);
+        } else {
+          bets.dontPass(10).withOdds(layAmountToWin(table.point, 10));
+        }
       },
     })
 
