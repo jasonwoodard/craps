@@ -8,4 +8,3 @@ craps-test-out.txt
 *.distribution.json
 .firebase/
 .DS_Store
-package-lock.json
