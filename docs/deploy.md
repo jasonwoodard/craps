@@ -33,13 +33,13 @@ Also at: https://jw-craps.web.app
 gcloud run deploy craps-api \
   --source . \
   --region us-central1 \
-  --no-allow-unauthenticated \
+  --allow-unauthenticated \
   --max-instances 2
 ```
 
 > **Windows/PowerShell**: Backslash line continuation doesn't work. Use a single line:
 > ```powershell
-> gcloud run deploy craps-api --source . --region us-central1 --no-allow-unauthenticated --max-instances 2
+> gcloud run deploy craps-api --source . --region us-central1 --allow-unauthenticated --max-instances 2
 > ```
 
 ## Deploy Both
@@ -49,7 +49,7 @@ firebase deploy --only hosting
 gcloud run deploy craps-api \
   --source . \
   --region us-central1 \
-  --no-allow-unauthenticated \
+  --allow-unauthenticated \
   --max-instances 2
 ```
 
@@ -57,13 +57,13 @@ gcloud run deploy craps-api \
 > ```powershell
 > cd web; npm run build; cd ..
 > firebase deploy --only hosting
-> gcloud run deploy craps-api --source . --region us-central1 --no-allow-unauthenticated --max-instances 2
+> gcloud run deploy craps-api --source . --region us-central1 --allow-unauthenticated --max-instances 2
 > ```
 
 ## Infrastructure Notes
 
 - Firebase Hosting rewrites `/api/**` to Cloud Run (configured in `firebase.json`)
-- Cloud Run is private — only accessible via Firebase Hosting rewrite
+- Cloud Run allows unauthenticated access (`allUsers` invoker) — `--allow-unauthenticated` sets this automatically on deploy
 - Billing alert set at $10/month on GCP billing account
 - Cloud Run capped at 2 instances max
 - **`package-lock.json` must be committed** — if it is in `.gitignore`, Cloud Run builds will fail because `npm ci` requires it
