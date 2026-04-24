@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { NavLink, useSearchParams } from 'react-router-dom';
-import { RunControls } from './RunControls';
+import { RunToolbar } from './RunToolbar';
 
 interface ShellProps {
   children: ReactNode;
@@ -86,15 +86,12 @@ export function Shell({ children }: ShellProps) {
           ))}
         </nav>
 
-        {/* Run controls */}
         <div className="flex-1" />
-        <div className="border-t border-gray-700">
-          <RunControls />
-        </div>
       </aside>
 
       {/* Main content */}
       <div className="flex flex-col flex-1" style={{ marginLeft: '240px' }}>
+        <RunToolbar />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
