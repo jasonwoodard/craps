@@ -146,6 +146,8 @@
   padding: 0;
   max-height: 240px;
   overflow-y: auto;
+  width: max-content;  /* size to widest item, not the pill width */
+  min-width: 100%;     /* never narrower than the pill */
 }
 .pill-option {
   padding: 6px 8px;
