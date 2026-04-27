@@ -24,32 +24,68 @@ interface PillProps {
   locked?: boolean;
   suffix?: string;
   hasChev?: boolean;
+  /** true → dropdown popover; false → inline edit */
+  isDropdown?: boolean;
   open: boolean;
   onToggle: (id: string) => void;
   error?: string;
   children: ReactNode;
 }
 
-function Pill({ id, label, displayValue, wide, locked, suffix, hasChev = true, open, onToggle, error, children }: PillProps) {
+function Pill({
+  id, label, displayValue, wide, locked, suffix,
+  hasChev = true, isDropdown = false, open, onToggle, error, children,
+}: PillProps) {
+  const stackClass = `pill__stack${wide ? ' pill__stack--wide' : ' pill__stack--narrow'}`;
+  const lockedClass = locked ? ' pill--locked' : '';
+
+  // Inline-edit mode: pill becomes a <div> so the nested <input> is valid HTML
+  if (open && !isDropdown) {
+    return (
+      <div className="pill-wrap">
+        <div className={`pill pill--open${lockedClass}`}>
+          <div className={stackClass}>
+            <span className="pill__label">{label}</span>
+            <span className="pill__value-row">
+              {suffix && <span className="pill__suffix">{suffix}</span>}
+              {children}
+            </span>
+          </div>
+          {hasChev && <span className="pill__chev">▾</span>}
+        </div>
+        {error && <p className="pill-inline-error">{error}</p>}
+      </div>
+    );
+  }
+
+  const btnClass = [
+    'pill',
+    lockedClass,
+    open ? ' pill--open' : '',
+    open && isDropdown ? ' pill--dropdown-open' : '',
+  ].join('').trim();
+
   return (
     <div className="pill-wrap">
       <button
         type="button"
-        className={'pill' + (locked ? ' pill--locked' : '')}
+        className={btnClass}
         onClick={() => onToggle(id)}
         aria-expanded={open}
-        aria-haspopup="true"
+        aria-haspopup={isDropdown ? 'listbox' : undefined}
       >
-        <div className={`pill__stack${wide ? ' pill__stack--wide' : ' pill__stack--narrow'}`}>
+        <div className={stackClass}>
           <span className="pill__label">{label}</span>
           <span className="pill__value-row">
             {suffix && <span className="pill__suffix">{suffix}</span>}
             <span className="pill__value">{displayValue}</span>
           </span>
         </div>
-        {hasChev && <span className="pill__chev">▾</span>}
+        {hasChev && (
+          <span className={`pill__chev${open && isDropdown ? ' pill__chev--open' : ''}`}>▾</span>
+        )}
       </button>
-      {open && (
+      {open && isDropdown && (
         <div className="pill-popover">
           {children}
           {error && <p className="pill-popover__error">{error}</p>}
@@ -59,6 +95,17 @@ function Pill({ id, label, displayValue, wide, locked, suffix, hasChev = true, o
   );
 }
 
+// Maps pill IDs to FormState keys (used for revert-on-escape)
+const PILL_TO_FORM_KEY: Partial<Record<string, keyof FormState>> = {
+  strategy: 'strategyA',
+  baseline: 'strategyA',
+  test:     'strategyB',
+  rolls:    'rolls',
+  bankroll: 'bankroll',
+  seed:     'seed',
+  seeds:    'seeds',
+};
+
 export function RunToolbar() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,6 +114,7 @@ export function RunToolbar() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [openPill, setOpenPill] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const editStartRef = useRef<Record<string, string>>({});
 
   const isDistribution = location.pathname === '/distribution';
   const isCompare = location.pathname === '/session-compare';
@@ -78,10 +126,10 @@ export function RunToolbar() {
     return {
       strategyA: searchParams.get('strategy') ?? strategiesParts[0] ?? 'CATS',
       strategyB: searchParams.get('test') ?? strategiesParts[1] ?? 'ThreePointMolly3X',
-      rolls: searchParams.get('rolls') ?? '500',
-      bankroll: searchParams.get('bankroll') ?? '300',
-      seed: searchParams.get('seed') ?? '',
-      seeds: searchParams.get('seeds') ?? '500',
+      rolls:     searchParams.get('rolls')    ?? '500',
+      bankroll:  searchParams.get('bankroll') ?? '300',
+      seed:      searchParams.get('seed')     ?? '',
+      seeds:     searchParams.get('seeds')    ?? '500',
     };
   });
 
@@ -151,7 +199,24 @@ export function RunToolbar() {
   }
 
   function togglePill(id: string) {
-    setOpenPill(prev => (prev === id ? null : id));
+    setOpenPill(prev => {
+      if (prev !== id) {
+        const key = PILL_TO_FORM_KEY[id];
+        if (key) editStartRef.current[id] = form[key];
+      }
+      return prev === id ? null : id;
+    });
+  }
+
+  function commitInline() {
+    setOpenPill(null);
+  }
+
+  function revertAndClose(id: string) {
+    const key = PILL_TO_FORM_KEY[id];
+    const startVal = editStartRef.current[id];
+    if (key !== undefined && startVal !== undefined) setField(key, startVal);
+    setOpenPill(null);
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -161,6 +226,17 @@ export function RunToolbar() {
 
   const showComparePills = isCompare || isDistributionCompare;
   const showSeedsPill = isDistribution || isDistributionCompare;
+
+  // Inline input handlers shared by all number pills
+  function inlineHandlers(id: string) {
+    return {
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter')  { e.preventDefault(); commitInline(); }
+        if (e.key === 'Escape') { e.preventDefault(); revertAndClose(id); }
+      },
+      onBlur: commitInline,
+    };
+  }
 
   return (
     <div
@@ -178,18 +254,23 @@ export function RunToolbar() {
               label="Baseline"
               displayValue={form.strategyA}
               wide
+              isDropdown
               open={openPill === 'baseline'}
               onToggle={togglePill}
             >
-              <select
-                value={form.strategyA}
-                onChange={e => { setField('strategyA', e.target.value); setOpenPill(null); }}
-                className="pill-popover__select"
-                // eslint-disable-next-line jsx-a11y/no-autofocus
-                autoFocus
-              >
-                {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <ul className="pill-option-list" role="listbox" aria-label="Baseline strategy">
+                {strategies.map(s => (
+                  <li
+                    key={s}
+                    role="option"
+                    aria-selected={form.strategyA === s}
+                    className={`pill-option${form.strategyA === s ? ' pill-option--active' : ''}`}
+                    onClick={() => { setField('strategyA', s); setOpenPill(null); }}
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
             </Pill>
 
             <span className="runbar__vs">vs</span>
@@ -199,17 +280,23 @@ export function RunToolbar() {
               label="Test"
               displayValue={form.strategyB}
               wide
+              isDropdown
               open={openPill === 'test'}
               onToggle={togglePill}
             >
-              <select
-                value={form.strategyB}
-                onChange={e => { setField('strategyB', e.target.value); setOpenPill(null); }}
-                className="pill-popover__select"
-                autoFocus
-              >
-                {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <ul className="pill-option-list" role="listbox" aria-label="Test strategy">
+                {strategies.map(s => (
+                  <li
+                    key={s}
+                    role="option"
+                    aria-selected={form.strategyB === s}
+                    className={`pill-option${form.strategyB === s ? ' pill-option--active' : ''}`}
+                    onClick={() => { setField('strategyB', s); setOpenPill(null); }}
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
             </Pill>
           </>
         ) : (
@@ -218,17 +305,23 @@ export function RunToolbar() {
             label="Strategy"
             displayValue={form.strategyA}
             wide
+            isDropdown
             open={openPill === 'strategy'}
             onToggle={togglePill}
           >
-            <select
-              value={form.strategyA}
-              onChange={e => { setField('strategyA', e.target.value); setOpenPill(null); }}
-              className="pill-popover__select"
-              autoFocus
-            >
-              {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <ul className="pill-option-list" role="listbox" aria-label="Strategy">
+              {strategies.map(s => (
+                <li
+                  key={s}
+                  role="option"
+                  aria-selected={form.strategyA === s}
+                  className={`pill-option${form.strategyA === s ? ' pill-option--active' : ''}`}
+                  onClick={() => { setField('strategyA', s); setOpenPill(null); }}
+                >
+                  {s}
+                </li>
+              ))}
+            </ul>
           </Pill>
         )}
 
@@ -244,8 +337,10 @@ export function RunToolbar() {
             type="number"
             value={form.rolls}
             onChange={e => setField('rolls', e.target.value)}
-            className="pill-popover__input"
+            className="pill__inline-input"
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
+            {...inlineHandlers('rolls')}
           />
         </Pill>
 
@@ -262,8 +357,10 @@ export function RunToolbar() {
             type="number"
             value={form.bankroll}
             onChange={e => setField('bankroll', e.target.value)}
-            className="pill-popover__input"
+            className="pill__inline-input"
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
+            {...inlineHandlers('bankroll')}
           />
         </Pill>
 
@@ -279,8 +376,10 @@ export function RunToolbar() {
               type="number"
               value={form.seeds}
               onChange={e => setField('seeds', e.target.value)}
-              className="pill-popover__input"
+              className="pill__inline-input"
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
+              {...inlineHandlers('seeds')}
             />
           </Pill>
         )}
@@ -300,8 +399,10 @@ export function RunToolbar() {
             value={form.seed}
             onChange={e => setField('seed', e.target.value)}
             placeholder="random"
-            className="pill-popover__input"
+            className="pill__inline-input"
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
+            {...inlineHandlers('seed')}
           />
         </Pill>
       </div>
