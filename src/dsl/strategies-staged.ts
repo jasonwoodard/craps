@@ -30,6 +30,7 @@
 
 import { stageMachine } from './stage-machine';
 import { StageContext, TableReadView } from './stage-machine-types';
+import { StrategyDefinition } from './strategy';
 
 /**
  * Creates a fresh CATS strategy. Each call produces an independent runtime.
@@ -379,3 +380,89 @@ export function BATSAccumulatorOnly() {
 function hasPointInSet(coverage: ReadonlySet<number>, points: number[]): boolean {
   return points.some(p => coverage.has(p));
 }
+
+// ---------------------------------------------------------------------------
+// Do/Don't — Simultaneous right-side and wrong-side hedge
+// ---------------------------------------------------------------------------
+
+/**
+ * Options for the Do/Don't hedge strategy.
+ *
+ * rightUnit / wrongUnit     Flat bet size for pass/come (right) and
+ *                           don't pass/don't come (wrong) sides.
+ * rightOddsMultiple         Take-odds multiplier on rightUnit (e.g. 2 → 2×).
+ * wrongOddsMultiple         Lay-odds multiplier on wrongUnit (e.g. 2 → 2×).
+ * maxComePairs              Number of come + don't come pairs to maintain
+ *                           during the point phase (0 = pass/don't pass only).
+ */
+export interface DoDontOptions {
+  rightUnit?: number;
+  wrongUnit?: number;
+  rightOddsMultiple?: number;
+  wrongOddsMultiple?: number;
+  maxComePairs?: number;
+}
+
+/**
+ * Creates a fresh Do/Don't strategy. Each call returns an independent runtime.
+ *
+ * Phase 1 (come-out, point OFF):
+ *   Place Pass Line + Don't Pass — flat bets only. Lay odds cannot be placed
+ *   until a point is established; adding them on come-out would put them at
+ *   risk during the come-out roll, which is incorrect.
+ *
+ * Phase 2 (point ON):
+ *   Maintain Pass Line + Don't Pass with full take/lay odds.
+ *   The two sides hedge each other: the pass side profits when the point
+ *   repeats, the don't side profits on a seven-out.
+ *
+ * Phase 3 (point ON, maxComePairs > 0):
+ *   After point establishment, add one Come + Don't Come pair per roll.
+ *   Each pair mirrors the Phase 2 hedge on an independent come-bet point.
+ */
+export function DoDont(options: DoDontOptions = {}): StrategyDefinition {
+  const {
+    rightUnit = 10,
+    wrongUnit = 10,
+    rightOddsMultiple = 1,
+    wrongOddsMultiple = 1,
+    maxComePairs = 0,
+  } = options;
+
+  const rightOdds = rightUnit * rightOddsMultiple;
+  const wrongOdds = wrongUnit * wrongOddsMultiple;
+
+  return stageMachine('DoDont')
+    .startingAt('hedgeActive')
+    .stage('hedgeActive', {
+      board: ({ bets, table }: StageContext) => {
+        if (!table.point) {
+          // Come-out phase: flat bets only — no odds before point is set.
+          bets.passLine(rightUnit);
+          bets.dontPass(wrongUnit);
+        } else {
+          // Point phase: flat bets + take/lay odds on both sides.
+          bets.passLine(rightUnit).withOdds(rightOdds);
+          bets.dontPass(wrongUnit).withOdds(wrongOdds);
+
+          // Optional come/don't come stacking (one pair per roll).
+          if (maxComePairs > 0) {
+            bets.come(rightUnit).withOdds(rightOdds);
+            bets.dontCome(wrongUnit).withOdds(wrongOdds);
+          }
+        }
+      },
+    })
+    .build();
+}
+
+// Pre-configured Do/Don't variants — $10 flat, symmetric odds, no come stacking.
+// Each call produces an independent runtime, matching the CATS/BATS convention.
+export function DoDont1X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 1, wrongOddsMultiple: 1 }); }
+export function DoDont2X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 2, wrongOddsMultiple: 2 }); }
+export function DoDont3X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 3, wrongOddsMultiple: 3 }); }
+
+// Pre-configured Do/Don't variants with come/don't come stacking (one pair).
+export function DoDontWithCome1X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 1, wrongOddsMultiple: 1, maxComePairs: 1 }); }
+export function DoDontWithCome2X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 2, wrongOddsMultiple: 2, maxComePairs: 1 }); }
+export function DoDontWithCome3X(): StrategyDefinition { return DoDont({ rightOddsMultiple: 3, wrongOddsMultiple: 3, maxComePairs: 1 }); }
