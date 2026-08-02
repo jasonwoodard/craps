@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router';
 import { useSimulation } from '../hooks/useSimulation';
 import { SummaryPanel } from '../components/SummaryPanel';
 import { SessionChart } from '../components/SessionChart';

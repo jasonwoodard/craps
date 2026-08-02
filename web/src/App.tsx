@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router';
 import { Shell } from './components/Shell';
 import { SessionPage } from './pages/SessionPage';
 import { DistributionPage } from './pages/DistributionPage';

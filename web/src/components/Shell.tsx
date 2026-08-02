@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { NavLink, useSearchParams } from 'react-router-dom';
+import { NavLink, useSearchParams } from 'react-router';
 import { RunToolbar } from './RunToolbar';
 
 interface ShellProps {
