@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router';
 import { useDistributionCompare } from '../hooks/useDistributionCompare';
 import { DistributionCompareChart } from '../components/DistributionCompareChart';
 import { OutcomeDelta } from '../components/OutcomeDelta';

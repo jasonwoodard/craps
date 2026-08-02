@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode, type KeyboardEvent } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router';
 
 interface FormState {
   strategyA: string;
