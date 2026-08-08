@@ -40,12 +40,23 @@ export type CrapsEventHandlers = {
 
 /** Session-level state — read-only in strategy code. */
 export interface SessionState {
-  /** Current bankroll minus buy-in. */
+  /**
+   * Profit per the strategy doc's §3.7 accounting:
+   * (rack + working bets at face value) − buy-in, after payouts settle.
+   */
   readonly profit: number;
   /** Current stage name. */
   readonly stage: string;
   /** Consecutive seven-outs without an intervening win. Resets on any win. */
   readonly consecutiveSevenOuts: number;
+  /**
+   * True only on the evaluation immediately following a seven-out that made
+   * consecutiveSevenOuts reach 2 or more (edge-triggered). §3.4's "2
+   * consecutive 7-outs" rule steps down ONE stage per trigger — retreat
+   * guards should key on this flag, not on the raw counter, or a single
+   * trigger cascades a stage per roll until a win resets the counter.
+   */
+  readonly sevenOutStepDownTriggered: boolean;
   /** Total hands played (seven-outs + points made). */
   readonly handsPlayed: number;
   /** Consecutive come-out natural wins (7 or 11). Resets on any non-natural come-out outcome. */

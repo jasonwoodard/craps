@@ -149,14 +149,14 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect((runtime as any).stageConfigs.has('littleMolly')).toBe(true);
     });
 
-    it('retreats to AccumulatorRegressed on 2 consecutive 7-outs', () => {
-      // The mustRetreatTo guard checks consecutiveSevenOuts >= 2
+    it('retreats to AccumulatorRegressed on a 7-out step-down trigger', () => {
+      // The mustRetreatTo guard keys on the edge-triggered flag (§3.4: one
+      // stage per trigger), not the raw counter level.
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('littleMolly');
       expect(config.mustRetreatTo).toBeDefined();
-      // Verify the guard returns 'accumulatorRegressed' when consec 7-outs >= 2
-      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 2, handsPlayed: 5, stage: 'littleMolly' });
+      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: true, handsPlayed: 5, stage: 'littleMolly' });
       expect(result).toBe('accumulatorRegressed');
     });
 
@@ -164,15 +164,24 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('littleMolly');
-      const result = config.mustRetreatTo({ profit: 50, consecutiveSevenOuts: 0, handsPlayed: 5, stage: 'littleMolly' });
+      const result = config.mustRetreatTo({ profit: 50, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 5, stage: 'littleMolly' });
       expect(result).toBe('accumulatorRegressed');
+    });
+
+    it('does not retreat on a stale counter without a fresh trigger', () => {
+      // Counter still at 2 from an already-consumed trigger: no cascade.
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('littleMolly');
+      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: false, handsPlayed: 5, stage: 'littleMolly' });
+      expect(result).toBeUndefined();
     });
 
     it('does not retreat when profit is above threshold and few 7-outs', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('littleMolly');
-      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 1, handsPlayed: 5, stage: 'littleMolly' });
+      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 1, sevenOutStepDownTriggered: false, handsPlayed: 5, stage: 'littleMolly' });
       expect(result).toBeUndefined();
     });
 
@@ -187,7 +196,7 @@ describe('CATS strategy (Stage Machine implementation)', () => {
   });
 
   describe('3-Point Molly — Tight', () => {
-    it('has canAdvanceTo guard at profit >= 150', () => {
+    it('has canAdvanceTo guard for the Loose shift', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyTight');
@@ -198,34 +207,271 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyTight');
-      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 0, handsPlayed: 10, stage: 'threePtMollyTight' });
+      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyTight' });
       expect(result).toBe('littleMolly');
     });
 
-    it('retreats to LittleMolly on 2 consecutive 7-outs', () => {
+    it('retreats to LittleMolly on a 7-out step-down trigger', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyTight');
-      const result = config.mustRetreatTo({ profit: 200, consecutiveSevenOuts: 2, handsPlayed: 10, stage: 'threePtMollyTight' });
+      const result = config.mustRetreatTo({ profit: 200, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: true, handsPlayed: 10, stage: 'threePtMollyTight' });
       expect(result).toBe('littleMolly');
+    });
+
+    it('hard-resets to AccumulatorRegressed below +$20', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('threePtMollyTight');
+      const result = config.mustRetreatTo({ profit: 10, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyTight' });
+      expect(result).toBe('accumulatorRegressed');
     });
   });
 
   describe('3-Point Molly — Loose', () => {
-    it('retreats to ThreePtMollyTight on profit drop below +$150', () => {
+    // Tight and Loose are modes of ONE stage: a 7-out trigger or profit
+    // below +$150 steps down a full stage to littleMolly; falling below the
+    // +$200 cushion shifts back to Tight (a mode change, not a step-down).
+    it('steps down to LittleMolly on profit drop below +$150', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyLoose');
-      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 0, handsPlayed: 10, stage: 'threePtMollyLoose' });
+      const result = config.mustRetreatTo({ profit: 100, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyLoose' });
+      expect(result).toBe('littleMolly');
+    });
+
+    it('steps down to LittleMolly on a 7-out step-down trigger', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('threePtMollyLoose');
+      const result = config.mustRetreatTo({ profit: 220, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: true, handsPlayed: 10, stage: 'threePtMollyLoose' });
+      expect(result).toBe('littleMolly');
+    });
+
+    it('shifts to Tight mode when cushion drops below +$200', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('threePtMollyLoose');
+      const result = config.mustRetreatTo({ profit: 180, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyLoose' });
       expect(result).toBe('threePtMollyTight');
     });
 
-    it('retreats to ThreePtMollyTight on 2 consecutive 7-outs', () => {
+    it('advances to ExpandedAlpha at profit >= +$250', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyLoose');
-      const result = config.mustRetreatTo({ profit: 200, consecutiveSevenOuts: 2, handsPlayed: 10, stage: 'threePtMollyLoose' });
-      expect(result).toBe('threePtMollyTight');
+      expect(config.canAdvanceTo('expandedAlpha', { profit: 250, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyLoose' })).toBe(true);
+      expect(config.canAdvanceTo('expandedAlpha', { profit: 240, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyLoose' })).toBe(false);
+    });
+  });
+
+  describe('Expanded Alpha (Stage 4)', () => {
+    it('advances to MaxAlpha at profit >= +$400', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('expandedAlpha');
+      expect(config.canAdvanceTo('maxAlpha', { profit: 400, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'expandedAlpha' })).toBe(true);
+      expect(config.canAdvanceTo('maxAlpha', { profit: 399, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'expandedAlpha' })).toBe(false);
+    });
+
+    it('steps down to Loose Molly on profit drop below +$250', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('expandedAlpha');
+      const result = config.mustRetreatTo({ profit: 240, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'expandedAlpha' });
+      expect(result).toBe('threePtMollyLoose');
+    });
+
+    it('steps down ONE stage (to Loose Molly) on a 7-out step-down trigger', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('expandedAlpha');
+      const result = config.mustRetreatTo({ profit: 300, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: true, handsPlayed: 10, stage: 'expandedAlpha' });
+      expect(result).toBe('threePtMollyLoose');
+    });
+
+    it('hard-resets to AccumulatorRegressed below +$20', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('expandedAlpha');
+      const result = config.mustRetreatTo({ profit: 15, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'expandedAlpha' });
+      expect(result).toBe('accumulatorRegressed');
+    });
+  });
+
+  describe('Max Alpha (Stage 5)', () => {
+    it('is terminal — no canAdvanceTo guard', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('maxAlpha');
+      expect(config.canAdvanceTo).toBeUndefined();
+    });
+
+    it('steps down to ExpandedAlpha on profit drop below +$400', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('maxAlpha');
+      const result = config.mustRetreatTo({ profit: 390, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'maxAlpha' });
+      expect(result).toBe('expandedAlpha');
+    });
+
+    it('steps down to ExpandedAlpha on a 7-out step-down trigger', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('maxAlpha');
+      const result = config.mustRetreatTo({ profit: 450, consecutiveSevenOuts: 2, sevenOutStepDownTriggered: true, handsPlayed: 10, stage: 'maxAlpha' });
+      expect(result).toBe('expandedAlpha');
+    });
+
+    it('hard-resets to AccumulatorRegressed below +$20', () => {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      const config = (runtime as any).stageConfigs.get('maxAlpha');
+      const result = config.mustRetreatTo({ profit: 0, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'maxAlpha' });
+      expect(result).toBe('accumulatorRegressed');
+    });
+  });
+
+  describe('Stages 4–5 integration (RiggedDice)', () => {
+    // Pre-setting initialBankroll (captured lazily on first reconcile) shifts
+    // the profit baseline so the ladder's gates clear deterministically
+    // without hundreds of rigged winning rolls.
+    function runCATSWithBaseline(rolls: number[], bankroll: number, baseline: number) {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      (runtime as any).initialBankroll = baseline;
+      const dice = new RiggedDice(rolls);
+      const engine = new CrapsEngine({ strategy, bankroll, rolls: rolls.length, dice });
+      const result = engine.run();
+      return { result, runtime };
+    }
+
+    // Sequence walk-through:
+    //  R1 6: point 6 ON (accumulatorFull board).
+    //  R2 6: place 6 hit → accumulatorRegressed; point made (OFF).
+    //  R3 5: regressed board resized; advance littleMolly; point 5 ON.
+    //  R4 6: come placed, travels to 6; advance threePtMollyTight.
+    //  R5 5: tight board; advance threePtMollyLoose; point made (OFF), 2nd come travels to 5.
+    //  R6 9: loose board (pass placed); advance expandedAlpha; point 9 ON.
+    //  R7 5: buys 4/10 up; advance maxAlpha; come-5 wins and comes down.
+    //  R8 4: buy 5 up, buy 9 SUPPRESSED (pass point covers 9); transit come travels to 4
+    //        (buy 4 wins the same roll — a rolled 4 resolves both bets).
+    //  R9 3: Swap Rule visible: buy 4 not re-declared, come-4 carries 5× odds.
+    const CLIMB = [6, 6, 5, 6, 5, 9, 5, 4, 3];
+
+    it('climbs the full ladder to maxAlpha', () => {
+      const { result, runtime } = runCATSWithBaseline(CLIMB, 500, 0);
+      expect(runtime.getCurrentStage()).toBe('maxAlpha');
+      const stages = result.rolls.map(r => r.stageName);
+      expect(stages).toContain('threePtMollyLoose');
+      expect(stages).toContain('expandedAlpha');
+    });
+
+    it('expandedAlpha/maxAlpha board: Swap Rule replaces a traveled-to Buy with come odds', () => {
+      const { result } = runCATSWithBaseline(CLIMB, 500, 0);
+      const lastRoll = result.rolls[8];
+      expect(lastRoll.stageName).toBe('maxAlpha');
+      const bets = lastRoll.activeBets;
+
+      // Come traveled to 4 → no Buy 4 re-declared; come carries 5× odds.
+      expect(bets.find(b => b.type === 'buy' && b.point === 4)).toBeUndefined();
+      const come4 = bets.find(b => b.type === 'come' && b.point === 4);
+      expect(come4).toBeDefined();
+      expect(come4!.odds).toBe(50);
+
+      // Uncovered buy numbers stay bought at $20.
+      expect(bets.find(b => b.type === 'buy' && b.point === 10)!.amount).toBe(20);
+      expect(bets.find(b => b.type === 'buy' && b.point === 5)!.amount).toBe(20);
+
+      // Pass-line point 9 counts as coverage: Buy 9 is suppressed.
+      expect(bets.find(b => b.type === 'buy' && b.point === 9)).toBeUndefined();
+    });
+
+    it('takes a standing Buy DOWN when the pass-line point lands on its number', () => {
+      // Continue the climb: 7-out clears the board (R10), come-out buys go up
+      // on all four numbers (R11 reconcile), the point lands on 4 (R11 roll),
+      // and the next reconcile removes the Buy 4 in favor of pass + odds.
+      const rolls = [...CLIMB, 7, 4, 3];
+      const { result } = runCATSWithBaseline(rolls, 500, -200);
+      const lastRoll = result.rolls[11];
+      expect(lastRoll.stageName).toBe('maxAlpha');
+      const bets = lastRoll.activeBets;
+
+      expect(bets.find(b => b.type === 'buy' && b.point === 4)).toBeUndefined();
+      expect(bets.find(b => b.type === 'buy' && b.point === 10)).toBeDefined();
+      expect(bets.find(b => b.type === 'buy' && b.point === 5)).toBeDefined();
+      expect(bets.find(b => b.type === 'buy' && b.point === 9)).toBeDefined();
+      const pass = bets.find(b => b.type === 'passLine');
+      expect(pass).toBeDefined();
+      expect(pass!.odds).toBe(50);
+    });
+  });
+
+  describe('retreat-chain semantics (§3.4, pinned deliberately)', () => {
+    // Drive the runtime directly so profit is held constant and only the
+    // rule under test can fire.
+    function makeRuntimeAt(stage: string, profit: number) {
+      const strategy = CATS();
+      const runtime = getRuntime(strategy);
+      (runtime as any).initialBankroll = 0;
+      (runtime as any).currentStage = stage;
+      (runtime as any).sessionState.stage = stage;
+      (runtime as any).sessionState.profit = profit;
+      return { strategy, runtime };
+    }
+
+    function declaredBets(strategy: StrategyDefinition): string[] {
+      const { SimpleBetReconciler } = require('../../src/dsl/bet-reconciler');
+      const bets = new SimpleBetReconciler();
+      strategy({ bets, track: <T>(_k: string, i?: T) => i as T });
+      return bets.desired.map((d: any) => `${d.type}:${d.point ?? ''}`);
+    }
+
+    it('a 7-out trigger in expandedAlpha steps down exactly ONE stage, for one roll', () => {
+      const { strategy, runtime } = makeRuntimeAt('expandedAlpha', 300);
+
+      // Two consecutive loaded 7-outs (no wins, profit held at 300).
+      runtime.postRoll([], 300, 4, undefined, 7);
+      expect(runtime.getSessionState().consecutiveSevenOuts).toBe(1);
+      expect(runtime.getSessionState().sevenOutStepDownTriggered).toBe(false);
+      (runtime as any).sessionState.profit = 300;
+      runtime.postRoll([], 300, 5, undefined, 7);
+      expect(runtime.getSessionState().sevenOutStepDownTriggered).toBe(true);
+      (runtime as any).sessionState.profit = 300;
+
+      // Next reconcile: the trigger costs one stage — the board played this
+      // roll is the Loose Molly's (no buys). Profit (+$300 ≥ +$250) then
+      // re-advances for the FOLLOWING roll, per the rules as written: the
+      // step-down buys one roll at reduced load, not a lasting demotion.
+      const declared = declaredBets(strategy);
+      expect(declared).not.toContain('buy:4');
+      expect(declared).not.toContain('buy:10');
+      expect(runtime.getCurrentStage()).toBe('expandedAlpha'); // re-advanced after board()
+
+      // A quiet roll later there is no residual trigger: the stale counter
+      // (still 2 — no win yet) must NOT cascade further down the ladder.
+      (runtime as any).sessionState.profit = 300;
+      runtime.postRoll([], 300, undefined, 4, 4);
+      expect(runtime.getSessionState().consecutiveSevenOuts).toBe(2);
+      expect(runtime.getSessionState().sevenOutStepDownTriggered).toBe(false);
+      const declaredNext = declaredBets(strategy);
+      expect(declaredNext).toContain('buy:4'); // full expandedAlpha board again
+      expect(runtime.getCurrentStage()).toBe('expandedAlpha');
+    });
+
+    it('a deep profit crash descends multiple stages in a single evaluation', () => {
+      // §3.4: profit-threshold step-downs apply immediately. From
+      // expandedAlpha at +$100: below +$250 (→ Loose) and below +$150
+      // (→ littleMolly), but above +$70 — lands in littleMolly in one step.
+      const { strategy, runtime } = makeRuntimeAt('expandedAlpha', 100);
+      declaredBets(strategy);
+      expect(runtime.getCurrentStage()).toBe('littleMolly');
+    });
+
+    it('hard reset: profit below +$20 returns any stage to accumulatorRegressed', () => {
+      const { strategy, runtime } = makeRuntimeAt('maxAlpha', 10);
+      declaredBets(strategy);
+      expect(runtime.getCurrentStage()).toBe('accumulatorRegressed');
     });
   });
 
@@ -262,12 +508,14 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(runtime.getCurrentStage()).toBe('accumulatorRegressed');
     });
 
-    it('correctly computes profit after stage transitions', () => {
-      // Simple: 4 (point), 6 (win at $18: payOut=39), rest no-action
-      // Bankroll: 500 - 36 (bets) = 464 → + 39 (win) = 503
-      // profit = 503 - 500 = 3
+    it('correctly computes profit after stage transitions (§3.7 accounting)', () => {
+      // 4 (point), 6 (win at $18: payOut=39), rest no-action.
+      // Rack: 500 - 36 (bets) = 464 → + 39 (win) = 503.
+      // §3.7 profit = (rack + working bets at face) − buy-in: the winning
+      // place 6 was taken down but the place 8 still works at $18.
+      // profit = 503 + 18 − 500 = 21
       const { runtime } = runCATS([4, 6]);
-      expect(runtime.getSessionState().profit).toBe(3);
+      expect(runtime.getSessionState().profit).toBe(21);
     });
 
     it('CATS with enough wins builds profit and advances stages', () => {

@@ -886,14 +886,14 @@ describe('StageMachineRuntime', () => {
 
     it('two-stage machine advances on the roll where threshold is first crossed', () => {
       const strategy = twoStagePlaceStrategy();
-      // 4 (point), 6 (place win: profit becomes +2), 8 (place win: profit hits +16)
-      // profit crosses 4 → advance on next board() call. Stepping up to stageB
-      // resizes the board $12 → $18 per number, moving $12 of rack profit onto
-      // the felt: session.profit is bankroll-only, so it dips to -8 after the
-      // upgrade even though total equity (rack + felt) is unchanged.
+      // 4 (point), 6 (place win: profit +14 = $2 rack + $12 felt), 8 (second win)
+      // profit crosses 4 → advance on next board() call. Profit follows §3.7
+      // accounting (rack + working bets at face − buy-in), so upgrading the
+      // board $12 → $18 per number is profit-neutral: final profit is the two
+      // wins' $28 of collected payouts regardless of felt load.
       const { runtime } = runWithStages(strategy, [4, 6, 8, 5, 5]);
       expect(runtime.getCurrentStage()).toBe('stageB');
-      expect(runtime.getSessionState().profit).toBe(-8);
+      expect(runtime.getSessionState().profit).toBe(28);
     });
 
     it('machine retreats to stage 1 on consecutive 7-outs', () => {

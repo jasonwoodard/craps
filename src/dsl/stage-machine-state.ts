@@ -21,6 +21,7 @@ interface MutableSessionState {
   profit: number;
   stage: string;
   consecutiveSevenOuts: number;
+  sevenOutStepDownTriggered: boolean;
   handsPlayed: number;
   consecutiveComeOutLosses: number;
   pointRepeaterStreak: number;
@@ -68,6 +69,7 @@ export class StageMachineRuntime {
       profit: 0,
       stage: startingStage,
       consecutiveSevenOuts: 0,
+      sevenOutStepDownTriggered: false,
       handsPlayed: 0,
       consecutiveComeOutLosses: 0,
       pointRepeaterStreak: 0,
@@ -128,9 +130,18 @@ export class StageMachineRuntime {
     pointAfter: number | undefined,
     rollValue: number,
   ): void {
-    // Update profit (initialBankroll is set in setTableContext on first reconcile call)
+    // Update profit per §3.7 accounting: (rack + working bets at face value)
+    // − buy-in, after payouts settle. Face value = flat + odds. Without table
+    // context (unit tests), felt load is 0 and profit is rack-only.
+    // (initialBankroll is set in setTableContext on first reconcile call)
     if (this.initialBankroll !== null) {
-      this.sessionState.profit = bankroll - this.initialBankroll;
+      let feltLoad = 0;
+      if (this.table) {
+        for (const bet of this.table.getPlayerBets(this.playerId)) {
+          feltLoad += bet.totalAmount;
+        }
+      }
+      this.sessionState.profit = bankroll + feltLoad - this.initialBankroll;
     }
 
     // Track seven-outs and hands played
@@ -157,6 +168,12 @@ export class StageMachineRuntime {
       this.sessionState.consecutiveSevenOuts = 0;
     }
     // No-action rolls do not reset consecutiveSevenOuts
+
+    // Edge-triggered step-down signal: fires only on the roll where a
+    // seven-out brings the counter to >= 2. Each further consecutive
+    // seven-out re-arms it, so every trigger costs exactly one stage.
+    this.sessionState.sevenOutStepDownTriggered =
+      hadSevenOut && this.sessionState.consecutiveSevenOuts >= 2;
 
     // Come-out loss tracking (natural win = bad for don't side)
     const isComeOut = pointBefore == null;
@@ -235,12 +252,17 @@ export class StageMachineRuntime {
   }
 
   private evaluateRetreats(): void {
-    const config = this.stageConfigs.get(this.currentStage);
-    if (!config || !config.mustRetreatTo) return;
+    // Loop so a deep profit crash descends immediately (§3.4 "step down
+    // immediately") rather than one stage per roll; bounded by stage count.
+    for (let i = 0; i < this.stageConfigs.size; i++) {
+      const config = this.stageConfigs.get(this.currentStage);
+      if (!config || !config.mustRetreatTo) return;
 
-    const target = config.mustRetreatTo(this.sessionState);
-    if (target && this.stageConfigs.has(target)) {
+      const target = config.mustRetreatTo(this.sessionState);
+      if (!target || !this.stageConfigs.has(target)) return;
       this.transitionTo(target);
+      // A 7-out trigger is consumed by its step-down: one stage per trigger.
+      this.sessionState.sevenOutStepDownTriggered = false;
     }
   }
 
