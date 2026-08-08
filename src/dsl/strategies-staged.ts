@@ -40,11 +40,33 @@ import { stageMachine } from './stage-machine';
 import { StageContext, TableReadView } from './stage-machine-types';
 import { StrategyDefinition } from './strategy';
 
+/** Options for CATS(). Defaults reproduce the strategy doc exactly. */
+export interface CATSOptions {
+  /**
+   * Stage 1 → 2 (Little Molly) profit gate in dollars (default $70).
+   * All higher ladder gates scale proportionally (rounded to the dollar):
+   * $150/$200/$250/$400 × (stage2Gate / 70). The §3.4 hard-reset floor
+   * stays at $20 — it is a capital-preservation floor tied to the buy-in,
+   * not a rung of the gate ladder. Used for threshold-sensitivity analysis;
+   * the strategy's official thresholds are unchanged.
+   */
+  stage2Gate?: number;
+}
+
 /**
  * Creates a fresh CATS strategy. Each call produces an independent runtime.
  * Register in StrategyRegistry as: `'CATS': CATS()`
  */
-export function CATS() {
+export function CATS(options: CATSOptions = {}) {
+  const g2 = options.stage2Gate ?? 70;
+  const f = g2 / 70;
+  const G_LITTLE   = g2;                    // Stage 1 → 2 gate; Little Molly retreat floor
+  const G_MOLLY    = Math.round(150 * f);   // Stage 2 → 3 gate; stage-3 retreat floor
+  const G_LOOSE    = Math.round(200 * f);   // Tight ⇄ Loose mode-shift cushion
+  const G_EXPANDED = Math.round(250 * f);   // Stage 3 → 4 gate; Expanded Alpha retreat floor
+  const G_MAX      = Math.round(400 * f);   // Stage 4 → 5 gate; Max Alpha retreat floor
+  const HARD_RESET = 20;                    // §3.4 hard reset — not scaled
+
   return stageMachine('CATS')
     .startingAt('accumulatorFull')
 
@@ -71,11 +93,11 @@ export function CATS() {
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.place(6, 12);
         bets.place(8, 12);
-        if (session.profit >= 70) {
+        if (session.profit >= G_LITTLE) {
           advanceTo('littleMolly');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 70,
+      canAdvanceTo: (_target, session) => session.profit >= G_LITTLE,
     })
 
     // --- Stage 2 (Little Molly) ---
@@ -86,13 +108,13 @@ export function CATS() {
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.passLine(10).withOdds(20);
         bets.come(10).withOdds(20);
-        if (session.profit >= 150) {
+        if (session.profit >= G_MOLLY) {
           advanceTo('threePtMollyTight');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 150,
+      canAdvanceTo: (_target, session) => session.profit >= G_MOLLY,
       mustRetreatTo: (session) =>
-        session.profit < 70 || session.sevenOutStepDownTriggered
+        session.profit < G_LITTLE || session.sevenOutStepDownTriggered
           ? 'accumulatorRegressed'
           : undefined,
     })
@@ -107,14 +129,14 @@ export function CATS() {
         bets.passLine(10).withOdds(odds.passLine);
         bets.come(10).withOdds(odds.come1);
         bets.come(10).withOdds(odds.come2);
-        if (session.profit >= 200 && table.hasSixOrEight) {
+        if (session.profit >= G_LOOSE && table.hasSixOrEight) {
           advanceTo('threePtMollyLoose');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 200,
+      canAdvanceTo: (_target, session) => session.profit >= G_LOOSE,
       mustRetreatTo: (session) => {
-        if (session.profit < 20) return 'accumulatorRegressed'; // §3.4 hard reset
-        if (session.profit < 150 || session.sevenOutStepDownTriggered) return 'littleMolly';
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
         return undefined;
       },
     })
@@ -130,15 +152,15 @@ export function CATS() {
         bets.passLine(10).withOdds(50);
         bets.come(10).withOdds(50);
         bets.come(10).withOdds(50);
-        if (session.profit >= 250) {
+        if (session.profit >= G_EXPANDED) {
           advanceTo('expandedAlpha');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 250,
+      canAdvanceTo: (_target, session) => session.profit >= G_EXPANDED,
       mustRetreatTo: (session) => {
-        if (session.profit < 20) return 'accumulatorRegressed'; // §3.4 hard reset
-        if (session.profit < 150 || session.sevenOutStepDownTriggered) return 'littleMolly';
-        if (session.profit < 200) return 'threePtMollyTight';
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
+        if (session.profit < G_LOOSE) return 'threePtMollyTight';
         return undefined;
       },
     })
@@ -158,14 +180,14 @@ export function CATS() {
         bets.come(10).withOdds(50);
         if (!table.coverage.has(4)) bets.buy(4, 20);
         if (!table.coverage.has(10)) bets.buy(10, 20);
-        if (session.profit >= 400) {
+        if (session.profit >= G_MAX) {
           advanceTo('maxAlpha');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 400,
+      canAdvanceTo: (_target, session) => session.profit >= G_MAX,
       mustRetreatTo: (session) => {
-        if (session.profit < 20) return 'accumulatorRegressed'; // §3.4 hard reset
-        if (session.profit < 250 || session.sevenOutStepDownTriggered) return 'threePtMollyLoose';
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_EXPANDED || session.sevenOutStepDownTriggered) return 'threePtMollyLoose';
         return undefined;
       },
     })
@@ -185,8 +207,8 @@ export function CATS() {
         if (!table.coverage.has(9)) bets.buy(9, 20);
       },
       mustRetreatTo: (session) => {
-        if (session.profit < 20) return 'accumulatorRegressed'; // §3.4 hard reset
-        if (session.profit < 400 || session.sevenOutStepDownTriggered) return 'expandedAlpha';
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MAX || session.sevenOutStepDownTriggered) return 'expandedAlpha';
         return undefined;
       },
     })

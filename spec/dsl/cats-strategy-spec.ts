@@ -407,6 +407,36 @@ describe('CATS strategy (Stage Machine implementation)', () => {
     });
   });
 
+  describe('CATSOptions.stage2Gate (threshold-sensitivity parameterization)', () => {
+    it('defaults reproduce the doc thresholds exactly', () => {
+      const runtime = getRuntime(CATS());
+      const configs = (runtime as any).stageConfigs;
+      const s = (profit: number) => ({ profit, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 0, stage: 'x' });
+      expect(configs.get('accumulatorRegressed').canAdvanceTo('littleMolly', s(70))).toBe(true);
+      expect(configs.get('accumulatorRegressed').canAdvanceTo('littleMolly', s(69))).toBe(false);
+      expect(configs.get('littleMolly').canAdvanceTo('threePtMollyTight', s(150))).toBe(true);
+      expect(configs.get('threePtMollyLoose').canAdvanceTo('expandedAlpha', s(250))).toBe(true);
+      expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(400))).toBe(true);
+    });
+
+    it('scales the higher gates proportionally, keeping the $20 hard reset fixed', () => {
+      // stage2Gate $40 → f = 4/7: gates become $40/$86/$114/$143/$229.
+      const runtime = getRuntime(CATS({ stage2Gate: 40 }));
+      const configs = (runtime as any).stageConfigs;
+      const s = (profit: number) => ({ profit, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 0, stage: 'x' });
+      expect(configs.get('accumulatorRegressed').canAdvanceTo('littleMolly', s(40))).toBe(true);
+      expect(configs.get('accumulatorRegressed').canAdvanceTo('littleMolly', s(39))).toBe(false);
+      expect(configs.get('littleMolly').canAdvanceTo('threePtMollyTight', s(86))).toBe(true);
+      expect(configs.get('littleMolly').canAdvanceTo('threePtMollyTight', s(85))).toBe(false);
+      expect(configs.get('threePtMollyLoose').canAdvanceTo('expandedAlpha', s(143))).toBe(true);
+      expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(229))).toBe(true);
+      expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(228))).toBe(false);
+      // Hard reset stays at $20 regardless of scale.
+      expect(configs.get('maxAlpha').mustRetreatTo(s(19))).toBe('accumulatorRegressed');
+      expect(configs.get('maxAlpha').mustRetreatTo(s(20))).toBe('expandedAlpha'); // < scaled $229 gate
+    });
+  });
+
   describe('retreat-chain semantics (§3.4, pinned deliberately)', () => {
     // Drive the runtime directly so profit is held constant and only the
     // rule under test can fire.

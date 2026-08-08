@@ -24,6 +24,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { CrapsEngine } from '../engine/craps-engine';
+import { StrategyDefinition } from '../dsl/strategy';
 import { createStrategy, lookupStrategy } from './strategy-registry';
 
 // ---------------------------------------------------------------------------
@@ -140,12 +141,19 @@ function parsePositiveInt(raw: string | undefined, name: string, defaultValue: n
 
 function runSessions(args: AnalyzeArgs): SessionView[] {
   lookupStrategy(args.strategy!); // validate the name up front
+  return runSessionsWithFactory(() => createStrategy(args.strategy!), args);
+}
+
+/** Run seeded sessions for any strategy factory and return session views. */
+export function runSessionsWithFactory(
+  factory: () => StrategyDefinition,
+  args: Pick<AnalyzeArgs, 'rolls' | 'bankroll' | 'seeds' | 'stopAtRuin'>,
+): SessionView[] {
   const sessions: SessionView[] = [];
   for (let seed = 0; seed < args.seeds; seed++) {
     // Fresh strategy per session — stage machines carry runtime state.
-    const strategy = createStrategy(args.strategy!);
     const engine = new CrapsEngine({
-      strategy,
+      strategy: factory(),
       bankroll: args.bankroll,
       rolls: args.rolls,
       seed,
@@ -162,6 +170,15 @@ function runSessions(args: AnalyzeArgs): SessionView[] {
     });
   }
   return sessions;
+}
+
+/** Full analysis for an arbitrary strategy factory (used by sweep tools). */
+export function analyzeWithFactory(
+  factory: () => StrategyDefinition,
+  args: Pick<AnalyzeArgs, 'rolls' | 'bankroll' | 'seeds' | 'stopAtRuin'>,
+): AnalyzeReport {
+  const sessions = runSessionsWithFactory(factory, args);
+  return aggregate(sessions, { rollsPerSession: args.rolls, bankroll: args.bankroll });
 }
 
 /** Parse run-sim --output json JSONL files (one session per file). */
