@@ -17,6 +17,7 @@ export interface BetReconciler {
   hardways(point: number, amount: number): void;
   ce(amount: number): void;
   lay(point: number, amount: number): void;
+  buy(point: number, amount: number): void;
   remove(type: string, point?: number): void;
 }
 
@@ -114,6 +115,10 @@ export class SimpleBetReconciler implements BetReconciler {
 
   lay(point: number, amount: number): void {
     this.add('lay', amount, point);
+  }
+
+  buy(point: number, amount: number): void {
+    this.add('buy', amount, point);
   }
 
   remove(type: string, point?: number): void {

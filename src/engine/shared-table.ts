@@ -13,6 +13,7 @@ import { DontComeBet } from '../bets/dont-come-bet';
 import { HardwaysBet } from '../bets/hardways-bet';
 import { CEBet } from '../bets/ce-bet';
 import { LayBet } from '../bets/lay-bet';
+import { BuyBet } from '../bets/buy-bet';
 import { RunLogger, SummaryRecord } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -287,6 +288,9 @@ export class SharedTable {
       case 'lay':
         if (point == null) return null;
         return new LayBet(amount, point, playerId);
+      case 'buy':
+        if (point == null) return null;
+        return new BuyBet(amount, point, playerId);
       default:
         return null;
     }

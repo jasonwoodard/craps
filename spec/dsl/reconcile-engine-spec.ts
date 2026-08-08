@@ -92,6 +92,79 @@ describe('ReconcileEngine', () => {
     expect(cmds[0]).toEqual({ type: 'remove', betType: 'place', point: 5 });
   });
 
+  describe('buy bets through the reconciler', () => {
+    it('produces a place command for a declared buy bet', () => {
+      const { engine } = makeEngine();
+      const cmds = engine.reconcile(({ bets }) => {
+        bets.buy(4, 20);
+        bets.buy(10, 20);
+      });
+      expect(cmds).toEqual([
+        { type: 'place', betType: 'buy', amount: 20, point: 4 },
+        { type: 'place', betType: 'buy', amount: 20, point: 10 },
+      ]);
+    });
+
+    it('is idempotent across rolls once the buy is on the table (CrapsEngine)', () => {
+      // 6 (point), 5, 9 — buy 4 placed on roll 1 and re-declared every roll.
+      const dice = new RiggedDice([6, 5, 9]);
+      const strategy: StrategyDefinition = ({ bets }) => {
+        bets.buy(4, 20);
+      };
+      const engine = new CrapsEngine({ strategy, bankroll: 500, rolls: 3, dice });
+      const result = engine.run();
+
+      // Exactly one buy bet on the felt every roll — never duplicated,
+      // never churned.
+      for (const roll of result.rolls) {
+        const buys = roll.activeBets.filter(b => b.type === 'buy');
+        expect(buys.length).toBe(1);
+        expect(buys[0].point).toBe(4);
+        expect(buys[0].amount).toBe(20);
+      }
+      // Placed once: bankroll only debited $20 total across the run.
+      expect(result.finalBankroll).toBe(480);
+    });
+
+    it('removes a buy when the strategy stops declaring it (remove via re-declaration)', () => {
+      // Roll 1 declares buy 4; from roll 2 the strategy calls remove('buy', 4)
+      // and stops declaring it — the diff takes the bet down and refunds it.
+      const dice = new RiggedDice([6, 5, 9]);
+      const strategy: StrategyDefinition = ({ bets, track }) => {
+        const state = track<{ declared: boolean }>('state', { declared: false });
+        if (!state.declared) {
+          bets.buy(4, 20);
+          state.declared = true;
+        } else {
+          bets.remove('buy', 4);
+        }
+      };
+      const engine = new CrapsEngine({ strategy, bankroll: 500, rolls: 3, dice });
+      const result = engine.run();
+
+      expect(result.rolls[0].activeBets.filter(b => b.type === 'buy').length).toBe(1);
+      expect(result.rolls[1].activeBets.filter(b => b.type === 'buy').length).toBe(0);
+      expect(result.finalBankroll).toBe(500); // refunded in full
+    });
+
+    it('settles a winning buy through the engine with vig on the bet', () => {
+      // 6 (point), 4 (buy 4 hits: +$39 net), 3 (no action)
+      const dice = new RiggedDice([6, 4, 3]);
+      const strategy: StrategyDefinition = ({ bets }) => {
+        bets.buy(4, 20);
+      };
+      const engine = new CrapsEngine({ strategy, bankroll: 500, rolls: 3, dice });
+      const result = engine.run();
+
+      // Roll 2 outcome: buy 4 win, payOut = 20 + 40 - 1 = 59.
+      const winOutcomes = result.rolls[1].outcomes.filter(o => o.result === 'win');
+      expect(winOutcomes.length).toBe(1);
+      expect(winOutcomes[0].payout).toBe(59);
+      // Buy re-placed on roll 3: 500 - 20 (initial) + 59 (win) - 20 (re-place) = 519
+      expect(result.finalBankroll).toBe(519);
+    });
+  });
+
   describe('come bet contract persistence (CrapsEngine integration)', () => {
     // A 3-point-Molly-style board: pass line + 2 come bets, all with odds.
     const molly: StrategyDefinition = ({ bets }) => {

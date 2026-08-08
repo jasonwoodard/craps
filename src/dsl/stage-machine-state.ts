@@ -43,6 +43,7 @@ const NOOP_BET_RECONCILER: BetReconciler = {
   hardways: () => {},
   ce: () => {},
   lay: () => {},
+  buy: () => {},
   remove: () => {},
 };
 
