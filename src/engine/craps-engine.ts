@@ -29,6 +29,12 @@ export interface CrapsEngineConfig {
   seed?: number;
   dice?: Dice;
   logger?: RunLogger;
+  /**
+   * End the session at ruin: when a roll begins with zero bets on the felt
+   * (the strategy declared bets it could not afford, or nothing at all),
+   * the session stops instead of zero-filling the remaining rolls.
+   */
+  stopAtRuin?: boolean;
 }
 
 interface BetSnapshot {
@@ -45,6 +51,7 @@ export class CrapsEngine {
   private initialBankroll: number;
   private maxRolls: number;
   private logger?: RunLogger;
+  private stopAtRuin: boolean;
   private playerId = 'engine-player';
 
   constructor(config: CrapsEngineConfig) {
@@ -53,6 +60,7 @@ export class CrapsEngine {
     this.initialBankroll = config.bankroll;
     this.maxRolls = config.rolls;
     this.logger = config.logger;
+    this.stopAtRuin = config.stopAtRuin ?? false;
 
     this.table = new CrapsTable();
     if (config.dice) {
@@ -68,6 +76,7 @@ export class CrapsEngine {
   run(): EngineResult {
     const rolls: RollRecord[] = [];
     let rollNumber = 0;
+    let endedAtRuin = false;
 
     while (this.shouldContinue(rollNumber)) {
       const record = this.playRoll(rollNumber + 1);
@@ -76,6 +85,13 @@ export class CrapsEngine {
         this.logger.onRoll(record);
       }
       rollNumber++;
+      // Ruin check: the roll began with nothing on the felt — the strategy
+      // could not fund a single bet. Without stopAtRuin the loop would
+      // zero-fill rolls until maxRolls while bankroll dribbles above $0.
+      if (this.stopAtRuin && record.activeBets.length === 0 && record.tableLoadBefore === 0) {
+        endedAtRuin = true;
+        break;
+      }
     }
 
     return {
@@ -83,6 +99,7 @@ export class CrapsEngine {
       initialBankroll: this.initialBankroll,
       rollsPlayed: rollNumber,
       rolls,
+      endedAtRuin,
     };
   }
 
@@ -147,6 +164,7 @@ export class CrapsEngine {
       tableLoadBefore,
       tableLoadAfter,
       stageName: runtime?.getCurrentStage(),
+      stagePlayed: runtime?.getLastBoardStage(),
     };
   }
 

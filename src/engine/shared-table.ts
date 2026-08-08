@@ -180,6 +180,7 @@ export class SharedTable {
         tableLoadBefore: pre.tableLoadBefore,
         tableLoadAfter,
         stageName: runtime?.getCurrentStage(),
+        stagePlayed: runtime?.getLastBoardStage(),
       };
 
       slot.log.push(record);

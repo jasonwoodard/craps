@@ -50,6 +50,7 @@ const NOOP_BET_RECONCILER: BetReconciler = {
 
 export class StageMachineRuntime {
   private currentStage: string;
+  private lastBoardStage: string;
   private stageTrackers = new Map<string, Map<string, any>>();
   private sessionState: MutableSessionState;
   private stageConfigs: Map<string, StageConfig>;
@@ -64,6 +65,7 @@ export class StageMachineRuntime {
     _machineName: string,
   ) {
     this.currentStage = startingStage;
+    this.lastBoardStage = startingStage;
     this.stageConfigs = configs;
     this.sessionState = {
       profit: 0,
@@ -91,6 +93,16 @@ export class StageMachineRuntime {
     return this.currentStage;
   }
 
+  /**
+   * Returns the stage whose board() built the bets for the most recent
+   * reconcile — i.e., the stage that actually PLAYED the roll. Differs from
+   * getCurrentStage() on transition rolls: retreats apply before board(),
+   * advances after it, and events can advance during postRoll.
+   */
+  getLastBoardStage(): string {
+    return this.lastBoardStage;
+  }
+
   /** Returns session state for external inspection (e.g., tests). */
   getSessionState(): SessionState {
     return this.sessionState;
@@ -108,6 +120,7 @@ export class StageMachineRuntime {
     if (!config) return;
 
     this.pendingAdvance = null;
+    this.lastBoardStage = this.currentStage;
 
     const stageCtx = this.buildStageContext(ctx, config);
 

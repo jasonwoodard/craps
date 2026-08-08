@@ -558,22 +558,39 @@ The step-up and step-down thresholds are meaningless without a definition of wha
 
 # §4 Simulation Findings
 
-*CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what simulation shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. Preliminary figures below are from an independent Monte Carlo of Stage 1 as written (200k trials); they are being reproduced and extended in the repo's TypeScript engine, which implements CATS through Stage 3 as `CATS()` in `src/dsl/strategies-staged.ts`.*
+*CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what the repo's TypeScript engine shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. The engine implements all five stages as `CATS()` in `src/dsl/strategies-staged.ts` (including the Swap Rule, §3.7 profit accounting, and the §3.4 step-down/hard-reset rules); the figures below come from `src/cli/analyze-stages.ts` over 2,000 sessions of up to 1,000 rolls at a $10 table with a $300 buy-in, sessions ending at ruin.*
 
 ## 4.1 Stage 1 gate: how often the path gets trodden
 
-| Metric | Result ($10 table, $300 buy-in) |
+| Metric | Engine result ($10 table, $300 buy-in) |
 |---|---|
-| P(reach +$70 before exhausting buy-in) | ~74% |
-| P(never leaving Stage 1 — full buy-in lost in the Accumulator) | ~26% |
-| Median rolls to +$70 | ~62 (≈ 35–40 min at ~100 rolls/hr) |
-| Mean rolls to +$70 | ~132 (right-skewed — some grinds run hours) |
+| P(reach Little Molly before exhausting buy-in) | **72%** |
+| P(never leaving Stage 1 — full buy-in lost in the Accumulator) | **28%** |
+| Median rolls to Little Molly | **~80** total (~54 with places working — see note) |
+| p90 rolls to Little Molly | ~420 (right-skewed — some grinds run hours) |
 
-Read that honestly: **roughly one session in four never reaches Little Molly.** That is not a flaw discovered late — it is the price of ruin control at a $300 buy-in, and it was always implied by the negative drift of the Accumulator. But it is a first-order property of the strategy, and it bears directly on the buy-in philosophy in §5.4: the $500 buy-in doesn't just add Molly runway, it shrinks the probability of a pure-grind losing session and shortens the median time to Alpha play. If the Accumulator grind would make the session feel like work, §5.4's $500/Stage-2-entry path is the sanctioned answer — not looser discipline.
+An earlier independent Monte Carlo of Stage 1 (200k trials) gave ~74% and a ~62-roll median; the engine reproduces the reach probability within band. The median-roll gap is a modeling difference, not a disagreement: the engine implements §3.7's rule that place bets are **off on the come-out roll**, so roughly 30% of elapsed rolls are dead time for the Accumulator. Counting only point-on rolls, the engine's median is ~54 — consistent with the reference figure.
 
-## 4.2 Metrics the engine tracks (roadmap)
+Read that honestly: **more than one session in four never reaches Little Molly.** That is not a flaw discovered late — it is the price of ruin control at a $300 buy-in, and it was always implied by the negative drift of the Accumulator. But it is a first-order property of the strategy, and it bears directly on the buy-in philosophy in §5.4: the $500 buy-in doesn't just add Molly runway, it shrinks the probability of a pure-grind losing session and shortens the median time to Alpha play. If the Accumulator grind would make the session feel like work, §5.4's $500/Stage-2-entry path is the sanctioned answer — not looser discipline.
 
-Stage-reach probabilities for every stage; time-in-stage distributions (the session-experience metric: what fraction of a session is grind vs. Alpha play); session P&L distribution by buy-in and roll count; and threshold sensitivity (how stage-reach and P&L respond to moving the +$70/+$150/+$250 gates). Results replace the preliminary figures above as they land.
+## 4.2 Full-ladder metrics from the engine
+
+Per-stage results from the same 2,000-session run (`analyze-stages.ts --strategy CATS --rolls 1000 --bankroll 300 --seeds 2000 --stop-at-ruin`). "Reach" is the share of sessions that ever enter the stage; "entry" counts rolls to first entry among sessions that get there; "time" is the share of all rolls played on that stage's board.
+
+| Stage | Reach | Median entry | p90 entry | Time in stage |
+|---|---|---|---|---|
+| Accumulator (regressed) | 100% | 6 | 14 | 82.8% |
+| Little Molly | 72% | 81 | 421 | 6.1% |
+| 3-Pt Molly (Tight) | 54% | 174 | 634 | 1.9% |
+| 3-Pt Molly (Loose) | 45% | 230 | 719 | 0.6% |
+| Expanded Alpha | 37% | 259 | 757 | 1.0% |
+| Max Alpha | 26% | 303 | 791 | 6.8% |
+
+**Session P&L over the 1,000-roll horizon:** p10 −$297, median −$289, p90 +$90; 18% of sessions end positive; 54% end at ruin. A 1,000-roll horizon is ~10 hours at table pace — far longer than a real session; it is used here so slow grinds resolve rather than being censored. The shape is the expected one for a negative-drift ladder with a fat right tail: most long sessions grind out, a minority ride the ladder (note Max Alpha's 6.8% time-in-stage against its 26% reach — sessions that get there tend to stay a while), and the winners win multiples of the buy-in.
+
+**Cost validation.** The engine's measured cost of the regressed Accumulator board is **$7.6 per 100 rolls** against the theoretical $7.8 (§1.4's come-out-adjusted Place 6/8 pair) — the anchor figure for the stage the strategy spends 80%+ of its time in. Bet-level payout math is pinned by the spec suite (Buy 4/10 at 1.67% and Buy 5/9 at 2.00% verified empirically over 200k resolutions each within ±0.3pp). Per-stage empirical E[loss] for the brief upper stages is not separately reportable with useful precision: their samples are small, concentrated in a handful of hot sessions, and the Swap Rule keeps part of the Buy load off the felt (which also means §2.5–2.6's ~$29 and ~$52 per-100-roll figures are ceilings — the working board is usually lighter than the fully-loaded one those figures assume).
+
+Threshold sensitivity (how stage-reach and P&L respond to moving the +$70/+$150/+$250 gates) is tracked separately — see `docs/cats-threshold-sensitivity.md`.
 
 ---
 

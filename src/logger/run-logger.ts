@@ -21,6 +21,7 @@ interface PlayerRollEntry {
   id: string;
   strategy: string;
   stageName?: string;
+  stagePlayed?: string;
   bankroll: { before: number; after: number; change: number };
   tableLoad: { before: number; after: number; betCount: number };
   activeBets: ActiveBetInfo[];
@@ -134,6 +135,7 @@ export class RunLogger {
         id: this.config.playerId,
         strategy: this.config.strategyName,
         ...(record.stageName !== undefined ? { stageName: record.stageName } : {}),
+        ...(record.stagePlayed !== undefined ? { stagePlayed: record.stagePlayed } : {}),
         bankroll: {
           before: record.bankrollBefore,
           after: record.bankrollAfter,
