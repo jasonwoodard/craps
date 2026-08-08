@@ -121,6 +121,13 @@ export class SimpleBetReconciler implements BetReconciler {
   }
 }
 
+/**
+ * Bet types whose flat amount is adjustable between rolls: the bet can be
+ * taken down and re-placed at a new amount. Contract bets (pass/come and
+ * their don't counterparts) are excluded — only their odds are adjustable.
+ */
+const RESIZABLE_TYPES = new Set(['place', 'field', 'hardways', 'ce', 'lay', 'buy']);
+
 export function diffBets(current: DesiredBet[], desired: DesiredBet[]): BetCommand[] {
   const commands: BetCommand[] = [];
   const key = (b: DesiredBet) => `${b.type}:${b.point ?? ''}`;
@@ -142,6 +149,11 @@ export function diffBets(current: DesiredBet[], desired: DesiredBet[]): BetComma
       if (db.odds) {
         commands.push({ type: 'updateOdds', betType: db.type, amount: db.odds, point: db.point });
       }
+    } else if (cb.amount !== db.amount && RESIZABLE_TYPES.has(db.type)) {
+      // Flat-amount change on a non-contract bet: take it down and re-place
+      // at the new amount (e.g. Place 6/8 regression $18 → $12).
+      commands.push({ type: 'remove', betType: cb.type, point: cb.point });
+      commands.push({ type: 'place', betType: db.type, amount: db.amount, point: db.point });
     } else if (cb.amount !== db.amount || cb.odds !== db.odds) {
       commands.push({ type: 'updateOdds', betType: db.type, amount: db.odds ?? 0, point: db.point });
     }

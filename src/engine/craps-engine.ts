@@ -113,6 +113,11 @@ export class CrapsEngine {
     this.settleBets(betsSnapshot);
 
     // Capture point 4: bankroll.after, tableLoad.after
+    // Snapshot semantics: tableLoadAfter is captured POST-settlement — winning
+    // bets have been paid and taken down, losing bets removed. On a roll where
+    // a bet wins (e.g. a $18 place 6 hit), it reflects only the bets still
+    // standing; the next roll's reconcile re-declares the board. It is NOT the
+    // board the strategy intends for the next roll.
     const tableLoadAfter = this.table.getPlayerBets(this.playerId)
       .reduce((sum, bet) => sum + bet.totalAmount, 0);
 

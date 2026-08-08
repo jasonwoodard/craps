@@ -78,6 +78,23 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       }
     });
 
+    it('reconciles the full board to Place 6 @ $12 + Place 8 @ $12 (load $24) on the roll after regression', () => {
+      // 4 (point), 6 (place 6 wins at $18, taken down → numberHit → regressed).
+      // The surviving place 8 is still on the table at $18. On the next roll's
+      // reconcile, the regressed board wants $12 on BOTH numbers — the stale
+      // $18 place 8 must be taken down and re-placed at $12, not left standing.
+      const { result } = runCATS([4, 6, 5, 5]);
+      const rollAfterTransition = result.rolls[2];
+      const place6 = rollAfterTransition.activeBets.find(b => b.type === 'place' && b.point === 6);
+      const place8 = rollAfterTransition.activeBets.find(b => b.type === 'place' && b.point === 8);
+      expect(place6).toBeDefined();
+      expect(place6!.amount).toBe(12);
+      expect(place8).toBeDefined();
+      expect(place8!.amount).toBe(12);
+      expect(rollAfterTransition.activeBets.length).toBe(2);
+      expect(rollAfterTransition.tableLoadBefore).toBe(24);
+    });
+
     it('advances to LittleMolly when profit reaches +$70 in AccumulatorRegressed', () => {
       // Need profit >= 70. Each place win at $12 = $14 profit.
       // But profit = bankroll - initial, and bankroll includes bet placements.
