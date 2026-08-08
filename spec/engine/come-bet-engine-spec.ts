@@ -167,14 +167,16 @@ describe('CrapsEngine — come bet bankroll settlement', () => {
       expect(result.finalBankroll).toBe(285);
     });
 
-    // Seven-out: flat always lost; odds OFF → returned to bankroll.
-    it('should lose flat and return odds to bankroll on seven-out (odds OFF)', () => {
+    // Seven-out (point phase): the off-by-default rule applies to the
+    // COME-OUT roll only — with the table point ON, come odds are working
+    // and lose with the flat. (If odds pushed on a seven-out, the odds bet
+    // would win at true odds and push on its loss — positive EV.)
+    it('should lose flat AND odds on a point-phase seven-out', () => {
       const { engine } = makeEngine({ dice: [7], tablePoint: 6 });
 
-      // Flat $10 taken (amount=0); odds $50 returned as push (amount===0 path).
-      // Bankroll: 140 + 50 (odds returned) = 190
+      // Flat $10 and odds $50 both taken. Bankroll: 140 (no change).
       const result = engine.run();
-      expect(result.finalBankroll).toBe(190);
+      expect(result.finalBankroll).toBe(140);
     });
   });
 });

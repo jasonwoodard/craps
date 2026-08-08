@@ -323,10 +323,11 @@ Resolution: Come point 9 made. Flat wins $10, odds win $45. Total come profit $5
 ---
 
 ```
-Scenario 015 — Come Bet + Odds, Seven-Out (Odds Off)
+Scenario 015 — Come Bet + Odds, Seven-Out (Point Phase — Odds Working)
 
 Assumptions: $10 table, 3× odds. Player bankroll $100.
-Pass line point: 8. Come point: 9. $30 come odds. Odds are OFF (default).
+Pass line point: 8. Come point: 9. $30 come odds. The off-by-default rule
+applies to the COME-OUT roll only — with the point ON, come odds are working.
 
 Step 1   Player   bets $10 Pass Line              Rail: $90
 Step 2   Dealer   rolls 8 (point established: 8)  Rail: $90
@@ -337,9 +338,11 @@ Step 6   Dealer   rolls 4 (no action)             Rail: $50
 Step 7   Dealer   rolls 7 (seven-out)             Rail: $50
 Step 8   Dealer   takes $10 Pass Line flat        Rail: $50
 Step 9   Dealer   takes $10 Come flat             Rail: $50
-Step 10  Dealer   pushes $30 come odds            Rail: $80
+Step 10  Dealer   takes $30 come odds             Rail: $50
 
-Resolution: Seven-out. Pass and come flats both lose. Come odds pushed (not lost). Down $20.
+Resolution: Seven-out during the point phase. Pass flat, come flat, and working
+come odds all lose. Down $50. (Odds pushed on a seven-out would make the odds
+bet positive-EV — win at true odds, push on loss — which no casino offers.)
 ```
 
 ---
@@ -368,11 +371,14 @@ Resolution: Seven-out. All three bets lost. Working odds are live and forfeit. D
 ---
 
 ```
-Scenario 017 — Come Bet + Odds, Come-Out Hits Come Point (Odds Off)
+Scenario 017 — Come Bet + Odds, Seven-Out Then New Come-Out
 
 Assumptions: $10 table, 3× odds. Player bankroll $100.
-Shooter sevens out. New come-out begins. Come-9 is established with $30 odds (OFF).
-Shooter rolls 9 on come-out — hits the come point while odds are off.
+Shooter sevens out with come-9 established ($30 odds working — point phase).
+A new come-out follows; 9 rolls, but the come bet no longer exists.
+(For come-out behavior of OFF odds on a surviving come bet, see
+docs/bets/come-bet-odds.md — that requires the shooter to MAKE the pass
+point, not seven out, so the come bet survives into the come-out roll.)
 
 Step 1   Player   bets $10 Pass Line              Rail: $90
 Step 2   Dealer   rolls 8 (point established: 8)  Rail: $90
@@ -381,25 +387,21 @@ Step 4   Dealer   rolls 9 (come point: 9)         Rail: $80
 Step 5   Player   places $30 come odds on 9       Rail: $50
 Step 6   Dealer   rolls 7 (seven-out)             Rail: $50
 Step 7   Dealer   takes $10 Pass Line             Rail: $50
-Step 8   Dealer   takes $10 Come flat             Rail: $40
-Step 9   Dealer   pushes $30 come odds            Rail: $70
-Step 10  Player   bets $10 Pass Line (new come-out) Rail: $60
-Step 11  Dealer   rolls 9 (come-out hits come point) Rail: $60
-Step 12  Dealer   pays $10 (come flat wins)        Rail: $70
-Step 13  Dealer   pushes $30 come odds (off — not paid) Rail: $100
-Step 14  Dealer   returns $10 come flat            Rail: $110
+Step 8   Dealer   takes $10 Come flat + $30 odds  Rail: $50
+Step 9   Player   bets $10 Pass Line (new come-out) Rail: $40
+Step 10  Dealer   rolls 9 (new point: 9)          Rail: $40
 
-Resolution: Come-out roll hits the come point. Flat wins $10. Odds pushed — not paid.
-Net come profit $10 only.
+Resolution: Seven-out takes pass flat, come flat, and working come odds ($50).
+Rolling 9 on the new come-out pays nothing — the come bet died with the shooter.
 ```
 
 ---
 
 ```
-Scenario 018 — Two Come Bets, Seven-Out (Both Odds Off)
+Scenario 018 — Two Come Bets, Seven-Out (Point Phase — Odds Working)
 
 Assumptions: $10 table, 3× odds. Player bankroll $200.
-Pass line point: 6. Come-5 with $30 odds. Come-9 with $30 odds. Both odds OFF.
+Pass line point: 6. Come-5 with $30 odds. Come-9 with $30 odds.
 
 Step 1   Player   bets $10 Pass Line               Rail: $190
 Step 2   Dealer   rolls 6 (point established: 6)   Rail: $190
@@ -412,12 +414,12 @@ Step 8   Player   places $30 come odds on 9        Rail: $110
 Step 9   Dealer   rolls 7 (seven-out)              Rail: $110
 Step 10  Dealer   takes $10 Pass Line              Rail: $110
 Step 11  Dealer   takes $10 Come-5 flat            Rail: $110
-Step 12  Dealer   pushes $30 Come-5 odds           Rail: $140
-Step 13  Dealer   takes $10 Come-9 flat            Rail: $140
-Step 14  Dealer   pushes $30 Come-9 odds           Rail: $170
+Step 12  Dealer   takes $30 Come-5 odds            Rail: $110
+Step 13  Dealer   takes $10 Come-9 flat            Rail: $110
+Step 14  Dealer   takes $30 Come-9 odds            Rail: $110
 
-Resolution: Seven-out. Three flats lost ($30 total). Two odds sets pushed ($60 returned).
-Net loss $30.
+Resolution: Seven-out during the point phase. Three flats and both working odds
+sets lost. Net loss $90.
 ```
 
 ---
@@ -442,12 +444,12 @@ Step 10  Dealer   pays $10 (come-5 flat)           Rail: $120
 Step 11  Dealer   pays $45 (come-5 odds at 3:2)    Rail: $165
 Step 12  Dealer   returns $10 flat + $30 odds      Rail: $205
 Step 13  Dealer   rolls 7 (seven-out)              Rail: $205
-Step 14  Dealer   takes $10 Pass Line              Rail: $195
-Step 15  Dealer   takes $10 Come-8 flat            Rail: $185
-Step 16  Dealer   pushes $30 Come-8 odds           Rail: $215
+Step 14  Dealer   takes $10 Pass Line              Rail: $205
+Step 15  Dealer   takes $10 Come-8 flat            Rail: $205
+Step 16  Dealer   takes $30 Come-8 odds            Rail: $205
 
-Resolution: Come-5 wins $55 profit. Seven-out takes pass and come-8 flat ($20).
-Come-8 odds pushed. Net session profit $15.
+Resolution: Come-5 wins $55 profit. Seven-out takes the pass flat, come-8 flat,
+and working come-8 odds (all already off the rail). Net session profit $5.
 ```
 
 ---

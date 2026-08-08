@@ -309,14 +309,16 @@ export class CrapsEngine {
           amount,
           payout: 0,
         });
-        // ComeBet seven-out with odds OFF: flat is lost (above), but odds were never
-        // at risk — they are returned to the player. Record as a separate push outcome.
-        if (bet instanceof ComeBet && oddsAmount > 0) {
+        // ComeBet come-out 7 with odds OFF: flat is lost (above), but odds were
+        // never at risk — they are returned to the player. The bet still HOLDS
+        // the odds (bet.oddsAmount > 0) only in that case; on a point-phase
+        // seven-out lose() zeroed them along with the flat.
+        if (bet instanceof ComeBet && bet.oddsAmount > 0) {
           outcomes.push({
             result: 'push',
             betType: bet.betType,
             point: bet.point,
-            amount: oddsAmount,
+            amount: bet.oddsAmount,
             payout: 0,
           });
         }
@@ -347,7 +349,7 @@ export class CrapsEngine {
 
         this.table.removeBet(bet);
       } else if (bet instanceof ComeBet && bet.amount === 0 && bet.oddsAmount > 0) {
-        // Any seven with odds OFF: flat always lost; credit odds back to bankroll
+        // Come-out 7 with odds OFF: flat lost; credit odds back to bankroll
         // without recording a win (odds were never at risk).
         this.bankroll += bet.oddsAmount;
         bet.oddsAmount = 0;
