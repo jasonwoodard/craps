@@ -1,7 +1,8 @@
-import { ReconcileEngine } from '../../src/dsl/strategy';
+import { ReconcileEngine, StrategyDefinition } from '../../src/dsl/strategy';
 import { GameState } from '../../src/dsl/game-state';
 import { PassLineAndPlace68, Place6And8Progressive, MartingaleField } from '../../src/dsl/strategies';
 import { CrapsTable } from '../../src/craps-table';
+import { CrapsEngine } from '../../src/engine/craps-engine';
 import { RiggedDice } from '../dice/rigged-dice';
 import { PassLineBet } from '../../src/bets/pass-line-bet';
 import { PlaceBet } from '../../src/bets/place-bet';
@@ -89,6 +90,85 @@ describe('ReconcileEngine', () => {
     // Should remove the place-5 bet
     expect(cmds.length).toBe(1);
     expect(cmds[0]).toEqual({ type: 'remove', betType: 'place', point: 5 });
+  });
+
+  describe('come bet contract persistence (CrapsEngine integration)', () => {
+    // A 3-point-Molly-style board: pass line + 2 come bets, all with odds.
+    const molly: StrategyDefinition = ({ bets }) => {
+      bets.passLine(10).withOdds(20);
+      bets.come(10).withOdds(20);
+      bets.come(10).withOdds(20);
+    };
+
+    it('traveled come bets persist and accumulate coverage across rolls', () => {
+      // 6 (point on 6), 5 (come #1 travels to 5), 9 (come #2 travels to 9), 3 (no action)
+      // Come bets go up one per roll (come box holds one bet), so the board
+      // builds: come #1 placed on roll 2, come #2 on roll 3.
+      const dice = new RiggedDice([6, 5, 9, 3]);
+      const engine = new CrapsEngine({ strategy: molly, bankroll: 500, rolls: 4, dice });
+      const result = engine.run();
+
+      // Roll 4 snapshot: pass line + come on 5 + come on 9; both declarations
+      // consumed by traveled bets, so no fresh transit come.
+      const bets = result.rolls[3].activeBets;
+      const comePoints = bets.filter(b => b.type === 'come' && b.point != null).map(b => b.point);
+      expect(comePoints).toContain(5);
+      expect(comePoints).toContain(9);
+      expect(bets.filter(b => b.type === 'come' && b.point == null).length).toBe(0);
+      expect(bets.filter(b => b.type === 'passLine').length).toBe(1);
+    });
+
+    it('applies odds to a come bet on the reconcile after it travels, not in transit', () => {
+      // 6 (point), 5 (come #1 travels to 5), 3 (no action)
+      const dice = new RiggedDice([6, 5, 3]);
+      const engine = new CrapsEngine({ strategy: molly, bankroll: 500, rolls: 3, dice });
+      const result = engine.run();
+
+      // Roll 2 snapshot: come #1 is in transit — no odds attached yet.
+      const transitCome = result.rolls[1].activeBets.find(b => b.type === 'come');
+      expect(transitCome).toBeDefined();
+      expect(transitCome!.odds).toBe(0);
+
+      // Roll 3 snapshot: come #1 traveled to 5 and now carries $20 odds.
+      const traveledCome = result.rolls[2].activeBets.find(b => b.type === 'come' && b.point === 5);
+      expect(traveledCome).toBeDefined();
+      expect(traveledCome!.odds).toBe(20);
+    });
+
+    it('caps come bets at the declared count once all declarations are covered', () => {
+      // 6 (point), 5, 9 (both comes travel), 8, 8 — no new comes beyond 2 total
+      const dice = new RiggedDice([6, 5, 9, 8, 8]);
+      const strategy: StrategyDefinition = ({ bets }) => {
+        bets.passLine(10);
+        bets.come(10);
+        bets.come(10);
+      };
+      const engine = new CrapsEngine({ strategy, bankroll: 500, rolls: 5, dice });
+      const result = engine.run();
+
+      // Once both declarations are consumed by traveled bets, no transit come
+      // is re-placed: exactly 2 come bets on the felt.
+      const bets = result.rolls[4].activeBets;
+      expect(bets.filter(b => b.type === 'come').length).toBe(2);
+      expect(bets.filter(b => b.type === 'come' && b.point == null).length).toBe(0);
+    });
+
+    it('does not attach pass line odds during the come-out roll', () => {
+      // Come-out roll: pass line up, odds declared — but odds cannot exist
+      // until a point is established.
+      const dice = new RiggedDice([6, 3]);
+      const engine = new CrapsEngine({ strategy: molly, bankroll: 500, rolls: 2, dice });
+      const result = engine.run();
+
+      const comeOutPass = result.rolls[0].activeBets.find(b => b.type === 'passLine');
+      expect(comeOutPass).toBeDefined();
+      expect(comeOutPass!.odds).toBe(0);
+
+      // After the point is set, the next reconcile attaches the odds.
+      const pointOnPass = result.rolls[1].activeBets.find(b => b.type === 'passLine');
+      expect(pointOnPass).toBeDefined();
+      expect(pointOnPass!.odds).toBe(20);
+    });
   });
 
   describe('postRoll', () => {

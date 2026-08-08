@@ -1,7 +1,7 @@
 import { CrapsTable } from '../craps-table';
 import { ReconcileEngine, StrategyDefinition } from '../dsl/strategy';
 import { GameState } from '../dsl/game-state';
-import { BetCommand, stringToBetType, betTypeToString } from '../dsl/bet-reconciler';
+import { BetCommand, stringToBetType, betTypeToString, oddsCommandMatchesBet } from '../dsl/bet-reconciler';
 import { Dice, LiveDice } from '../dice/dice';
 import { BaseBet } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
@@ -216,49 +216,50 @@ export class SharedTable {
     const betType = stringToBetType(cmd.betType);
     if (betType === undefined) return;
 
+    // Come/Don't Come removals with no point target in-transit bets only —
+    // traveled bets are contracts and are never removed by the reconciler.
+    const transitOnly =
+      cmd.point == null && (cmd.betType === 'come' || cmd.betType === 'dontCome');
+
     const playerBets = this.table.getPlayerBets(slot.playerId);
     for (const bet of playerBets) {
-      if (bet.betType === betType && (cmd.point == null || bet.point === cmd.point)) {
-        slot.bankroll += bet.totalAmount;
-        this.table.removeBet(bet);
-        break;
-      }
+      if (bet.betType !== betType) continue;
+      if (transitOnly ? bet.point != null : (cmd.point != null && bet.point !== cmd.point)) continue;
+      slot.bankroll += bet.totalAmount;
+      this.table.removeBet(bet);
+      break;
     }
   }
 
   private applyUpdateOddsCommand(cmd: BetCommand & { type: 'updateOdds' }, slot: PlayerSlot): void {
     const playerBets = this.table.getPlayerBets(slot.playerId);
     for (const bet of playerBets) {
-      if (bet instanceof PassLineBet || bet instanceof ComeBet) {
-        const typeStr = betTypeToString(bet.betType);
-        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
-          const oldOdds = bet.oddsAmount;
-          const newOdds = cmd.amount;
-          const diff = newOdds - oldOdds;
-          if (diff > 0 && slot.bankroll >= diff) {
-            slot.bankroll -= diff;
-            bet.oddsAmount = newOdds;
-          } else if (diff < 0) {
-            slot.bankroll += Math.abs(diff);
-            bet.oddsAmount = newOdds;
-          }
-          break;
+      const typeStr = betTypeToString(bet.betType);
+      if (typeStr !== cmd.betType) continue;
+      if (!oddsCommandMatchesBet(cmd, bet, this.table)) continue;
+
+      if (bet instanceof PassLineBet) {
+        // Covers ComeBet (subclass) — take-odds side.
+        const diff = cmd.amount - bet.oddsAmount;
+        if (diff > 0 && slot.bankroll >= diff) {
+          slot.bankroll -= diff;
+          bet.oddsAmount = cmd.amount;
+        } else if (diff < 0) {
+          slot.bankroll += Math.abs(diff);
+          bet.oddsAmount = cmd.amount;
         }
+        break;
       } else if (bet instanceof DontPassBet) {
-        const typeStr = betTypeToString(bet.betType);
-        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
-          const oldLay = bet.layOddsAmount;
-          const newLay = cmd.amount;
-          const diff = newLay - oldLay;
-          if (diff > 0 && slot.bankroll >= diff) {
-            slot.bankroll -= diff;
-            bet.layOddsAmount = newLay;
-          } else if (diff < 0) {
-            slot.bankroll += Math.abs(diff);
-            bet.layOddsAmount = newLay;
-          }
-          break;
+        // Covers DontComeBet (subclass) — lay-odds side.
+        const diff = cmd.amount - bet.layOddsAmount;
+        if (diff > 0 && slot.bankroll >= diff) {
+          slot.bankroll -= diff;
+          bet.layOddsAmount = cmd.amount;
+        } else if (diff < 0) {
+          slot.bankroll += Math.abs(diff);
+          bet.layOddsAmount = cmd.amount;
         }
+        break;
       }
     }
   }
