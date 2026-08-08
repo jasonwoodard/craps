@@ -371,28 +371,55 @@ Resolution: Seven-out. All three bets lost. Working odds are live and forfeit. D
 ---
 
 ```
-Scenario 017 — Come Bet + Odds, Seven-Out Then New Come-Out
+Scenario 017 — Come Bet + Odds, Come-Out Hits Come Point (Odds Off)
 
 Assumptions: $10 table, 3× odds. Player bankroll $100.
-Shooter sevens out with come-9 established ($30 odds working — point phase).
-A new come-out follows; 9 rolls, but the come bet no longer exists.
-(For come-out behavior of OFF odds on a surviving come bet, see
-docs/bets/come-bet-odds.md — that requires the shooter to MAKE the pass
-point, not seven out, so the come bet survives into the come-out roll.)
+The shooter MAKES the pass point, so the come-9 ($30 odds) survives into the
+new come-out roll with its odds off by default. The come-out roll then hits
+the come point: the flat wins 1:1; the off odds cannot win and are returned.
+(Note: the pass point must be MADE for this scenario to exist — a seven-out
+would take the come bet and its working odds with it; see Scenario 015.)
 
 Step 1   Player   bets $10 Pass Line              Rail: $90
 Step 2   Dealer   rolls 8 (point established: 8)  Rail: $90
 Step 3   Player   bets $10 Come                   Rail: $80
 Step 4   Dealer   rolls 9 (come point: 9)         Rail: $80
 Step 5   Player   places $30 come odds on 9       Rail: $50
-Step 6   Dealer   rolls 7 (seven-out)             Rail: $50
-Step 7   Dealer   takes $10 Pass Line             Rail: $50
-Step 8   Dealer   takes $10 Come flat + $30 odds  Rail: $50
-Step 9   Player   bets $10 Pass Line (new come-out) Rail: $40
-Step 10  Dealer   rolls 9 (new point: 9)          Rail: $40
+Step 6   Dealer   rolls 8 (point made)            Rail: $50
+Step 7   Dealer   pays $10 + returns $10 Pass Line Rail: $70
+Step 8   Dealer   rolls 9 (come-out hits come point) Rail: $70
+Step 9   Dealer   pays $10 (come flat wins 1:1)   Rail: $80
+Step 10  Dealer   returns $10 come flat           Rail: $90
+Step 11  Dealer   returns $30 come odds (off — not paid) Rail: $120
 
-Resolution: Seven-out takes pass flat, come flat, and working come odds ($50).
-Rolling 9 on the new come-out pays nothing — the come bet died with the shooter.
+Resolution: Come-out roll hits the come point with odds off. Flat wins $10;
+odds are returned intact, not paid. Net come profit $10 only.
+```
+
+---
+
+```
+Scenario 017b — Come Bet + Odds, Come-Out Seven (Odds Off)
+
+Assumptions: $10 table, 3× odds. Player bankroll $100.
+Same setup as 017 — the pass point is MADE, so the come-9 ($30 odds, off)
+survives into the come-out roll. The come-out roll is a 7: the contract flat
+is lost, but the off odds were never at risk and are returned.
+
+Step 1   Player   bets $10 Pass Line              Rail: $90
+Step 2   Dealer   rolls 8 (point established: 8)  Rail: $90
+Step 3   Player   bets $10 Come                   Rail: $80
+Step 4   Dealer   rolls 9 (come point: 9)         Rail: $80
+Step 5   Player   places $30 come odds on 9       Rail: $50
+Step 6   Dealer   rolls 8 (point made)            Rail: $50
+Step 7   Dealer   pays $10 + returns $10 Pass Line Rail: $70
+Step 8   Dealer   rolls 7 (come-out seven)        Rail: $70
+Step 9   Dealer   takes $10 come flat             Rail: $70
+Step 10  Dealer   returns $30 come odds (off — not at risk) Rail: $100
+
+Resolution: Come-out 7 takes the come flat (contract bet, always live) but
+the off odds are returned. Net come loss $10 only. Session ends even: +$10
+pass, −$10 come.
 ```
 
 ---

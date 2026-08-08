@@ -2,13 +2,19 @@
  * Integration tests: Scenarios 011–019 — Come Bets
  * Source of truth: docs/testing/integration-scenarios.md
  *
- * Note on seven-out odds (scenarios 015/017/018/019): come odds are off by
+ * Note on seven-out odds (scenarios 015/018/019): come odds are off by
  * default ONLY on the come-out roll. On a point-phase seven-out the odds
  * behind an established come bet are working and lose with the flat — the
  * originally documented "odds pushed on seven-out" behavior was
  * mathematically impossible (odds would win at true odds and push on their
  * loss: a positive-EV bet). Both the scenarios doc and these specs now
  * reflect the standard rule.
+ *
+ * Scenarios 017/017b document the come-out (point OFF) behavior of off
+ * odds on a surviving come bet: flat wins 1:1 / loses as a contract, odds
+ * returned intact either way. The pass point must be MADE for these to
+ * exist — a seven-out takes the come bet before any come-out roll happens
+ * (the original 017 setup was impossible for that reason).
  */
 
 import { PassLineBet } from '../../src/bets/pass-line-bet';
@@ -113,29 +119,47 @@ describe('Integration — Come Bets (Scenarios 011–019)', () => {
     s.expectRail(50);                    // Steps 9–11: down $50
   });
 
-  it('Scenario 017 — Come Bet + Odds, Seven-Out Then New Come-Out', () => {
-    // Seven-out ends the shooter with the point ON: come flat AND odds lost
-    // (working during the point phase). cm is removed from the table, so the
-    // following come-out 9 only establishes pl2's point.
-    const s = new ScenarioTable(100, [8, 9, 7, 9]);
-    const pl1 = new PassLineBet(10, 'player');
+  it('Scenario 017 — Come Bet + Odds, Come-Out Hits Come Point (Odds Off)', () => {
+    // The pass point is MADE, so the come-9 survives into the come-out roll
+    // with odds off. The come-out 9 hits the come point: flat wins 1:1, off
+    // odds are returned intact — not paid.
+    const s = new ScenarioTable(100, [8, 9, 8, 9]);
+    const pl = new PassLineBet(10, 'player');
     const cm = new ComeBet(10, 'player');
 
-    s.bet(pl1).expectRail(90);            // Step 1
+    s.bet(pl).expectRail(90);             // Step 1
     s.roll().expectRail(90);              // Step 2: roll 8 → point established
     s.bet(cm).expectRail(80);             // Step 3
     s.roll().expectRail(80);              // Step 4: roll 9 → come point 9
-    s.setOdds(cm, 30).expectRail(50);     // Step 5: place $30 odds
+    s.setOdds(cm, 30).expectRail(50);     // Step 5: place $30 odds (OFF by default)
 
-    s.roll();                              // Step 6: roll 7 → seven-out, flat + odds lost
-    s.expectRail(50);                      // after seven-out: rail $50
+    s.roll();                              // Step 6: roll 8 → point MADE
+    s.expectRail(70);                      // Step 7: PL pays $10 + $10 flat returned
 
-    // New come-out: place new pass line
-    const pl2 = new PassLineBet(10, 'player');
-    s.bet(pl2).expectRail(40);             // Step 10: bet $10 PL → rail $40
+    s.roll();                              // Step 8: come-out roll 9 → come point hit, odds off
+    // Steps 9–11: flat wins $10, $10 flat returned, $30 odds returned intact
+    s.expectRail(120);
+  });
 
-    s.roll();                              // Step 11: roll 9 → pl2 point 9 established; no cm on table
-    s.expectRail(40);                      // no come win; rail unchanged
+  it('Scenario 017b — Come Bet + Odds, Come-Out Seven (Odds Off)', () => {
+    // Same setup; the come-out roll is a 7. The contract flat is lost, but
+    // the off odds were never at risk and are returned.
+    const s = new ScenarioTable(100, [8, 9, 8, 7]);
+    const pl = new PassLineBet(10, 'player');
+    const cm = new ComeBet(10, 'player');
+
+    s.bet(pl).expectRail(90);             // Step 1
+    s.roll().expectRail(90);              // Step 2: roll 8 → point established
+    s.bet(cm).expectRail(80);             // Step 3
+    s.roll().expectRail(80);              // Step 4: roll 9 → come point 9
+    s.setOdds(cm, 30).expectRail(50);     // Step 5: place $30 odds (OFF by default)
+
+    s.roll();                              // Step 6: roll 8 → point MADE
+    s.expectRail(70);                      // Step 7: PL pays $10 + $10 flat returned
+
+    s.roll();                              // Step 8: come-out 7 → come flat taken
+    // Steps 9–10: $30 odds returned (off — not at risk)
+    s.expectRail(100);                     // net: +$10 pass, −$10 come — session even
   });
 
   it('Scenario 018 — Two Come Bets, Seven-Out (both odds working, lost)', () => {
