@@ -12,7 +12,9 @@ const VALID_BUY_POINTS = [4, 5, 6, 8, 9, 10];
  *   5 / 9  → 3:2
  *   6 / 8  → 6:5
  *
- * Vig = Math.max(1, Math.floor(winAmount × 0.05))
+ * Vig = Math.max(1, Math.floor(betAmount × 0.05)) — 5% of the BET, the
+ * standard casino convention ($20 Buy 4 → $1 vig → win nets $39, a 1.67%
+ * edge; charging on the win would double the effective edge to ~3.3%).
  * Net win = winAmount − vig
  * payOut = amount (original) + net win   (like PlaceBet, includes original stake)
  *
@@ -45,7 +47,7 @@ export class BuyBet extends BaseBet {
 
   win(_table: CrapsTable): void {
     const winAmount = BuyBet.computeTrueOddsWin(this.amount, this.point!);
-    const vig = Math.max(1, Math.floor(winAmount * 0.05));
+    const vig = Math.max(1, Math.floor(this.amount * 0.05));
     // payOut includes the original stake (matches PlaceBet convention).
     this.payOut = this.amount + winAmount - vig;
   }

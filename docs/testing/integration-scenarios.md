@@ -31,7 +31,7 @@ observable table action. The simulator must match every rail amount at every ste
 
 ### Buy Bets (vig on win only)
 
-Vig = `Math.floor(winAmount × 0.05)`, minimum $1.
+Vig = `Math.floor(betAmount × 0.05)`, minimum $1 — 5% of the bet, the standard casino convention.
 
 | Number | True odds | $20 buys | Vig | Net win |
 |--------|-----------|----------|-----|---------|
@@ -649,19 +649,19 @@ Net profit $8.
 Scenario 028 — Buy 4, Hit (Vig on Win Only)
 
 Assumptions: $10 table. Player bankroll $100.
-Point is ON (6). Buy 4 for $20. True odds 2:1. Wins $40. Vig = floor($40 × 0.05) = $2.
-Net win: $38.
+Point is ON (6). Buy 4 for $20. True odds 2:1. Wins $40. Vig = floor($20 × 0.05) = $1.
+Net win: $39.
 
 Step 1   Player   bets $10 Pass Line              Rail: $90
 Step 2   Dealer   rolls 6 (point established: 6)  Rail: $90
 Step 3   Player   bets $20 Buy 4                  Rail: $70
 Step 4   Dealer   rolls 4 (buy 4 hits)            Rail: $70
-Step 5   Dealer   pays $38 (net after $2 vig)     Rail: $108
-Step 6   Dealer   returns $20 buy bet             Rail: $128
-Step 7   Dealer   rolls 7 (seven-out)             Rail: $128
-Step 8   Dealer   takes $10 Pass Line             Rail: $118
+Step 5   Dealer   pays $39 (net after $1 vig)     Rail: $109
+Step 6   Dealer   returns $20 buy bet             Rail: $129
+Step 7   Dealer   rolls 7 (seven-out)             Rail: $129
+Step 8   Dealer   takes $10 Pass Line             Rail: $119
 
-Resolution: Buy 4 wins $38 net. Seven-out then takes pass line. Net profit $28.
+Resolution: Buy 4 wins $39 net. Seven-out then takes pass line. Net profit $29.
 ```
 
 ---
@@ -670,18 +670,18 @@ Resolution: Buy 4 wins $38 net. Seven-out then takes pass line. Net profit $28.
 Scenario 029 — Buy 10, Hit (Vig on Win Only)
 
 Assumptions: $10 table. Player bankroll $100.
-Point is ON (6). Buy 10 for $20. True odds 2:1. Wins $40. Vig = $2. Net win: $38.
+Point is ON (6). Buy 10 for $20. True odds 2:1. Wins $40. Vig = floor($20 × 0.05) = $1. Net win: $39.
 
 Step 1   Player   bets $10 Pass Line              Rail: $90
 Step 2   Dealer   rolls 6 (point established: 6)  Rail: $90
 Step 3   Player   bets $20 Buy 10                 Rail: $70
 Step 4   Dealer   rolls 10 (buy 10 hits)          Rail: $70
-Step 5   Dealer   pays $38 (net after $2 vig)     Rail: $108
-Step 6   Dealer   returns $20 buy bet             Rail: $128
-Step 7   Dealer   rolls 7 (seven-out)             Rail: $128
-Step 8   Dealer   takes $10 Pass Line             Rail: $118
+Step 5   Dealer   pays $39 (net after $1 vig)     Rail: $109
+Step 6   Dealer   returns $20 buy bet             Rail: $129
+Step 7   Dealer   rolls 7 (seven-out)             Rail: $129
+Step 8   Dealer   takes $10 Pass Line             Rail: $119
 
-Resolution: Buy 10 wins $38 net. Seven-out then takes pass line. Net profit $28.
+Resolution: Buy 10 wins $39 net. Seven-out then takes pass line. Net profit $29.
 ```
 
 ---

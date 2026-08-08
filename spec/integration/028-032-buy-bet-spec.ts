@@ -3,7 +3,7 @@
  * Source of truth: docs/testing/integration-scenarios.md
  *
  * BuyBet is implemented in src/bets/buy-bet.ts.
- * Vig = Math.max(1, Math.floor(winAmount × 0.05)); charged on win only.
+ * Vig = Math.max(1, Math.floor(betAmount × 0.05)); charged on win only.
  */
 
 import { PassLineBet } from '../../src/bets/pass-line-bet';
@@ -13,8 +13,8 @@ import { ScenarioTable } from './helpers/scenario-helper';
 describe('Integration — Buy Bets (Scenarios 028–032)', () => {
 
   it('Scenario 028 — Buy 4, Hit (Vig on Win Only)', () => {
-    // Point: 6. Buy 4 for $20. True odds 2:1 → win $40. Vig = floor($40×0.05) = $2. Net $38.
-    // payOut = $20 + $38 = $58. Then 7-out takes pass line.
+    // Point: 6. Buy 4 for $20. True odds 2:1 → win $40. Vig = floor($20×0.05) = $1. Net $39.
+    // payOut = $20 + $39 = $59. Then 7-out takes pass line.
     const s = new ScenarioTable(100, [6, 4, 7]);
     const pl = new PassLineBet(10, 'player');
     const b4 = new BuyBet(20, 4, 'player');
@@ -22,14 +22,14 @@ describe('Integration — Buy Bets (Scenarios 028–032)', () => {
     s.bet(pl);                          // −$10; rail $90
     s.roll();                            // roll 6 → point on
     s.bet(b4);                           // −$20; rail $70
-    s.roll();                            // roll 4 → buy hits; rail += $58 → $128
+    s.roll();                            // roll 4 → buy hits; rail += $59 → $129
     s.roll();                            // roll 7 → seven-out; pass lost (already deducted)
-    s.expectRail(128);
+    s.expectRail(129);
   });
 
   it('Scenario 029 — Buy 10, Hit (Vig on Win Only)', () => {
-    // Point: 6. Buy 10 for $20. True odds 2:1 → win $40. Vig $2. Net $38.
-    // payOut = $58. Then 7-out.
+    // Point: 6. Buy 10 for $20. True odds 2:1 → win $40. Vig = floor($20×0.05) = $1. Net $39.
+    // payOut = $59. Then 7-out.
     const s = new ScenarioTable(100, [6, 10, 7]);
     const pl = new PassLineBet(10, 'player');
     const b10 = new BuyBet(20, 10, 'player');
@@ -37,9 +37,9 @@ describe('Integration — Buy Bets (Scenarios 028–032)', () => {
     s.bet(pl);                           // −$10; rail $90
     s.roll();                             // roll 6 → point on
     s.bet(b10);                           // −$20; rail $70
-    s.roll();                             // roll 10 → buy hits; rail += $58 → $128
+    s.roll();                             // roll 10 → buy hits; rail += $59 → $129
     s.roll();                             // roll 7 → seven-out
-    s.expectRail(128);
+    s.expectRail(129);
   });
 
   it('Scenario 030 — Buy 4, Seven-Out (No Vig Charged)', () => {
