@@ -1,10 +1,10 @@
 # CATS: Craps Alpha-Transition Strategy
 
-**Version:** 1.1  | Copyright 2026 Jason Woodard
+**Version:** 1.2  | Copyright 2026 Jason Woodard
 
 **Table Basis:** $10 / $15 minimum, 5× odds  
 
-**Status:** Complete — Appendix removed; survival matrix integrated into §5.4
+**Status:** Complete — v1.2 correctness pass: standardized edge metrics (per-bet combined edge + expected loss per 100 rolls), corrected §1.1 and Turbo figures, reconciled Tight Molly loads, added §3.7 accounting definitions and §4 simulation findings
 
 ---
 
@@ -38,7 +38,7 @@ Two dice produce 36 equally likely outcomes. Everything in craps flows from this
 | 9 | 4 | 11.11% | Point number |
 | 10 | 3 | 8.33% | Point number |
 | 11 | 2 | 5.56% | Natural (win on come-out) |
-| 12 | 1 | 2.78% | Craps (push on come-out for Pass; lose for Come) |
+| 12 | 1 | 2.78% | Craps (lose on come-out for Pass and Come; push for Don't Pass/Don't Come) |
 
 The 7 appears more than any other number. This is not bad luck — it is the structural fact that every other strategic decision rests on.
 
@@ -74,7 +74,7 @@ All CATS stages are built from bets at the top of this table. Every bet below th
 
 | Bet | House Edge | CATS Stage |
 |---|---|---|
-| **Pass / Come + 3-4-5× Odds** | **0.37%** | Stage 3: 3-Point Molly (Loose) |
+| **Pass / Come + 5× flat Odds** | **0.33%** | Stage 3: 3-Point Molly (Loose) |
 | Pass / Come + 2× Odds | 0.61% | Stage 2: Little Molly |
 | Pass / Come + 1× Odds | 0.85% | Stage 2: Little Molly (conservative) |
 | Pass / Come (flat only) | 1.41% | Entry cost — unavoidable |
@@ -98,25 +98,31 @@ All CATS stages are built from bets at the top of this table. Every bet below th
 
 ## 1.4 Blended House Edge
 
-When multiple bets are live simultaneously, your effective edge is a weighted average across all money in action.
+When multiple bets are live simultaneously, no single "house edge" number describes the position. CATS uses two metrics, each answering a different question. Earlier drafts mixed them, which produced three different figures for the same configuration. v1.2 standardizes.
 
-**Formula:**
+**Metric 1 — Combined edge per bet resolved.** Expected loss divided by total money wagered, per resolved pass/come decision. Odds are counted only for the ~2/3 of decisions where a point exists. This is the standard casino-literature figure and answers: *how efficient is this configuration per dollar I actually wager?*
 
-$$\text{Blended HE} = \frac{\sum(\text{Bet}_i \times \text{HE}_i)}{\sum \text{Bet}_i}$$
+$$\text{Combined edge} = \frac{1.41\%}{1 + k \cdot \tfrac{2}{3}} \quad \text{(flat } k\times \text{ odds)}$$
 
-**CATS stage blended edges ($10 table, 5× odds):**
+**Metric 2 — Expected loss per 100 rolls.** Each bet's per-resolution edge times its resolution frequency, summed across the board. This answers the question the stage tables need: *what does an hour in this stage cost?* (~100 rolls/hr at typical table pace.) It is the only metric that makes stages with different stack sizes comparable — and it is immune to the odds-denominator illusion, since zero-edge odds add exactly $0 regardless of multiple.
 
-| Stage | Name | Flat bets | Odds | Total load | Blended HE |
-|---|---|---|---|---|---|
-| 1 | Accumulator (start) | $36 | — | $36 | 1.52% |
-| 1 | Accumulator (regressed) | $24 | — | $24 | 1.52% |
-| 2 | Little Molly | $20 | $40 (2×) | $60 | **0.470%** |
-| 3 | 3-Point Molly (Tight) | $30 | $60 (tier) | $90 | **0.470%** |
-| 3 | 3-Point Molly (Loose) | $30 | $150 (5× flat) | $180 | **0.235%** |
-| 4 | Expanded Alpha | $70 | $150 | $220 | **0.496%** |
-| 5 | Max Alpha | $110 | $150 | $260 | **0.727%** |
+**CATS stage costs ($10 table, 5× odds):**
 
-> **On the Loose Molly figure:** The original CATS document cited 0.37% for the 3-Point Molly. That figure reflects the standard casino 3-4-5× odds structure (3× on 4/10, 4× on 5/9, 5× on 6/8), which produces a weighted average of ~4.17× per bet. CATS uses flat 5× on all numbers, which is more aggressive and yields a lower blended edge of 0.235%. The strategy is better than previously stated.
+| Stage | Name | Flat bets | Odds | Total load | Core config edge (per bet) | E[loss] / 100 rolls |
+|---|---|---|---|---|---|---|
+| 1 | Accumulator (start) | $36 | — | $36 | 1.52% | ~$12 |
+| 1 | Accumulator (regressed) | $24 | — | $24 | 1.52% | ~$8 |
+| 2 | Little Molly | $20 | $40 (2×) | $60 | 0.61% | ~$8 |
+| 3 | 3-Point Molly (Tight) | $30 | $60–90 (tier) | $90–120 | ~0.58% | ~$13 |
+| 3 | 3-Point Molly (Loose) | $30 | $150 (5× flat) | $180 | **0.33%** | ~$13 |
+| 4 | Expanded Alpha | $70 | $150 | $220 | mixed (0.33% + 1.67%) | **~$29** |
+| 5 | Max Alpha | $110 | $150 | $260 | mixed (0.33% + 1.67% + 2.00%) | **~$52** |
+
+*(Per-roll components: each maintained $10 pass/come flat ≈ $0.042/roll; regressed Place 6/8 pair, come-out-adjusted ≈ $0.078/roll; Buy 4/10 pair ≈ $0.167/roll; Buy 5/9 pair ≈ $0.222/roll. Tight Molly odds and load vary with which numbers the Come bets land on.)*
+
+> **On the Loose Molly figure:** The original CATS document cited 0.37% for the 3-Point Molly, reflecting the standard 3-4-5× odds structure (weighted average ~4.17×). CATS uses flat 5× on all numbers, which improves the combined per-bet edge from 0.374% to **0.326%**. (An earlier draft claimed 0.235% — that figure came from assuming odds are always on, a metric artifact rather than a real improvement. Flat 5× is better than 3-4-5×, just not by that much.)
+
+> **What the two metrics reveal together:** Per-dollar efficiency improves dramatically up the ladder (1.52% → 0.33%), but per-roll cost does not fall — it rises, because load grows faster than edge shrinks. The Accumulator and Little Molly both cost ~$8/100 rolls; the Mollys ~$13; the Buy stages $29–52. What the ladder buys with that rising spend is coverage and fat-tail exposure, not cheaper play. Be honest with yourself about that trade — §2.5 and §2.6 price it explicitly.
 
 ---
 
@@ -124,7 +130,7 @@ $$\text{Blended HE} = \frac{\sum(\text{Bet}_i \times \text{HE}_i)}{\sum \text{Be
 
 Taking odds does not change your expected loss per hand. It changes how volatile your session is.
 
-| Odds multiple | Blended HE (pass line basis) | Std dev (units) | 7-out cost ($10 flat) |
+| Odds multiple | Combined edge (per bet resolved — Metric 1) | Std dev (units) | 7-out cost ($10 flat) |
 |---|---|---|---|
 | 0× | 1.41% | 1.00 | $10 |
 | 1× | 0.85% | 1.41 | $20 |
@@ -185,6 +191,8 @@ Where *e* = edge per unit, *B* = bankroll in units, *σ* = standard deviation pe
 | 3-Point Molly (Loose) | $180 | ~1–2 |
 | Expanded Alpha | $220 | ~1 |
 
+> **Caveat:** this matrix divides raw buy-in by load — a deliberately conservative floor. In practice the profit-funded thresholds guarantee extra cushion at every step-up: entering Loose Molly implies equity of at least $450–500 ($300 buy-in + $150–200 profit), which survives 2–3 fully loaded 7-outs, not 1–2. The matrix understates the protection the ladder itself provides.
+
 > This is why CATS funds each stage with profit before stepping up. The Accumulator is not optional preamble — it is the capitalization event that makes the Molly stages survivable with a standard buy-in.
 
 ---
@@ -195,13 +203,13 @@ Where *e* = edge per unit, *B* = bankroll in units, *σ* = standard deviation pe
 
 CATS is a five-stage escalation system. Each stage is funded by profit from the previous stage. You never increase table load with buy-in capital — only with accumulated profit. While you are in a stage, you are watching for the threshold that lets you step up to the next one.
 
-| # | Stage | Board | Blended HE | Step-Up threshold | Step-Down threshold |
+| # | Stage | Board | E[loss] / 100 rolls | Step-Up threshold | Step-Down threshold |
 |---|---|---|---|---|---|
-| 1 | **Accumulator** | Place 6/8 | 1.52% | Profit ≥ **+$70** | Starting state — no step-down |
-| 2 | **Little Molly** | Pass + 1 Come + 2× odds | ~0.61% | Profit ≥ **+$150** | Profit < +$70 or 2× consecutive 7-outs |
-| 3 | **3-Point Molly** | Pass + 2 Come + scaled odds | 0.37–0.61% | Profit ≥ **+$250** | Profit < +$150 or 2× consecutive 7-outs |
-| 4 | **Expanded Alpha** | Molly + Buy 4/10 | **0.496%** | Profit ≥ **+$400** | Profit < +$250 |
-| 5 | **Max Alpha** | Expanded Alpha + Buy 5/9 | **0.727%** | The long roll — see §2.5 | Profit < +$400 |
+| 1 | **Accumulator** | Place 6/8 | ~$8 | Profit ≥ **+$70** | Starting state — no step-down |
+| 2 | **Little Molly** | Pass + 1 Come + 2× odds | ~$8 | Profit ≥ **+$150** | Profit < +$70 or 2× consecutive 7-outs |
+| 3 | **3-Point Molly** | Pass + 2 Come + scaled odds | ~$13 | Profit ≥ **+$250** | Profit < +$150 or 2× consecutive 7-outs |
+| 4 | **Expanded Alpha** | Molly + Buy 4/10 | **~$29** | Profit ≥ **+$400** | Profit < +$250 |
+| 5 | **Max Alpha** | Expanded Alpha + Buy 5/9 | **~$52** | The long roll — see §2.5 | Profit < +$400 |
 
 > **Reading the threshold column:** While you are in Stage 1 (Accumulator), you are watching for profit ≥ +$70. That is the moment you step up to Stage 2. You are not thinking about exit conditions — you are thinking about the step-up target.
 
@@ -239,7 +247,7 @@ CATS is a five-stage escalation system. Each stage is funded by profit from the 
 | Place 6 and 8 | 6, 8 | $12 each | $18 each | $14 / $21 |
 | **Total** | All box numbers | **$64** | **$96** | Avg ~$15 |
 
-**Blended HE: 4.00%** — the speed tax.
+**Blended HE: 3.90%** — the speed tax. ($20 × 6.67% + $20 × 4.00% + $24 × 1.52% = $2.50 ÷ $64.) Per-roll, the full board bleeds ~$0.67/roll — acceptable for the intended 1–2 roll dwell before regression, ruinous if left working. The regression step is not optional.
 
 **Execution:**
 1. Point is established — drop the full Across load
@@ -272,8 +280,8 @@ CATS is a five-stage escalation system. Each stage is funded by profit from the 
 | $10 | $10 | $10 | $20 | $60 |
 | $15 | $15 | $15 | $30 | $90 |
 
-**Blended HE: 0.470%**
-> ($20 × 1.41% + $40 × 0.00%) ÷ $60 = **0.470%** — a 3× improvement over the Accumulator's 1.52%.
+**Combined edge: 0.61% per bet resolved | E[loss]: ~$8 / 100 rolls**
+> Per dollar wagered, this is a ~2.5× efficiency improvement over the Accumulator (1.52% → 0.61%). Note what does *not* improve: expected cost per roll stays at ~$8, because the load more than doubles while the edge falls. The step-up buys efficiency and a second covered number — not cheaper play.
 
 **Odds rule:**
 
@@ -289,13 +297,13 @@ CATS is a five-stage escalation system. Each stage is funded by profit from the 
 
 **Step-Down rule:** Return to Accumulator if profit falls below +$70 OR after 2 consecutive 7-outs in Little Molly.
 
-> **On the 2 consecutive 7-out rule:** This trigger is not profit-based by design. Two immediate 7-outs in a row is a signal about table behavior, not just your stack. It suggests shooters are failing to sustain hands — a short-hand pattern that makes the Molly stages structurally punishing regardless of cushion. Profit is a lagging indicator of what already happened. Consecutive 7-out frequency is a leading indicator of what is likely to happen next. Step down, let the Accumulator run, and reassess.
+> **On the 2 consecutive 7-out rule:** This trigger is not profit-based by design — but be clear-eyed about what it is and is not. Dice are memoryless: two consecutive 7-outs have zero predictive power over the next roll. The rule's value is *pre-commitment*: it fires automatically at exactly the moment your in-the-moment judgment is most compromised — right after two straight losses, when the instinct is to chase. It converts a tilt-prone decision into a mechanical one, throttles load while your read of the table resets, and costs almost nothing in EV terms (the Accumulator bleeds the same ~$8/100 rolls as Little Molly). Step down, let the Accumulator run, and reassess with a clear head.
 
 ---
 
 ## 2.4 Stage 3: 3-Point Molly
 
-**Purpose:** The primary Alpha stage. Three numbers covered, blended edge at 0.37% (Loose) or better. This is where casino money starts hunting fat tails.
+**Purpose:** The primary Alpha stage. Three numbers covered at the best per-dollar efficiency in CATS — 0.326% combined edge in Loose mode. This is where casino money starts hunting fat tails.
 
 **Board (steady state — 3 numbers covered):**
 
@@ -304,7 +312,7 @@ CATS is a five-stage escalation system. Each stage is funded by profit from the 
 | $10 | $30 | $150 (5× max) | $180 |
 | $15 | $45 | $225 (5× max) | $270 |
 
-**Blended HE (Loose): 0.37%**
+**Combined edge (Loose): 0.326% per bet resolved | E[loss]: ~$13 / 100 rolls**
 
 ### Tight vs. Loose: Two modes of the same stage
 
@@ -316,12 +324,12 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 
 | Coverage state | 6/8 odds | 5/9 odds | 4/10 odds | Approx. load |
 |---|---|---|---|---|
-| Sweet spot (6/8 + 5/9 covered) | 3× | 2× | 1× | ~$120 |
+| Sweet spot (6/8 + 5/9 covered) | 3× | 2× | 1× | ~$90–120 (coverage-dependent) |
 | Middle (6/8, no 5/9) | 2× | — | 1× | ~$100 |
 | Rough (no 6/8) | 1× | 1× | 1× | ~$60 |
 
-**Blended HE (Tight, sweet spot): 0.470%**
-> ($30 × 1.41% + $60 × 0.00%) ÷ $90 = **0.470%** — identical to Little Molly's profile. Same edge efficiency, more numbers covered, higher load.
+**Combined edge (Tight): ~0.58% per bet resolved | E[loss]: ~$13 / 100 rolls**
+> Tight's load and odds total depend on which numbers the Come bets land on — with 6 *and* 8 covered, tier odds run $80 on $30 flat (~$110 load); with one of them, $60 on $30 (~$90). What is constant: the flat bets. Tight and Loose carry identical flats ($30), so they have **identical expected cost per roll** (~$13/100). The Tight/Loose choice moves zero expected dollars — it is purely a variance dial, which is exactly why it is safe to key it to cushion depth and table read.
 
 **Loose Molly** — max 5× odds on all numbers, all the time:
 
@@ -339,7 +347,7 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 >
 > Standard 3-Point Molly play takes maximum odds on all numbers at all times. This is mathematically correct in isolation — the odds bet has zero edge regardless of multiple, so more is always better. CATS departs from this in Tight mode, and the reason is cushion mechanics, not edge math.
 >
-> When a player first steps up from Little Molly, their profit cushion is at +$150 — the minimum funded threshold. Full Loose Molly load is $180. A single 7-out in Loose mode at step-up leaves the player $30 below buy-in. Tight mode reduces that 7-out cost to ~$90 while maintaining the same 0.470% blended edge as Little Molly — buying time to either deepen the cushion or confirm the shooter before committing maximum variance.
+> When a player first steps up from Little Molly, their profit cushion is at +$150 — the minimum funded threshold. Full Loose Molly load is $180. A single 7-out in Loose mode at step-up leaves the player $30 below buy-in. Tight mode reduces that 7-out cost to ~$90–110 at zero expected-value cost — Tight and Loose share the same flats and therefore the same ~$13/100-roll expected loss — buying time to either deepen the cushion or confirm the shooter before committing maximum variance. The protection Tight provides is variance reduction, purchased free.
 >
 > The transition from Tight to Loose is not a concession to conservatism — it is sequencing. The Accumulator existed to fund this moment. Once cushion clears +$200 and the table read is favorable, Loose Molly is the correct expression of everything the earlier stages built toward: maximum odds, minimum edge, full fat-tail exposure.
 >
@@ -355,9 +363,9 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 
 ## 2.5 Stage 4: Expanded Alpha
 
-**Purpose:** Add Buy 4/10 to the Molly. The 4 and 10 have the highest leverage factor in the casino at this edge level — a $20 Buy pays $40 (2:1). Adding them at 1.67% edge into a 0.37% base is an acceptable trade for the coverage and payout they add.
+**Purpose:** Add Buy 4/10 to the Molly. The 4 and 10 have the highest leverage factor in the casino at this edge level — a $20 Buy pays $39 net of the $1 win-vig (2:1 less commission). Adding them at 1.67% edge into a 0.326% base is a trade for targeted coverage and payout — priced honestly below.
 
-> ⚠️ **Confirm win-vig rule before placing Buy bets.** If the casino charges 5% on every Buy bet (not only on wins), edge is 4.76% — worse than Place 4/10. Ask the dealer: *"Do you charge the vig only on winning Buy bets?"* If yes: 1.67%. If no: skip the Buy bets entirely and let Come bets cover those numbers at 0.37%.
+> ⚠️ **Confirm win-vig rule before placing Buy bets.** If the casino charges 5% on every Buy bet (not only on wins), edge is 4.76% — worse than Place 4/10. Ask the dealer: *"Do you charge the vig only on winning Buy bets?"* If yes: 1.67%. If no: skip the Buy bets entirely and let Come bets cover those numbers at 0.326% combined.
 
 **Board:**
 
@@ -366,10 +374,10 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 | $10 | $180 | $20 | $20 | $220 |
 | $15 | $270 | $30 | $30 | $330 |
 
-**Blended HE: 0.496%**
-> ($30 × 1.41% + $150 × 0.00% + $40 × 1.67%) ÷ $220 = **0.496%** — a modest rise from the Loose Molly's 0.235%, absorbed by the leverage the Buy 4/10 adds.
+**E[loss]: ~$29 / 100 rolls — more than double the Loose Molly's ~$13**
+> The honest price: Buy bets resolve on 9 of 36 rolls, so their edge is charged relentlessly — the Buy 4/10 pair adds ~$17/100 rolls on its own. Know the alternative before paying it: a fourth Come bet adds long-roll action at ~$4/100 rolls, roughly a quarter of the Buys' cost. What the ~$13/100-roll premium purchases is *immediate, targeted* coverage of the 4 and 10 — Come bets wander to whatever number rolls. At +$400 cushion, buying certainty of coverage for a long-roll hunt is a defensible trade. It is a trade, not a free upgrade.
 
-**The Swap Rule:** If a Come bet travels to 4 or 10 while a Buy is active on that number — pull the Buy immediately. The Come bet + 5× odds at 0.37% blended dominates the Buy at 1.67%. Tell the dealer: *"Take down my Buy [number]."* You just improved your edge on that number by a factor of 4.5× at no cost.
+**The Swap Rule:** If a Come bet travels to 4 or 10 while a Buy is active on that number — pull the Buy immediately. The Come bet + 5× odds at 0.326% combined edge dominates the Buy at 1.67%. Tell the dealer: *"Take down my Buy [number]."* You just improved your per-dollar edge on that number roughly 5× at no cost.
 
 **Step-Up threshold:** Profit ≥ +$400. Step up to Max Alpha.
 
@@ -388,10 +396,10 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 | $10 | $220 | $20 | $20 | $260 |
 | $15 | $330 | $30 | $30 | $390 |
 
-**Blended HE: 0.727%**
-> ($30 × 1.41% + $150 × 0.00% + $40 × 1.67% + $40 × 2.00%) ÷ $260 = **0.727%** — the highest in CATS, still less than half the Accumulator's 1.52%.
+**E[loss]: ~$52 / 100 rolls — the most expensive stage in CATS, roughly 4× the Loose Molly**
+> The Buy 5/9 pair resolves on 10 of 36 rolls and adds ~$22/100 rolls on top of Expanded Alpha's ~$29. Per dollar wagered the stage still looks respectable, but per hour it is by far the priciest configuration in the system. That is not a reason to skip it — it is the reason Stage 5 is gated behind +$400 of accumulated profit and framed as long-roll infrastructure rather than a default posture. Enter it knowing the meter is running.
 
-**Note on Buy 5/9 edge:** At 2.00%, the Buy 5/9 is the highest-edge component in CATS. At Stage 5 cushion levels (+$400), this is an acceptable cost for the coverage. The Molly's Come bets already cover 5 and 9 at blended 0.37% — the Buy bets add *additional* action at those numbers, capturing more of a long shooter's production.
+**Note on Buy 5/9 edge:** At 2.00%, the Buy 5/9 is the highest-edge component in CATS. At Stage 5 cushion levels (+$400), this is an acceptable cost for the coverage. The Molly's Come bets already cover 5 and 9 at 0.326% combined edge — the Buy bets add *additional* action at those numbers, capturing more of a long shooter's production.
 
 **Step-Down rule:** Return to Expanded Alpha if profit falls below +$400.
 
@@ -458,7 +466,7 @@ The 3-Point Molly is played in one of two modes depending on cushion depth and t
 
 | Table min | Pass/Come flat | 6/8 odds (3×) | 5/9 odds (2×) | 4/10 odds (1×) | Sweet spot load |
 |---|---|---|---|---|---|
-| $10 | $10 | $30 | $20 | $10 | ~$120 |
+| $10 | $10 | $30 | $20 | $10 | ~$90–120 |
 | $15 | $15 | $45 | $30 | $15 | ~$180 |
 
 **Loose — max odds:**
@@ -521,7 +529,7 @@ If a Come bet travels to a number with an active Buy bet:
 2. Tell the dealer: *"Take down my Buy [number]"*
 3. Take full 5× odds on the Come bet
 
-The Come + odds at 0.37% blended replaces the Buy at 1.67%. You improve your edge on that number by 4.5× at no cost.
+The Come + odds at 0.326% combined edge replaces the Buy at 1.67%. You improve your per-dollar edge on that number roughly 5× at no cost.
 
 ---
 
@@ -536,7 +544,36 @@ The Come + odds at 0.37% blended replaces the Buy at 1.67%. You improve your edg
 
 ---
 
+## 3.7 Accounting Definitions
 
+The step-up and step-down thresholds are meaningless without a definition of what is being measured. CATS uses these conventions — the simulator implements the same ones:
+
+**Profit** = (rack + working bets at face value) − buy-in, evaluated after each roll's payouts settle. Working bets count at face: a $60 Molly board with $240 in the rack after a $300 buy-in is +$0, not −$60. Do not use rack-only accounting — with $180 on the felt, the two definitions differ by more than a full stage gate.
+
+**Place and Buy bets are OFF on the come-out roll** (the standard table default). All per-roll cost figures in §1.4 assume this.
+
+**The consecutive 7-out counter** resets on any collected win and carries across stage transitions — stepping down does not clear it; a win does.
+
+---
+
+# §4 Simulation Findings
+
+*CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what simulation shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. Preliminary figures below are from an independent Monte Carlo of Stage 1 as written (200k trials); they are being reproduced and extended in the repo's TypeScript engine, which implements CATS through Stage 3 as `CATS()` in `src/dsl/strategies-staged.ts`.*
+
+## 4.1 Stage 1 gate: how often the path gets trodden
+
+| Metric | Result ($10 table, $300 buy-in) |
+|---|---|
+| P(reach +$70 before exhausting buy-in) | ~74% |
+| P(never leaving Stage 1 — full buy-in lost in the Accumulator) | ~26% |
+| Median rolls to +$70 | ~62 (≈ 35–40 min at ~100 rolls/hr) |
+| Mean rolls to +$70 | ~132 (right-skewed — some grinds run hours) |
+
+Read that honestly: **roughly one session in four never reaches Little Molly.** That is not a flaw discovered late — it is the price of ruin control at a $300 buy-in, and it was always implied by the negative drift of the Accumulator. But it is a first-order property of the strategy, and it bears directly on the buy-in philosophy in §5.4: the $500 buy-in doesn't just add Molly runway, it shrinks the probability of a pure-grind losing session and shortens the median time to Alpha play. If the Accumulator grind would make the session feel like work, §5.4's $500/Stage-2-entry path is the sanctioned answer — not looser discipline.
+
+## 4.2 Metrics the engine tracks (roadmap)
+
+Stage-reach probabilities for every stage; time-in-stage distributions (the session-experience metric: what fraction of a session is grind vs. Alpha play); session P&L distribution by buy-in and roll count; and threshold sensitivity (how stage-reach and P&L respond to moving the +$70/+$150/+$250 gates). Results replace the preliminary figures above as they land.
 
 ---
 
@@ -589,20 +626,20 @@ Imagine a shooter establishes a point of 6. They roll nine times before hitting 
 
 Both players pay the same expected cost. Player B's session is dramatically more volatile — bigger wins, bigger losses, same long-run average. This is not recklessness. It is the correct expression of fat-tail hunting when cushion supports it.
 
-### The Little Molly / Tight Molly identity
+### The Little Molly / Tight Molly relationship
 
-When the blended edge calculations were run, a striking result emerged: Little Molly (2× flat odds, $60 load) and 3-Point Molly Tight (tier odds, $90 load) both compute to **0.470% blended edge** — identical.
+An earlier draft celebrated a "striking identity": Little Molly and Tight Molly both computed to 0.470% blended edge. v1.2 retires that claim — it was an arithmetic artifact of the old snapshot metric (any configuration whose aggregate odds happen to run 2× its flats produces the same number), and it held only for particular coverage draws. Here is the corrected comparison:
 
-| Configuration | Flat bets | Odds | Load | Blended HE |
-|---|---|---|---|---|
-| Little Molly | $20 @ 1.41% | $40 @ 0% | $60 | **0.470%** |
-| 3-Point Molly Tight | $30 @ 1.41% | $60 @ 0% | $90 | **0.470%** |
+| Attribute | Little Molly | 3-Point Molly Tight |
+|---|---|---|
+| Flat bets | $20 | $30 |
+| Odds (aggregate) | $40 | $60–90 (coverage-dependent) |
+| E[loss] / 100 rolls | ~$8 | ~$13 |
+| Numbers covered | 2 | 3 |
+| Win:lose per roll | 1.33–1.67:1 | 1.83–2.33:1 |
+| 7-out cost | $60 | $90–120 |
 
-Same edge efficiency. Different load. Different coverage.
-
-What this means in practice: when you step from Little Molly to Tight Molly, you are not buying a better edge. You are buying *more numbers covered* at the same edge cost — moving from 2 numbers to 3, from 1.33–1.67:1 win/lose ratio to 1.83–2.33:1, at a $30 increase in 7-out exposure. The step-up is a variance decision, not an efficiency decision. You are accepting more volatility in exchange for better coverage and a higher win rate per roll — funded by the cushion you built to absorb exactly that volatility.
-
-This is what the math looks like when it confirms the operations. Little Molly was not designed to share an edge profile with Tight Molly. It turned out that way because the tier rule is calibrated correctly.
+What the step-up actually buys: a third flat bet (~+$4/100 rolls in expected cost) purchases a third covered number and a meaningfully better win rate per roll, at a $30–60 increase in 7-out exposure. The step-up is mostly a variance-and-coverage decision with a small, known expected cost — funded by the cushion you built to absorb exactly that volatility. Within Stage 3, the Tight/Loose choice then moves *zero* expected dollars (identical flats) — that dial is pure variance, and §2.4 keys it to cushion accordingly.
 
 ---
 
@@ -626,7 +663,7 @@ The operations do not change based on table read. What changes is your *pace* th
 
 On a hot table: step up to threshold promptly. Shift to Loose Molly once at +$200. Let the variance run — this is what the cushion is for.
 
-On a cold or choppy table: stay in Little Molly even after reaching the +$150 step-up threshold. You are buying more information at 0.470% edge. Wait for a shooter who sustains before committing to Loose Molly at $180 load. The step-up threshold is a *permission*, not a command.
+On a cold or choppy table: stay in Little Molly even after reaching the +$150 step-up threshold. Extending Little Molly costs nothing extra in expected dollars — it runs one fewer flat than the Molly (~$8 vs ~$13 per 100 rolls), so waiting actually *reduces* your expected loss while you watch. What you forgo is coverage and fat-tail exposure, not efficiency. Wait for a shooter who sustains before committing to Loose Molly at $180 load. The step-up threshold is a *permission*, not a command.
 
 > #### 📐 Sidebar: The Consecutive 7-Out Rule
 >
@@ -650,7 +687,7 @@ There is a version of CATS where you buy in for $300, grind the Accumulator, and
 
 The $300 buy-in is not a limitation — it is a feature. It constrains early variance, forces grind discipline, and makes the step-up moments feel earned. The Accumulator phase at $300 is not overhead. It is part of the game.
 
-The $600 direct entry skips the grind and starts where the math is best — 0.235% edge from the first roll. The cost: all $600 is your own money from the start. A bad run in Stage 3 hurts differently when the cushion is buy-in rather than accumulated profit. The variance is identical. The psychological frame is not.
+The $600 direct entry skips the grind and starts where the math is best — 0.326% combined edge from the first roll. The cost: all $600 is your own money from the start. A bad run in Stage 3 hurts differently when the cushion is buy-in rather than accumulated profit. The variance is identical. The psychological frame is not.
 
 **The multi-session path** is the natural synthesis. Run $300 grind sessions first. Bank any profit. If Sessions 1 and 2 go well, Session 3 becomes the Power Session — enter at Stage 3 with a larger buy-in funded partly by earlier winnings. You get the direct entry *and* a casino-funded cushion. This is the Alpha-Transition logic applied across a trip rather than within a single session.
 
@@ -676,23 +713,23 @@ The $500 buy-in doubles Molly runway without changing the stage structure. If va
 
 Every stage in CATS occupies a position on two axes: how much edge you are paying, and how much variance you are carrying. Understanding where each stage sits on that map is what tells you whether a given improvisation is calibrated caution or an edge violation.
 
-| Stage | Mode | Blended HE | Variance | 7-out cost ($10) | What you are doing |
+| Stage | Mode | E[loss] / 100 rolls | Variance | 7-out cost ($10) | What you are doing |
 |---|---|---|---|---|---|
-| Accumulator | — | 1.52% | Low | $24 | Paying to generate capital. Variance is controlled by design. |
-| Little Molly | Basic (2× flat) | 0.470% | Low-Med | $60 | Same edge profile as Tight Molly, lower load. Reading the table. |
-| 3-Point Molly | Tight (tier odds) | 0.470% | Medium | $90 | Same edge as Little Molly, better coverage. Cushion-aware. |
-| 3-Point Molly | Loose (5× flat) | 0.235% | High | $180 | Minimum achievable edge. Maximum fat-tail exposure. |
-| Expanded Alpha | Loose + Buy 4/10 | 0.496% | High | $220 | Small edge cost for significant leverage on 4/10. |
-| Max Alpha | Expanded + Buy 5/9 | 0.727% | Very High | $260 | Highest edge in Alpha stages. Built for the long roll. |
-| Hardways / Props | — | 9–17% | Very High | Varies | **Off the map.** Not a variance choice — a tax. |
+| Accumulator | — | ~$8 | Low | $24 | Paying to generate capital. Variance is controlled by design. |
+| Little Molly | Basic (2× flat) | ~$8 | Low-Med | $60 | Same expected cost as the Accumulator, better efficiency per dollar. Reading the table. |
+| 3-Point Molly | Tight (tier odds) | ~$13 | Medium | $90–120 | Same expected cost as Loose, less variance. Cushion-aware. |
+| 3-Point Molly | Loose (5× flat) | ~$13 | High | $180 | Best per-dollar edge in CATS (0.33%). Maximum fat-tail exposure. |
+| Expanded Alpha | Loose + Buy 4/10 | ~$29 | High | $220 | Double the burn rate, purchased for targeted 4/10 coverage. |
+| Max Alpha | Expanded + Buy 5/9 | ~$52 | Very High | $260 | 4× the Molly's burn rate. Built for the long roll, gated at +$400. |
+| Hardways / Props | — | Off the chart | Very High | Varies | **Off the map.** Not a variance choice — a tax. |
 
 Three things this map shows that prose cannot:
 
 First, the **edge cliff between CATS and non-CATS bets** is stark. The worst CATS stage (Accumulator at 1.52%) is still less than one-sixth the edge of the cheapest Hardway (9.09%). These are not comparable decisions on a spectrum — they are different categories.
 
-Second, **Little Molly and Tight Molly share an edge profile.** When you delay stepping up from Little Molly, you are staying at 0.470% edge instead of moving to 0.235% (Loose). That costs efficiency — but it costs it at a rate that is still inside the CATS framework. The cost of buying information is measured in fractions of a percent.
+Second, **delaying step-up is free — or better.** Little Molly bleeds ~$8/100 rolls against the Molly's ~$13, so extending it to read the table *saves* expected dollars. What you pay for patience is forgone coverage and fat-tail exposure — upside variance, not efficiency. The old framing (that waiting "costs edge") had the sign backwards; the cost of buying information here is zero.
 
-Third, **Loose Molly is the inflection point** — the stage where edge drops below 0.25% and variance goes high simultaneously. Everything in CATS before this moment exists to make this moment survivable. Everything after it exists to extract value from it.
+Third, **Loose Molly is the inflection point** — the best per-dollar edge in CATS (0.326% combined) at the same expected cost per roll as Tight, with maximum variance. Everything in CATS before this moment exists to make this moment survivable. Everything after it *raises* the burn rate to buy coverage — the map's right-hand stages are purchases, not upgrades.
 
 CATS gives you a framework, not a cage. Once you understand why every rule exists, you know which ones have latitude and which are fixed by math that doesn't care how you feel about the next roll.
 
@@ -704,7 +741,7 @@ These are edge violations. No read, no feel, no hot streak changes them.
 |---|---|
 | Do not press Place 6/8 during Accumulator | 1.52% edge regardless of bet size. Every pressed dollar is a dollar not in odds at 0% |
 | Do not take Hardways, Big 6/8, or Prop bets | 9–16.67% edge. No session justifies these |
-| Do not play Place 5/9 or Place 4/10 | 4.00–6.67% edge. Buy instead, or let Come bets cover them |
+| Do not play Place 5/9 or Place 4/10 | 4.00–6.67% edge. Buy instead, or let Come bets cover them. *Sole exception: Turbo CATS (§2.2), where full-board Place bets ride for an intended 1–2 roll dwell before regression* |
 | Do not stay in a Molly stage after 2 consecutive 7-outs | The trigger exists because in-moment judgment is compromised after consecutive losses |
 | Always confirm win-vig before Buy bets | If casino charges on all bets (not wins only): Buy 4/10 edge jumps from 1.67% to 4.76% |
 
@@ -717,7 +754,7 @@ Improvising in CATS means adjusting timing and odds multiples. Nothing else. The
 | When to step up | Step up at threshold | Can *delay* step-up on cold table — threshold is permission, not command |
 | Odds multiple in Stage 3 | Tight below +$200, Loose above | Can stay Tight above +$200 if table reads uncertain |
 | Turbo vs. Standard Accumulator | Turbo on warm tables | Standard on any table — Turbo is a speed option, not required |
-| Staying in Little Molly | Step up at +$150 | Can extend Little Molly to read additional shooters — costs 0.470% edge while you watch |
+| Staying in Little Molly | Step up at +$150 | Can extend Little Molly to read additional shooters — costs nothing in expected dollars; forgoes coverage and upside while you watch |
 | Stage-down timing | Step down at threshold | Can step down *earlier* if table clearly cold — below threshold is required, above it is optional |
 
 ### What varying looks like in practice
@@ -736,7 +773,7 @@ The two columns above can feel abstract. Here is a concrete roll sequence showin
 
 What the player varied: *when* to step up, *which mode* of Molly to play, and *when* to shift from Tight to Loose. What they never varied: bet selection, odds on 0% bets, or the fundamental stage structure.
 
-**The distinction that matters:** staying in Little Molly two extra shooters costs you edge efficiency — you're at 0.470% instead of 0.235% for those hands. That's a real cost, and it's the cost of buying information. A Hard 8 at any point in that sequence costs 9.09% edge on that bet. These are not similar decisions dressed differently. One is calibrated caution within the framework. The other is a tax.
+**The distinction that matters:** staying in Little Molly two extra shooters costs you nothing in expected dollars — it actually runs ~$4/100 rolls cheaper than the Molly; what you give up is coverage and the chance to catch a hot hand at full exposure. A Hard 8 at any point in that sequence costs 9.09% edge on that bet. These are not similar decisions dressed differently. One is free calibrated caution within the framework. The other is a tax.
 
 # §6 BATS Strategy (Darkside)
 
@@ -744,6 +781,8 @@ What the player varied: *when* to step up, *which mode* of Molly to play, and *w
 
 ---
 
-*— End of working draft v2.1 —*
+*— End of v1.2 —*
+
+*v1.2 changelog: standardized on two named edge metrics (§1.4) and propagated corrected figures throughout; fixed §1.1 (twelve loses for Pass, pushes for Don't Pass); Turbo blended edge corrected to 3.90% with burn-rate warning; Tight Molly loads reconciled as coverage-dependent ($90–120); retired the Little/Tight "0.470% identity" as a metric artifact; reframed the consecutive-7-out rule as pre-commitment; reframed odds-multiple and step-up-timing choices as variance decisions with correct EV signs; priced Stages 4–5 in $/100 rolls against the fourth-Come alternative; added §3.7 accounting definitions, §4 simulation findings, Turbo carve-out, and the §1.7 cushion caveat.*
 
 **BATS Strategy** — deferred to a companion paper. Same Alpha-Transition architecture, darkside mechanics. See §6 stub for known audit items before drafting.
