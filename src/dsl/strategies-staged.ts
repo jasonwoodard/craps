@@ -1,5 +1,5 @@
 /**
- * CATS — Calculated Advantage Timing Strategy
+ * CATS — Craps Alpha-Transition Strategy
  * BATS — Bearish Alpha-Transition Strategy
  *
  * Both are five-stage strategies implemented using the Stage Machine API.
