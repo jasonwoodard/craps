@@ -97,9 +97,10 @@ describe('DontComeBet', () => {
       expect(result.finalBankroll).toBe(280);
     });
 
-    it('DontCome with lay odds loses in transit on 7 (seven-out before DC establishes)', () => {
-      // DC + lay odds placed with point ON. 7 rolled immediately (DC still in transit).
-      // DC in transit loses on 7; lay odds are also lost (bet never established).
+    it('DontCome with declared lay odds loses only the flat on a transit 7 (odds never attach in transit)', () => {
+      // DC + lay odds declared with point ON. 7 rolled immediately (DC still in
+      // transit). Lay odds cannot legally exist on a DC before it travels, so
+      // the reconciler defers them: only the $10 flat is at risk on the 7.
       const strategy: StrategyDefinition = ({ bets }) => {
         bets.dontPass(10);
         bets.dontCome(10).withOdds(12);
@@ -108,11 +109,12 @@ describe('DontComeBet', () => {
       const engine = new CrapsEngine({ strategy, bankroll: 300, rolls: 2, dice });
       const result = engine.run();
       // Roll 1: 300 - 10 (dontPass) = 290. Roll 6 → point 6.
-      // Roll 2: 290 - 10 (dontCome flat) - 12 (lay odds) = 268. Roll 7:
-      //   dontPass wins → +10+10=20 → 288
-      //   dontCome in transit → 7 loses flat+odds → no return
-      // Final: 268 + 20 = 288
-      expect(result.finalBankroll).toBe(288);
+      // Roll 2: 290 - 10 (dontCome flat) = 280 — the $12 lay odds stay in the
+      //   rack until the DC travels. Roll 7:
+      //   dontPass wins → +10+10=20 → 300
+      //   dontCome in transit → 7 loses flat only
+      // Final: 280 + 20 = 300
+      expect(result.finalBankroll).toBe(300);
     });
 
     it('DontComeBet runs 500 rolls without error (seed 42, $500 bankroll)', () => {

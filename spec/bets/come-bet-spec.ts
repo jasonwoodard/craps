@@ -134,18 +134,19 @@ describe('ComeBet', () => {
       expect(bet.amount).toBe(10);
     });
 
-    it('should lose flat and push odds on seven-out (odds OFF)', () => {
-      // Flat is ALWAYS lost when seven is rolled after the bet has traveled.
-      // Odds that are OFF are returned as a push — they were never at risk.
-      // Settlement detects amount===0 && oddsAmount>0 and credits odds back.
+    it('should lose flat AND odds on a point-phase seven-out', () => {
+      // The off-by-default odds rule applies to the COME-OUT roll only
+      // (docs/bets/come-bet-odds.md scope). With the table point ON, the
+      // odds behind an established come bet are working: a seven-out takes
+      // the flat and the odds together.
       const table = TableMaker.getTable().withPoint(6).value();
       const bet = new ComeBet(10, playerId);
       bet.evaluateDiceRoll({ die1: 0, die2: 9, sum: 9 }, table); // travels to 9
       bet.oddsAmount = 50;
       bet.evaluateDiceRoll({ die1: 0, die2: 7, sum: 7 }, table); // seven-out
       expect(bet.amount).toBe(0);          // flat lost — taken by the house
-      expect(bet.oddsAmount).toBe(50);     // odds preserved for settlement to return
-      expect(bet.payOut).toBeUndefined();  // no win signal; settlement uses amount===0 path
+      expect(bet.oddsAmount).toBe(0);      // working odds lost with it
+      expect(bet.payOut).toBeUndefined();
     });
   });
 

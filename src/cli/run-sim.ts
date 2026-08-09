@@ -22,7 +22,7 @@ import { CrapsEngine } from '../engine/craps-engine';
 import { SharedTable, SharedTableResult } from '../engine/shared-table';
 import { RunLogger } from '../logger/run-logger';
 import { StrategyDefinition } from '../dsl/strategy';
-import { lookupStrategy } from './strategy-registry';
+import { lookupStrategy, createStrategy } from './strategy-registry';
 import { loadStrategyFile } from './strategy-loader';
 import { summarize, computeFullAggregates } from '../../server/lib/distribution';
 
@@ -205,20 +205,23 @@ export function runSim(args: CliArgs): void {
 
 export function runDistribution(args: CliArgs): void {
   let strategyName: string;
-  let strategy: StrategyDefinition;
 
   if (args.strategyFile) {
-    strategy = loadStrategyFile(args.strategyFile);
     strategyName = args.strategyFile;
   } else {
     strategyName = args.strategy!;
-    strategy = lookupStrategy(strategyName);
+    lookupStrategy(strategyName); // validate the name up front
   }
 
   const N = args.seeds!;
   const sessionResults = [];
 
   for (let i = 0; i < N; i++) {
+    // Fresh strategy instance per session — stage machines carry runtime
+    // state (stage, profit baseline) that must not leak across sessions.
+    const strategy = args.strategyFile
+      ? loadStrategyFile(args.strategyFile)
+      : createStrategy(strategyName);
     // Seeds are sequential integers starting at 0 — same convention as SSE stream.
     const engine = new CrapsEngine({
       strategy,

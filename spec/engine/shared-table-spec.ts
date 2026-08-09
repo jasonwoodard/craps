@@ -187,20 +187,21 @@ describe('SharedTable', () => {
 
   // M3.4: Progressive strategy test (CUJ 2.1)
   //
-  // Roll sequence rationale:
+  // Roll sequence rationale (the reconciler resizes standing place bets when
+  // the desired amount changes — remove + re-place at the new amount):
   //   Roll 1 (4): come-out; point=4 established; place bets placed but OFF (no resolution).
   //   Roll 2 (6): place 6 hits (wins=0→1). Both strategies pay at $12.
   //   Roll 3 (8): place 8 hits (wins=1→2). Both strategies pay at $12.
-  //   Roll 4 (6): place 6 hits (wins=2→3). Place6And8Progressive still has place6@$12 on table
-  //               (updateOdds is a no-op for place bets; amount updates only take effect after
-  //               a bet is naturally removed and re-placed). Pays at $12.
-  //   Roll 5 (8): place 8 hits (wins=3→4). Place6And8Progressive re-placed place8@$18 before this
-  //               roll (after roll 3's win cleared it and wins=2 on reconcile), so it pays at $18
-  //               vs Place6And8's flat $12.
-  //   Roll 6 (7): seven-out; both remaining place bets lose; no credit.
+  //   Roll 4 (6): place 6 hits (wins=2→3). Before this roll, reconcile (wins=2 →
+  //               amount $18) resized the surviving place6 $12→$18 and re-placed
+  //               place8 at $18. Place 6 pays at $18 ($21 profit).
+  //   Roll 5 (8): place 8 hits (wins=3→4). Before this roll, reconcile (wins=3 →
+  //               amount $24) resized place8 $18→$24 and re-placed place6 at $24.
+  //               Place 8 pays at $24 ($28 profit).
+  //   Roll 6 (7): seven-out; both remaining place bets ($24 each) lose.
   //
   // Expected final bankrolls (derived from hand-trace):
-  //   Place6And8Progressive: 515  (higher exposure from pressing bets)
+  //   Place6And8Progressive: 529  (presses win more but the 7-out claims $48)
   //   Place6And8:        532  (flat $12 throughout — avoids the larger bets but misses upside)
   describe('progressive strategy (CUJ 2.1)', () => {
 
@@ -225,7 +226,7 @@ describe('SharedTable', () => {
       expect(results['Place6And8Progressive'].finalBankroll).not.toBe(results['Place6And8'].finalBankroll);
 
       // Exact values verified by hand-trace (see comment above)
-      expect(results['Place6And8Progressive'].finalBankroll).toBe(515);
+      expect(results['Place6And8Progressive'].finalBankroll).toBe(529);
       expect(results['Place6And8'].finalBankroll).toBe(532);
     });
 
@@ -242,10 +243,9 @@ describe('SharedTable', () => {
 
       const results = table.run();
 
-      // Roll 5 (index 4): before this roll, reconcile ran with wins=3 (amount=24 for new bets).
-      // Place6 was removed after roll 4's win and re-placed at $24.
-      // Place8 survived from before roll 4, but was placed at $18 (wins=2 on that reconcile)
-      // and was not updated (updateOdds is a no-op for place bets).
+      // Roll 5 (index 4): before this roll, reconcile ran with wins=3 (amount $24).
+      // Place6 was removed after roll 4's win and re-placed at $24; the surviving
+      // place8 was resized $18 → $24 by the reconciler.
       const progressiveLog = results['Place6And8Progressive'].log;
       const flatLog        = results['Place6And8'].log;
 

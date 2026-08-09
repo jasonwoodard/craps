@@ -1,7 +1,7 @@
 import { CrapsTable } from '../craps-table';
 import { ReconcileEngine, StrategyDefinition } from '../dsl/strategy';
 import { GameState } from '../dsl/game-state';
-import { BetCommand, stringToBetType, betTypeToString } from '../dsl/bet-reconciler';
+import { BetCommand, stringToBetType, betTypeToString, oddsCommandMatchesBet } from '../dsl/bet-reconciler';
 import { Dice, LiveDice } from '../dice/dice';
 import { BaseBet } from '../bets/base-bet';
 import { PassLineBet } from '../bets/pass-line-bet';
@@ -12,6 +12,8 @@ import { DontPassBet } from '../bets/dont-pass-bet';
 import { DontComeBet } from '../bets/dont-come-bet';
 import { HardwaysBet } from '../bets/hardways-bet';
 import { CEBet } from '../bets/ce-bet';
+import { LayBet } from '../bets/lay-bet';
+import { BuyBet } from '../bets/buy-bet';
 import { RunLogger } from '../logger/run-logger';
 import { RollRecord, ActiveBetInfo, EngineResult } from './roll-record';
 import { STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
@@ -27,6 +29,12 @@ export interface CrapsEngineConfig {
   seed?: number;
   dice?: Dice;
   logger?: RunLogger;
+  /**
+   * End the session at ruin: when a roll begins with zero bets on the felt
+   * (the strategy declared bets it could not afford, or nothing at all),
+   * the session stops instead of zero-filling the remaining rolls.
+   */
+  stopAtRuin?: boolean;
 }
 
 interface BetSnapshot {
@@ -43,6 +51,7 @@ export class CrapsEngine {
   private initialBankroll: number;
   private maxRolls: number;
   private logger?: RunLogger;
+  private stopAtRuin: boolean;
   private playerId = 'engine-player';
 
   constructor(config: CrapsEngineConfig) {
@@ -51,6 +60,7 @@ export class CrapsEngine {
     this.initialBankroll = config.bankroll;
     this.maxRolls = config.rolls;
     this.logger = config.logger;
+    this.stopAtRuin = config.stopAtRuin ?? false;
 
     this.table = new CrapsTable();
     if (config.dice) {
@@ -66,6 +76,7 @@ export class CrapsEngine {
   run(): EngineResult {
     const rolls: RollRecord[] = [];
     let rollNumber = 0;
+    let endedAtRuin = false;
 
     while (this.shouldContinue(rollNumber)) {
       const record = this.playRoll(rollNumber + 1);
@@ -74,6 +85,13 @@ export class CrapsEngine {
         this.logger.onRoll(record);
       }
       rollNumber++;
+      // Ruin check: the roll began with nothing on the felt — the strategy
+      // could not fund a single bet. Without stopAtRuin the loop would
+      // zero-fill rolls until maxRolls while bankroll dribbles above $0.
+      if (this.stopAtRuin && record.activeBets.length === 0 && record.tableLoadBefore === 0) {
+        endedAtRuin = true;
+        break;
+      }
     }
 
     return {
@@ -81,6 +99,7 @@ export class CrapsEngine {
       initialBankroll: this.initialBankroll,
       rollsPlayed: rollNumber,
       rolls,
+      endedAtRuin,
     };
   }
 
@@ -113,6 +132,11 @@ export class CrapsEngine {
     this.settleBets(betsSnapshot);
 
     // Capture point 4: bankroll.after, tableLoad.after
+    // Snapshot semantics: tableLoadAfter is captured POST-settlement — winning
+    // bets have been paid and taken down, losing bets removed. On a roll where
+    // a bet wins (e.g. a $18 place 6 hit), it reflects only the bets still
+    // standing; the next roll's reconcile re-declares the board. It is NOT the
+    // board the strategy intends for the next roll.
     const tableLoadAfter = this.table.getPlayerBets(this.playerId)
       .reduce((sum, bet) => sum + bet.totalAmount, 0);
 
@@ -140,6 +164,7 @@ export class CrapsEngine {
       tableLoadBefore,
       tableLoadAfter,
       stageName: runtime?.getCurrentStage(),
+      stagePlayed: runtime?.getLastBoardStage(),
     };
   }
 
@@ -184,49 +209,50 @@ export class CrapsEngine {
     const betType = stringToBetType(cmd.betType);
     if (betType === undefined) return;
 
+    // Come/Don't Come removals with no point target in-transit bets only —
+    // traveled bets are contracts and are never removed by the reconciler.
+    const transitOnly =
+      cmd.point == null && (cmd.betType === 'come' || cmd.betType === 'dontCome');
+
     const playerBets = this.table.getPlayerBets(this.playerId);
     for (const bet of playerBets) {
-      if (bet.betType === betType && (cmd.point == null || bet.point === cmd.point)) {
-        this.bankroll += bet.totalAmount;
-        this.table.removeBet(bet);
-        break;
-      }
+      if (bet.betType !== betType) continue;
+      if (transitOnly ? bet.point != null : (cmd.point != null && bet.point !== cmd.point)) continue;
+      this.bankroll += bet.totalAmount;
+      this.table.removeBet(bet);
+      break;
     }
   }
 
   private applyUpdateOddsCommand(cmd: BetCommand & { type: 'updateOdds' }): void {
     const playerBets = this.table.getPlayerBets(this.playerId);
     for (const bet of playerBets) {
-      if (bet instanceof PassLineBet || bet instanceof ComeBet) {
-        const typeStr = betTypeToString(bet.betType);
-        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
-          const oldOdds = bet.oddsAmount;
-          const newOdds = cmd.amount;
-          const diff = newOdds - oldOdds;
-          if (diff > 0 && this.bankroll >= diff) {
-            this.bankroll -= diff;
-            bet.oddsAmount = newOdds;
-          } else if (diff < 0) {
-            this.bankroll += Math.abs(diff);
-            bet.oddsAmount = newOdds;
-          }
-          break;
+      const typeStr = betTypeToString(bet.betType);
+      if (typeStr !== cmd.betType) continue;
+      if (!oddsCommandMatchesBet(cmd, bet, this.table)) continue;
+
+      if (bet instanceof PassLineBet) {
+        // Covers ComeBet (subclass) — take-odds side.
+        const diff = cmd.amount - bet.oddsAmount;
+        if (diff > 0 && this.bankroll >= diff) {
+          this.bankroll -= diff;
+          bet.oddsAmount = cmd.amount;
+        } else if (diff < 0) {
+          this.bankroll += Math.abs(diff);
+          bet.oddsAmount = cmd.amount;
         }
+        break;
       } else if (bet instanceof DontPassBet) {
-        const typeStr = betTypeToString(bet.betType);
-        if (typeStr === cmd.betType && (cmd.point == null || bet.point === cmd.point)) {
-          const oldLay = bet.layOddsAmount;
-          const newLay = cmd.amount;
-          const diff = newLay - oldLay;
-          if (diff > 0 && this.bankroll >= diff) {
-            this.bankroll -= diff;
-            bet.layOddsAmount = newLay;
-          } else if (diff < 0) {
-            this.bankroll += Math.abs(diff);
-            bet.layOddsAmount = newLay;
-          }
-          break;
+        // Covers DontComeBet (subclass) — lay-odds side.
+        const diff = cmd.amount - bet.layOddsAmount;
+        if (diff > 0 && this.bankroll >= diff) {
+          this.bankroll -= diff;
+          bet.layOddsAmount = cmd.amount;
+        } else if (diff < 0) {
+          this.bankroll += Math.abs(diff);
+          bet.layOddsAmount = cmd.amount;
         }
+        break;
       }
     }
   }
@@ -251,6 +277,12 @@ export class CrapsEngine {
         return new HardwaysBet(amount, point, this.playerId);
       case 'ce':
         return new CEBet(amount, this.playerId);
+      case 'lay':
+        if (point == null) return null;
+        return new LayBet(amount, point, this.playerId);
+      case 'buy':
+        if (point == null) return null;
+        return new BuyBet(amount, point, this.playerId);
       default:
         return null;
     }
@@ -295,14 +327,16 @@ export class CrapsEngine {
           amount,
           payout: 0,
         });
-        // ComeBet seven-out with odds OFF: flat is lost (above), but odds were never
-        // at risk — they are returned to the player. Record as a separate push outcome.
-        if (bet instanceof ComeBet && oddsAmount > 0) {
+        // ComeBet come-out 7 with odds OFF: flat is lost (above), but odds were
+        // never at risk — they are returned to the player. The bet still HOLDS
+        // the odds (bet.oddsAmount > 0) only in that case; on a point-phase
+        // seven-out lose() zeroed them along with the flat.
+        if (bet instanceof ComeBet && bet.oddsAmount > 0) {
           outcomes.push({
             result: 'push',
             betType: bet.betType,
             point: bet.point,
-            amount: oddsAmount,
+            amount: bet.oddsAmount,
             payout: 0,
           });
         }
@@ -333,7 +367,7 @@ export class CrapsEngine {
 
         this.table.removeBet(bet);
       } else if (bet instanceof ComeBet && bet.amount === 0 && bet.oddsAmount > 0) {
-        // Any seven with odds OFF: flat always lost; credit odds back to bankroll
+        // Come-out 7 with odds OFF: flat lost; credit odds back to bankroll
         // without recording a win (odds were never at risk).
         this.bankroll += bet.oddsAmount;
         bet.oddsAmount = 0;

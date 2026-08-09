@@ -88,6 +88,25 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
 };
 
 /**
+ * Factories for strategies that carry per-session runtime state (stage
+ * machines). Multi-session runs MUST create a fresh instance per session —
+ * the singletons in BUILT_IN_STRATEGIES carry stage, profit baseline, and
+ * counters from one session into the next.
+ */
+const STRATEGY_FACTORIES: Record<string, () => StrategyDefinition> = {
+  'BATS':                BATS,
+  'BATSAccumulatorOnly': BATSAccumulatorOnly,
+  'CATS':                CATS,
+  'CATSAccumulatorOnly': CATSAccumulatorOnly,
+  'DoDont1X':            DoDont1X,
+  'DoDont2X':            DoDont2X,
+  'DoDont3X':            DoDont3X,
+  'DoDontWithCome1X':    DoDontWithCome1X,
+  'DoDontWithCome2X':    DoDontWithCome2X,
+  'DoDontWithCome3X':    DoDontWithCome3X,
+};
+
+/**
  * Look up a built-in strategy by name. Throws a descriptive error if the name
  * is not recognised so the CLI can surface a helpful message.
  */
@@ -98,4 +117,15 @@ export function lookupStrategy(name: string): StrategyDefinition {
     throw new Error(`Unknown strategy "${name}". Available strategies: ${available}`);
   }
   return strategy;
+}
+
+/**
+ * Create a strategy instance for one session. Stage-machine strategies get a
+ * fresh runtime; stateless strategies return the shared function (their only
+ * state lives in the per-engine ReconcileEngine trackers).
+ */
+export function createStrategy(name: string): StrategyDefinition {
+  const factory = STRATEGY_FACTORIES[name];
+  if (factory) return factory();
+  return lookupStrategy(name);
 }

@@ -1,16 +1,24 @@
 /**
- * CATS — Calculated Advantage Timing Strategy
+ * CATS — Craps Alpha-Transition Strategy
  * BATS — Bearish Alpha-Transition Strategy
  *
  * Both are five-stage strategies implemented using the Stage Machine API.
  * Each call to CATS() / BATS() returns a fresh StrategyDefinition with its own runtime.
  *
- * CATS stages:
+ * CATS stages ($10 basis, thresholds per cats-strategy.md §2.0/§3.1):
  *   accumulatorFull    → Place 6/8 at $18 each. Transitions on first 6/8 hit.
  *   accumulatorRegressed → Place 6/8 at $12 each. Advances at profit ≥ +$70.
  *   littleMolly        → Pass $10 + 1 Come $10 + 2× odds. Advances at +$150.
  *   threePtMollyTight  → Pass + 2 Come + tiered odds. Shifts to Loose at +$200 w/ 6/8.
- *   threePtMollyLoose  → Pass + 2 Come + 5× odds. Terminal stage (no further advance).
+ *   threePtMollyLoose  → Pass + 2 Come + 5× odds. Advances to expandedAlpha at +$250.
+ *   expandedAlpha      → Loose Molly + Buy 4/10 @ $20 (Swap Rule). Advances at +$400.
+ *   maxAlpha           → expandedAlpha + Buy 5/9 @ $20 (Swap Rule). Terminal.
+ *
+ * Tight and Loose are MODES of one stage (stage 3): the §3.4 seven-out
+ * step-down from either mode lands in littleMolly; Loose ⇄ Tight shifts on
+ * the ±$200 cushion are mode changes, not step-downs. §3.4's hard reset
+ * (profit < +$20) returns any stage to accumulatorRegressed. Profit follows
+ * §3.7: (rack + working bets at face) − buy-in, settled per roll.
  *
  * CATSAccumulatorOnly stages:
  *   accumulatorFull    → Place 6/8 at $18 each. Transitions on first 6/8 hit.
@@ -32,11 +40,33 @@ import { stageMachine } from './stage-machine';
 import { StageContext, TableReadView } from './stage-machine-types';
 import { StrategyDefinition } from './strategy';
 
+/** Options for CATS(). Defaults reproduce the strategy doc exactly. */
+export interface CATSOptions {
+  /**
+   * Stage 1 → 2 (Little Molly) profit gate in dollars (default $70).
+   * All higher ladder gates scale proportionally (rounded to the dollar):
+   * $150/$200/$250/$400 × (stage2Gate / 70). The §3.4 hard-reset floor
+   * stays at $20 — it is a capital-preservation floor tied to the buy-in,
+   * not a rung of the gate ladder. Used for threshold-sensitivity analysis;
+   * the strategy's official thresholds are unchanged.
+   */
+  stage2Gate?: number;
+}
+
 /**
  * Creates a fresh CATS strategy. Each call produces an independent runtime.
  * Register in StrategyRegistry as: `'CATS': CATS()`
  */
-export function CATS() {
+export function CATS(options: CATSOptions = {}) {
+  const g2 = options.stage2Gate ?? 70;
+  const f = g2 / 70;
+  const G_LITTLE   = g2;                    // Stage 1 → 2 gate; Little Molly retreat floor
+  const G_MOLLY    = Math.round(150 * f);   // Stage 2 → 3 gate; stage-3 retreat floor
+  const G_LOOSE    = Math.round(200 * f);   // Tight ⇄ Loose mode-shift cushion
+  const G_EXPANDED = Math.round(250 * f);   // Stage 3 → 4 gate; Expanded Alpha retreat floor
+  const G_MAX      = Math.round(400 * f);   // Stage 4 → 5 gate; Max Alpha retreat floor
+  const HARD_RESET = 20;                    // §3.4 hard reset — not scaled
+
   return stageMachine('CATS')
     .startingAt('accumulatorFull')
 
@@ -63,67 +93,124 @@ export function CATS() {
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.place(6, 12);
         bets.place(8, 12);
-        if (session.profit >= 70) {
+        if (session.profit >= G_LITTLE) {
           advanceTo('littleMolly');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 70,
+      canAdvanceTo: (_target, session) => session.profit >= G_LITTLE,
     })
 
-    // --- Stage 3: Little Molly ---
+    // --- Stage 2 (Little Molly) ---
     // Pass line $10 + 1 come $10, both with 2× odds.
     // Advances to ThreePtMollyTight at +$150.
-    // Retreats to AccumulatorRegressed on profit < +$70 or 2 consecutive 7-outs.
+    // Retreats to AccumulatorRegressed on profit < +$70 or a 7-out trigger.
     .stage('littleMolly', {
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.passLine(10).withOdds(20);
         bets.come(10).withOdds(20);
-        if (session.profit >= 150) {
+        if (session.profit >= G_MOLLY) {
           advanceTo('threePtMollyTight');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 150,
+      canAdvanceTo: (_target, session) => session.profit >= G_MOLLY,
       mustRetreatTo: (session) =>
-        session.profit < 70 || session.consecutiveSevenOuts >= 2
+        session.profit < G_LITTLE || session.sevenOutStepDownTriggered
           ? 'accumulatorRegressed'
           : undefined,
     })
 
-    // --- Stage 4: Three-Point Molly — Tight ---
+    // --- Stage 3, Tight mode ---
     // Pass line $10 + 2 come $10, with tiered odds based on coverage.
-    // Shifts to Loose at +$200 when 6 or 8 is covered.
-    // Retreats to LittleMolly on profit < +$150 or 2 consecutive 7-outs.
+    // Shifts to Loose (mode change) at +$200 when 6 or 8 is covered.
+    // Steps down to LittleMolly on profit < +$150 or a 7-out trigger.
     .stage('threePtMollyTight', {
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         const odds = tieredOdds(table);
         bets.passLine(10).withOdds(odds.passLine);
         bets.come(10).withOdds(odds.come1);
         bets.come(10).withOdds(odds.come2);
-        if (session.profit >= 200 && table.hasSixOrEight) {
+        if (session.profit >= G_LOOSE && table.hasSixOrEight) {
           advanceTo('threePtMollyLoose');
         }
       },
-      canAdvanceTo: (_target, session) => session.profit >= 200,
-      mustRetreatTo: (session) =>
-        session.profit < 150 || session.consecutiveSevenOuts >= 2
-          ? 'littleMolly'
-          : undefined,
+      canAdvanceTo: (_target, session) => session.profit >= G_LOOSE,
+      mustRetreatTo: (session) => {
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
+        return undefined;
+      },
     })
 
-    // --- Stage 5: Three-Point Molly — Loose ---
+    // --- Stage 3, Loose mode ---
     // Pass line $10 + 2 come $10, all with 5× odds ($50 each).
-    // Retreats to ThreePtMollyTight on profit < +$150 or 2 consecutive 7-outs.
-    // No further advance — ExpandedAlpha/MaxAlpha deferred (require Buy bets).
+    // Advances to ExpandedAlpha at +$250.
+    // Tight and Loose are modes of ONE stage: a 7-out trigger or profit
+    // < +$150 steps down a full stage to LittleMolly; dropping below the
+    // +$200 cushion shifts back to Tight (mode change, not a step-down).
     .stage('threePtMollyLoose', {
-      board: ({ bets }: StageContext) => {
+      board: ({ bets, session, advanceTo }: StageContext) => {
         bets.passLine(10).withOdds(50);
         bets.come(10).withOdds(50);
         bets.come(10).withOdds(50);
+        if (session.profit >= G_EXPANDED) {
+          advanceTo('expandedAlpha');
+        }
       },
-      mustRetreatTo: (session) =>
-        session.profit < 150 || session.consecutiveSevenOuts >= 2
-          ? 'threePtMollyTight'
-          : undefined,
+      canAdvanceTo: (_target, session) => session.profit >= G_EXPANDED,
+      mustRetreatTo: (session) => {
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
+        if (session.profit < G_LOOSE) return 'threePtMollyTight';
+        return undefined;
+      },
+    })
+
+    // --- Stage 4: Expanded Alpha ---
+    // Loose Molly board + Buy 4 @ $20 + Buy 10 @ $20 (win-vig only).
+    // Swap Rule (§3.5), expressed declaratively: a Buy is only declared
+    // while its number is NOT covered by the pass line or a traveled Come —
+    // when a Come travels to 4 or 10, the next reconcile takes the Buy down
+    // and puts 5× odds on the Come.
+    // Advances to MaxAlpha at +$400. Steps down to Loose Molly on profit
+    // < +$250 or a 7-out trigger.
+    .stage('expandedAlpha', {
+      board: ({ bets, table, session, advanceTo }: StageContext) => {
+        bets.passLine(10).withOdds(50);
+        bets.come(10).withOdds(50);
+        bets.come(10).withOdds(50);
+        if (!table.coverage.has(4)) bets.buy(4, 20);
+        if (!table.coverage.has(10)) bets.buy(10, 20);
+        if (session.profit >= G_MAX) {
+          advanceTo('maxAlpha');
+        }
+      },
+      canAdvanceTo: (_target, session) => session.profit >= G_MAX,
+      mustRetreatTo: (session) => {
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_EXPANDED || session.sevenOutStepDownTriggered) return 'threePtMollyLoose';
+        return undefined;
+      },
+    })
+
+    // --- Stage 5: Max Alpha (terminal) ---
+    // Expanded Alpha board + Buy 5 @ $20 + Buy 9 @ $20 (win-vig only).
+    // Swap Rule applies to all four buy numbers.
+    // Steps down to ExpandedAlpha on profit < +$400 or a 7-out trigger.
+    .stage('maxAlpha', {
+      board: ({ bets, table }: StageContext) => {
+        bets.passLine(10).withOdds(50);
+        bets.come(10).withOdds(50);
+        bets.come(10).withOdds(50);
+        if (!table.coverage.has(4)) bets.buy(4, 20);
+        if (!table.coverage.has(10)) bets.buy(10, 20);
+        if (!table.coverage.has(5)) bets.buy(5, 20);
+        if (!table.coverage.has(9)) bets.buy(9, 20);
+      },
+      mustRetreatTo: (session) => {
+        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
+        if (session.profit < G_MAX || session.sevenOutStepDownTriggered) return 'expandedAlpha';
+        return undefined;
+      },
     })
 
     .build();

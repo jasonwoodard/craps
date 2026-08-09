@@ -485,10 +485,12 @@ describe('BATS strategy (Stage Machine implementation)', () => {
 
       const { runtime } = runBATS(rolls, 2000);
       const profit = runtime.getSessionState().profit;
-      if (profit >= 350) {
+      if (profit >= 500) {
+        expect(runtime.getCurrentStage()).toBe('maxDarkAlpha');
+      } else if (profit >= 350) {
         expect(runtime.getCurrentStage()).toBe('expandedDarkAlpha');
       }
-      // Whether or not $350 is reached, no throw
+      // Whether or not the gates are reached, no throw
     });
   });
 

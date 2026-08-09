@@ -31,10 +31,11 @@ describe('StageContext type contract', () => {
         hardways: () => {},
         ce: () => {},
         lay: () => {},
+        buy: () => {},
         remove: () => {},
       },
       track: <T>(key: string, initial?: T) => initial as T,
-      session: { profit: 0, stage: 'test', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
+      session: { profit: 0, stage: 'test', consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
       table: {
         point: null,
         coverage: new Set<number>(),
@@ -66,10 +67,11 @@ describe('StageContext type contract', () => {
         hardways: (point: number, amount: number) => {},
         ce: (amount: number) => {},
         lay: (point: number, amount: number) => {},
+        buy: (point: number, amount: number) => {},
         remove: (type: string, point?: number) => {},
       },
       track: <T>(_k: string, i?: T) => i as T,
-      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
+      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
       table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0, dontCoverage: new Set(), dontComeBetsInTransit: 0 },
       advanceTo: () => {},
     };
@@ -87,6 +89,7 @@ describe('StageContext type contract', () => {
       profit: 100,
       stage: 'stage1',
       consecutiveSevenOuts: 2,
+      sevenOutStepDownTriggered: false,
       handsPlayed: 5,
       consecutiveComeOutLosses: 1,
       pointRepeaterStreak: 0,
@@ -124,7 +127,7 @@ describe('StageContext type contract', () => {
     const ctx: StageContext = {
       bets: {} as any,
       track: <T>(_k: string, i?: T) => i as T,
-      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
+      session: { profit: 0, stage: 'a', consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 0, consecutiveComeOutLosses: 0, pointRepeaterStreak: 0 },
       table: { point: null, coverage: new Set(), hasSixOrEight: false, comeBetsInTransit: 0, dontCoverage: new Set(), dontComeBetsInTransit: 0 },
       advanceTo: (name: string) => { calledWith = name; },
     };
