@@ -33,20 +33,8 @@ export function stageMachine(name: string, options: StageMachineOptions = {}): S
   return new StageMachineBuilderImpl(name, options);
 }
 
-/** Build the slug → metadata table from a machine's stage configs. */
-export function collectStageMetadata(stages: Map<string, StageConfig>): StageMetadata[] {
-  const rows: StageMetadata[] = [];
-  for (const [state, config] of stages) {
-    if (!config.entry) continue;
-    rows.push({
-      slug: config.entry.slug ?? state,
-      state,
-      displayName: config.entry.displayName,
-      gate: config.entry.gate,
-    });
-  }
-  return rows;
-}
+export { collectStageMetadata } from './stage-machine-state';
+import { collectStageMetadata } from './stage-machine-state';
 
 class StageMachineBuilderImpl implements StageMachineBuilder {
   private _name: string;

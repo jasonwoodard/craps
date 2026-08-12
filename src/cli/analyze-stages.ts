@@ -25,7 +25,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CrapsEngine } from '../engine/craps-engine';
 import { StrategyDefinition } from '../dsl/strategy';
-import { createStrategy, lookupStrategy } from './strategy-registry';
+import { createStrategy } from './strategy-registry';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -140,7 +140,7 @@ function parsePositiveInt(raw: string | undefined, name: string, defaultValue: n
 // ---------------------------------------------------------------------------
 
 function runSessions(args: AnalyzeArgs): SessionView[] {
-  lookupStrategy(args.strategy!); // validate the name up front
+  createStrategy(args.strategy!); // validate the spec up front
   return runSessionsWithFactory(() => createStrategy(args.strategy!), args);
 }
 

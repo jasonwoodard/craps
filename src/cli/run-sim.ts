@@ -177,7 +177,7 @@ export function runSim(args: CliArgs): void {
     strategyName = args.strategyFile;
   } else {
     strategyName = args.strategy!;
-    strategy = lookupStrategy(strategyName);
+    strategy = createStrategy(strategyName); // spec-aware: NAME[@key=value,...]
   }
 
   const logger = new RunLogger({
@@ -210,7 +210,7 @@ export function runDistribution(args: CliArgs): void {
     strategyName = args.strategyFile;
   } else {
     strategyName = args.strategy!;
-    lookupStrategy(strategyName); // validate the name up front
+    createStrategy(strategyName); // validate the spec up front
   }
 
   const N = args.seeds!;
@@ -249,7 +249,7 @@ export function runCompare(args: CliArgs): void {
   const strategies: Array<{ name: string; strategy: StrategyDefinition }> = [];
 
   for (const name of args.compare ?? []) {
-    strategies.push({ name, strategy: lookupStrategy(name) });
+    strategies.push({ name, strategy: createStrategy(name) });
   }
 
   for (const filePath of args.compareFiles ?? []) {

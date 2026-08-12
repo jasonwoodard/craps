@@ -5,7 +5,7 @@
  * event dispatch, and transition evaluation.
  */
 
-import { StageConfig, StageContext, SessionState, TableReadView } from './stage-machine-types';
+import { StageConfig, StageContext, SessionState, TableReadView, StageMetadata } from './stage-machine-types';
 import { StrategyContext } from './strategy';
 import { CrapsTable } from '../craps-table';
 import { Outcome } from './outcome';
@@ -47,6 +47,25 @@ const NOOP_BET_RECONCILER: BetReconciler = {
   buy: () => {},
   remove: () => {},
 };
+
+/**
+ * Build the ordered slug → metadata table from a machine's stage configs.
+ * Rows appear in stage-declaration order; only stages with entry metadata
+ * are included (internal states like accumulatorRegressed are omitted).
+ */
+export function collectStageMetadata(stages: Map<string, StageConfig>): StageMetadata[] {
+  const rows: StageMetadata[] = [];
+  for (const [state, config] of stages) {
+    if (!config.entry) continue;
+    rows.push({
+      slug: config.entry.slug ?? state,
+      state,
+      displayName: config.entry.displayName,
+      gate: config.entry.gate,
+    });
+  }
+  return rows;
+}
 
 export class StageMachineRuntime {
   private currentStage: string;
@@ -116,6 +135,11 @@ export class StageMachineRuntime {
   /** Returns session state for external inspection (e.g., tests). */
   getSessionState(): SessionState {
     return this.sessionState;
+  }
+
+  /** Ordered funded-entry stage metadata (slugs, display names, gates). */
+  getStageMetadata(): StageMetadata[] {
+    return collectStageMetadata(this.stageConfigs);
   }
 
   /**
