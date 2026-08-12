@@ -11,10 +11,46 @@ import { RiggedDice } from '../dice/rigged-dice';
 import { STAGE_MACHINE_RUNTIME, StrategyDefinition } from '../../src/dsl/strategy';
 import { StageMachineRuntime } from '../../src/dsl/stage-machine-state';
 import { CATS } from '../../src/dsl/strategies-staged';
+import { createStrategy } from '../../src/cli/strategy-registry';
 
 function getRuntime(strategy: StrategyDefinition): StageMachineRuntime {
   return (strategy as any)[STAGE_MACHINE_RUNTIME];
 }
+
+describe('funded entry — BATS generality acceptance (v4 §2, decision #7)', () => {
+  // The acceptance test for "general solution, not CATS solution": a funded
+  // BATS entry works purely through the stage-machine mechanism. BATS's only
+  // contribution is declarative stage metadata — no BATS-specific runtime
+  // code exists anywhere in the entry/origin/spec machinery.
+  it('BATS@entry=threePtDolly starts in the Dolly with profit at its $225 gate', () => {
+    const strategy = createStrategy('BATS@entry=threePtDolly');
+    const runtime = getRuntime(strategy);
+    expect(runtime.getCurrentStage()).toBe('threePtDolly');
+
+    // 4 (come-out: DP placed, point 4 on) — origin = 300 − 225 = 75,
+    // so profit = equity − origin = 225 at the start.
+    const dice = new RiggedDice([4]);
+    const engine = new CrapsEngine({ strategy, bankroll: 300, rolls: 1, dice });
+    const result = engine.run();
+    expect(result.rolls[0].stagePlayed).toBe('threePtDolly');
+    expect(runtime.getSessionState().profit).toBe(225);
+    expect(runtime.getSessionState().consecutiveSevenOuts).toBe(0);
+  });
+
+  it('a funded BATS entry retreats down the Dolly chain as profit falls', () => {
+    const strategy = createStrategy('BATS@entry=threePtDolly');
+    const runtime = getRuntime(strategy);
+    // Losing sequence for the don't side: points made repeatedly. Each made
+    // point loses the DP flat + lay odds, dropping profit through the $225
+    // (→ littleDolly) and $120 (→ bearishAccumulator) floors.
+    const rolls: number[] = [];
+    for (let i = 0; i < 12; i++) rolls.push(6, 6); // point 6 set, point made
+    const dice = new RiggedDice(rolls);
+    const engine = new CrapsEngine({ strategy, bankroll: 300, rolls: rolls.length, dice });
+    engine.run();
+    expect(runtime.getCurrentStage()).toBe('bearishAccumulator');
+  });
+});
 
 describe('funded entry (v4 §2)', () => {
 
