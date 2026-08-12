@@ -112,7 +112,10 @@ describe('analyze-stages CLI', () => {
         strategy: 'CATS', rolls: 60, bankroll: 300, seeds: 8,
         stopAtRuin: true, output: 'json',
       });
-      expect(entries[0].report).toEqual(standalone);
+      // generatedAt is a wall-clock stamp — it is excluded from run identity
+      // (manifestHash) and from determinism comparisons.
+      const stripStamp = (r: any) => ({ ...r, manifest: { ...r.manifest, generatedAt: 'X' } });
+      expect(stripStamp(entries[0].report)).toEqual(stripStamp(standalone));
       // Stopping menu present per spec.
       expect(entries[0].report.stopping).toBeDefined();
       expect(entries[1].report.stopping).toBeDefined();
@@ -136,11 +139,13 @@ describe('analyze-stages CLI', () => {
       // Time percentages sum to ~100.
       const totalTime = report.stages.reduce((sum, s) => sum + s.timeInStagePct, 0);
       expect(totalTime).toBeCloseTo(100, 6);
-      // Deterministic: same seeds → same report.
+      // Deterministic: same seeds → same report (generatedAt is wall-clock
+      // and excluded from run identity).
       const again = runAnalysis({
         strategy: 'CATS', rolls: 200, bankroll: 300, seeds: 10, stopAtRuin: true, output: 'json',
       });
-      expect(again).toEqual(report);
+      const stripStamp = (r: any) => ({ ...r, manifest: { ...r.manifest, generatedAt: 'X' } });
+      expect(stripStamp(again)).toEqual(stripStamp(report));
     });
   });
 });

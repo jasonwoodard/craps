@@ -1,18 +1,30 @@
 import { Request, Response } from 'express';
 import { SharedTable } from '../../src/engine/shared-table';
-import { BUILT_IN_STRATEGIES } from '../../src/cli/strategy-registry';
+import { createStrategy } from '../../src/cli/strategy-registry';
+import { buildManifest, manifestHash, RunManifest } from '../../src/cli/manifest';
 import { summarize, computeAggregates, SessionSummary } from '../lib/distribution';
+import { LruCache } from '../lib/memo';
+
+/** Memoized final aggregates keyed by the pair of manifest hashes (v4 §5). */
+const cache = new LruCache<{
+  baseline: ReturnType<typeof computeAggregates>;
+  test: ReturnType<typeof computeAggregates>;
+  manifests: RunManifest[];
+}>();
 
 export function distributionCompareStreamRoute(req: Request, res: Response): void {
   const { strategy, test, seeds, rolls, bankroll } = req.query as Record<string, string>;
 
-  if (!strategy || !BUILT_IN_STRATEGIES[strategy]) {
-    res.status(400).json({ error: `Unknown baseline strategy: "${strategy}". Available: ${Object.keys(BUILT_IN_STRATEGIES).join(', ')}` });
+  try {
+    createStrategy(strategy ?? '');
+  } catch (err: any) {
+    res.status(400).json({ error: `Baseline: ${err.message}` });
     return;
   }
-
-  if (!test || !BUILT_IN_STRATEGIES[test]) {
-    res.status(400).json({ error: `Unknown test strategy: "${test}". Available: ${Object.keys(BUILT_IN_STRATEGIES).join(', ')}` });
+  try {
+    createStrategy(test ?? '');
+  } catch (err: any) {
+    res.status(400).json({ error: `Test: ${err.message}` });
     return;
   }
 
@@ -39,8 +51,30 @@ export function distributionCompareStreamRoute(req: Request, res: Response): voi
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const baselineFn = BUILT_IN_STRATEGIES[strategy];
-  const testFn = BUILT_IN_STRATEGIES[test];
+  const manifests = [strategy, test].map(spec => buildManifest({
+    strategySpec: spec,
+    bankroll: bankrollNum,
+    rolls: rollsNum,
+    seeds: { count: N },
+  }));
+  const key = manifests.map(manifestHash).join('+');
+
+  const cached = cache.get(key);
+  if (cached) {
+    const payload = JSON.stringify({
+      progress: 1,
+      completed: N,
+      baseline: cached.baseline,
+      test: cached.test,
+      manifests,
+      cached: true,
+      done: true,
+    });
+    res.write(`data: ${payload}\n\n`);
+    res.end();
+    return;
+  }
+
   const batchSize = Math.max(1, Math.floor(N / 10));
   const baselineResults: SessionSummary[] = [];
   const testResults: SessionSummary[] = [];
@@ -49,9 +83,10 @@ export function distributionCompareStreamRoute(req: Request, res: Response): voi
     if (res.destroyed) break;
 
     // Use SharedTable so both strategies see identical dice for each seed.
+    // Fresh instances per seed — stage machines carry runtime state.
     const table = new SharedTable({ seed: i, rolls: rollsNum });
-    table.addStrategy(strategy, baselineFn, { bankroll: bankrollNum });
-    table.addStrategy(test, testFn, { bankroll: bankrollNum });
+    table.addStrategy(strategy, createStrategy(strategy), { bankroll: bankrollNum });
+    table.addStrategy(test, createStrategy(test), { bankroll: bankrollNum });
     const sharedResult = table.run();
 
     const baselineEntry = sharedResult[strategy];
@@ -72,12 +107,19 @@ export function distributionCompareStreamRoute(req: Request, res: Response): voi
     }
 
     if ((i + 1) % batchSize === 0 || i === N - 1) {
+      const baselineAgg = computeAggregates(baselineResults);
+      const testAgg = computeAggregates(testResults);
+      const done = i === N - 1;
+      if (done && !res.destroyed) {
+        cache.set(key, { baseline: baselineAgg, test: testAgg, manifests });
+      }
       const payload = JSON.stringify({
         progress: (i + 1) / N,
         completed: i + 1,
-        baseline: computeAggregates(baselineResults),
-        test: computeAggregates(testResults),
-        done: i === N - 1,
+        baseline: baselineAgg,
+        test: testAgg,
+        manifests,
+        done,
       });
       res.write(`data: ${payload}\n\n`);
     }

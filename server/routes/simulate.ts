@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { CrapsEngine } from '../../src/engine/craps-engine';
-import { BUILT_IN_STRATEGIES } from '../../src/cli/strategy-registry';
+import { BUILT_IN_STRATEGIES, createStrategy } from '../../src/cli/strategy-registry';
 
 export function simulateRoute(req: Request, res: Response): void {
   const { strategy, rolls, bankroll, seed } = req.body as {
@@ -10,8 +10,14 @@ export function simulateRoute(req: Request, res: Response): void {
     seed?: unknown;
   };
 
-  if (typeof strategy !== 'string' || !BUILT_IN_STRATEGIES[strategy]) {
+  if (typeof strategy !== 'string') {
     res.status(400).json({ error: `Unknown strategy: "${strategy}". Available: ${Object.keys(BUILT_IN_STRATEGIES).join(', ')}` });
+    return;
+  }
+  try {
+    createStrategy(strategy);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
     return;
   }
 
@@ -33,7 +39,8 @@ export function simulateRoute(req: Request, res: Response): void {
   const resolvedSeed = seed !== undefined ? (seed as number) : Math.floor(Math.random() * 1_000_000);
 
   const engine = new CrapsEngine({
-    strategy: BUILT_IN_STRATEGIES[strategy],
+    // Fresh instance per request — stage machines carry runtime state.
+    strategy: createStrategy(strategy),
     bankroll,
     rolls,
     seed: resolvedSeed,

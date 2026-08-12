@@ -27,6 +27,7 @@ import { CrapsEngine } from '../engine/craps-engine';
 import { StrategyDefinition } from '../dsl/strategy';
 import { createStrategy, getStageLadder, getStrategyMetadata } from './strategy-registry';
 import { parseStrategySpec } from './strategy-loader';
+import { buildManifest, RunManifest } from './manifest';
 import {
   StreamingStoppingEvaluator,
   StoppingConfig,
@@ -86,6 +87,8 @@ export interface AnalyzeReport {
   pctSessionsRuined: number;
   /** Stopping-rule menu results (v4 §3); present when sessions were scored. */
   stopping?: StoppingReport;
+  /** Run manifest (v4 §5) — embedded in every output mode. */
+  manifest?: RunManifest;
 }
 
 // Ladder display order; unknown stages append in encounter order.
@@ -341,6 +344,7 @@ function fmt(n: number, digits = 1): string {
 }
 
 function printText(report: AnalyzeReport): void {
+  if (report.manifest) console.log(`\nmanifest: ${JSON.stringify(report.manifest)}`);
   console.log(`\n=== Stage metrics (${report.sessions} sessions, up to ${report.rollsPerSession} rolls, $${report.bankroll} bankroll) ===\n`);
 
   const header =
@@ -481,6 +485,12 @@ export function runAnalysis(args: AnalyzeArgs): AnalyzeReport {
 
   const report = aggregate(sessions, { rollsPerSession: args.rolls, bankroll: args.bankroll });
   report.stopping = evaluator.report();
+  report.manifest = buildManifest({
+    strategySpec: args.strategy ?? `jsonl:${args.jsonlDir}`,
+    bankroll: args.bankroll,
+    rolls: args.rolls,
+    seeds: { count: args.jsonlDir ? sessions.length : args.seeds },
+  });
   return report;
 }
 
@@ -512,6 +522,9 @@ export function runComparison(args: AnalyzeArgs): CompareEntry[] {
 function printComparison(entries: CompareEntry[], args: AnalyzeArgs): void {
   const width = Math.max(24, ...entries.map(e => e.spec.length + 2));
   const label = (s: string) => s.padStart(width);
+  for (const e of entries) {
+    if (e.report.manifest) console.log(`manifest: ${JSON.stringify(e.report.manifest)}`);
+  }
   console.log(`\n=== Spec comparison (${args.seeds} shared seeds, up to ${args.rolls} rolls, $${args.bankroll} bankroll) ===\n`);
   console.log('Metric'.padEnd(30) + entries.map(e => label(e.spec)).join(''));
   console.log('-'.repeat(30 + width * entries.length));
