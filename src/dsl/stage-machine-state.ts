@@ -51,6 +51,8 @@ const NOOP_BET_RECONCILER: BetReconciler = {
 export class StageMachineRuntime {
   private currentStage: string;
   private lastBoardStage: string;
+  /** Funded-entry gate (v4 §2): origin = initialBankroll − entryGate. */
+  private entryGate: number;
   private stageTrackers = new Map<string, Map<string, any>>();
   private sessionState: MutableSessionState;
   private stageConfigs: Map<string, StageConfig>;
@@ -63,9 +65,11 @@ export class StageMachineRuntime {
     startingStage: string,
     configs: Map<string, StageConfig>,
     _machineName: string,
+    entryGate: number = 0,
   ) {
     this.currentStage = startingStage;
     this.lastBoardStage = startingStage;
+    this.entryGate = entryGate;
     this.stageConfigs = configs;
     this.sessionState = {
       profit: 0,
@@ -85,6 +89,12 @@ export class StageMachineRuntime {
     // Capture initial bankroll on first call (before any bets are placed)
     if (bankroll !== undefined && this.initialBankroll === null) {
       this.initialBankroll = bankroll;
+      // Session start: equity = bankroll, so profit = bankroll − origin =
+      // entryGate exactly. Without this, the first reconcile's retreat
+      // check would see the constructor's profit 0 and cascade a funded
+      // entry down the ladder before the first roll. Default entry has
+      // gate 0 — identical to the previous initialization.
+      this.sessionState.profit = this.entryGate;
     }
   }
 
@@ -144,8 +154,11 @@ export class StageMachineRuntime {
     rollValue: number,
   ): void {
     // Update profit per §3.7 accounting: (rack + working bets at face value)
-    // − buy-in, after payouts settle. Face value = flat + odds. Without table
-    // context (unit tests), felt load is 0 and profit is rack-only.
+    // − origin, after payouts settle. Face value = flat + odds. Origin is
+    // the funded-entry zero point (v4 §2): initialBankroll − entryGate, so
+    // a default entry (gate 0) reproduces the classic equity − buy-in and a
+    // funded entry starts with profit exactly at its stage's gate. Without
+    // table context (unit tests), felt load is 0 and profit is rack-only.
     // (initialBankroll is set in setTableContext on first reconcile call)
     if (this.initialBankroll !== null) {
       let feltLoad = 0;
@@ -154,7 +167,8 @@ export class StageMachineRuntime {
           feltLoad += bet.totalAmount;
         }
       }
-      this.sessionState.profit = bankroll + feltLoad - this.initialBankroll;
+      const origin = this.initialBankroll - this.entryGate;
+      this.sessionState.profit = bankroll + feltLoad - origin;
     }
 
     // Track seven-outs and hands played

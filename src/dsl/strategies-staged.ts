@@ -57,6 +57,13 @@ export interface CATSOptions {
    * buys, accumulator amounts, gates — derives from it via catsUnits().
    */
   tableMin?: number;
+  /**
+   * Funded entry (v4 §2): stable stage slug to start the session in
+   * ('accumulator', 'littleMolly', 'threePtMollyTight',
+   * 'threePtMollyLoose', 'expandedAlpha', 'maxAlpha'). Origin becomes
+   * bankroll − gate(entry); default = 'accumulator' (classic behavior).
+   */
+  entry?: string;
 }
 
 /**
@@ -74,12 +81,13 @@ export function CATS(options: CATSOptions = {}) {
   const G_MAX      = Math.round(U.gates.maxAlpha * f);         // Stage 4 → 5 gate; Max Alpha retreat floor
   const HARD_RESET = U.hardReset;                              // §3.4 hard reset — not gate-scaled
 
-  return stageMachine('CATS')
+  return stageMachine('CATS', { entryStage: options.entry })
     .startingAt('accumulatorFull')
 
     // --- Stage 1: Accumulator Full ---
     // Place 6/8 at $18 each. On first hit of 6 or 8, transition to regressed.
     .stage('accumulatorFull', {
+      entry: { slug: 'accumulator', displayName: 'Accumulator', gate: 0 },
       board: ({ bets }: StageContext) => {
         bets.place(6, U.accumulatorStart);
         bets.place(8, U.accumulatorStart);
@@ -112,6 +120,7 @@ export function CATS(options: CATSOptions = {}) {
     // Advances to ThreePtMollyTight at +$150.
     // Retreats to AccumulatorRegressed on profit < +$70 or a 7-out trigger.
     .stage('littleMolly', {
+      entry: { displayName: 'Little Molly', gate: G_LITTLE },
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.passLine(U.flat).withOdds(U.oddsLittle);
         bets.come(U.flat).withOdds(U.oddsLittle);
@@ -131,6 +140,7 @@ export function CATS(options: CATSOptions = {}) {
     // Shifts to Loose (mode change) at +$200 when 6 or 8 is covered.
     // Steps down to LittleMolly on profit < +$150 or a 7-out trigger.
     .stage('threePtMollyTight', {
+      entry: { displayName: '3-Point Molly — Tight', gate: G_MOLLY },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         const odds = tieredOdds(table, U);
         bets.passLine(U.flat).withOdds(odds.passLine);
@@ -155,6 +165,12 @@ export function CATS(options: CATSOptions = {}) {
     // < +$150 steps down a full stage to LittleMolly; dropping below the
     // +$200 cushion shifts back to Tight (mode change, not a step-down).
     .stage('threePtMollyLoose', {
+      // Funded Loose entry is gated at 25u — the top of stage 3's band
+      // (v4 §4 ladder / work order: $300 entry → origin $50, profit $250).
+      // It shares the 25u value with expandedAlpha's entry gate, so a
+      // Loose entry at exactly its gate immediately qualifies to advance:
+      // v4 decision #1, the physics handles the rest.
+      entry: { displayName: '3-Point Molly — Loose', gate: G_EXPANDED },
       board: ({ bets, session, advanceTo }: StageContext) => {
         bets.passLine(U.flat).withOdds(U.oddsLoose);
         bets.come(U.flat).withOdds(U.oddsLoose);
@@ -181,6 +197,7 @@ export function CATS(options: CATSOptions = {}) {
     // Advances to MaxAlpha at +$400. Steps down to Loose Molly on profit
     // < +$250 or a 7-out trigger.
     .stage('expandedAlpha', {
+      entry: { displayName: 'Expanded Alpha', gate: G_EXPANDED },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         bets.passLine(U.flat).withOdds(U.oddsLoose);
         bets.come(U.flat).withOdds(U.oddsLoose);
@@ -204,6 +221,7 @@ export function CATS(options: CATSOptions = {}) {
     // Swap Rule applies to all four buy numbers.
     // Steps down to ExpandedAlpha on profit < +$400 or a 7-out trigger.
     .stage('maxAlpha', {
+      entry: { displayName: 'Max Alpha', gate: G_MAX },
       board: ({ bets, table }: StageContext) => {
         bets.passLine(U.flat).withOdds(U.oddsLoose);
         bets.come(U.flat).withOdds(U.oddsLoose);
@@ -305,15 +323,16 @@ function layAmountToWin(point: number, targetWin: number): number {
  * Creates a fresh BATS strategy. Each call produces an independent runtime.
  * Register in StrategyRegistry as: `'BATS': BATS()`
  */
-export function BATS(options: { tableMin?: number } = {}) {
+export function BATS(options: { tableMin?: number; entry?: string } = {}) {
   const B = batsUnits(options.tableMin ?? 10);
-  return stageMachine('BATS')
+  return stageMachine('BATS', { entryStage: options.entry })
     .startingAt('bearishAccumulator')
 
     // --- Stage 1: Bearish Accumulator ---
     // Don't Pass only. Lay odds sized to win 1 unit ($10).
     // Advance at profit ≥ +$120.
     .stage('bearishAccumulator', {
+      entry: { displayName: 'Bearish Accumulator', gate: 0 },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         if (!table.point) {
           bets.dontPass(B.flat);
@@ -330,6 +349,7 @@ export function BATS(options: { tableMin?: number } = {}) {
     // Retreat: 2 consecutive come-out losses OR profit drops below +$120.
     // Advance at profit ≥ +$225.
     .stage('littleDolly', {
+      entry: { displayName: 'Little Dolly', gate: B.gates.littleDolly },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         if (!table.point) {
           bets.dontPass(10);
@@ -353,6 +373,7 @@ export function BATS(options: { tableMin?: number } = {}) {
     // Retreat: point repeater streak ≥ 2 OR profit drops below +$225.
     // Advance at profit ≥ +$350.
     .stage('threePtDolly', {
+      entry: { displayName: '3-Point Dolly', gate: B.gates.threePtDolly },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         if (!table.point) {
           bets.dontPass(10);
@@ -378,6 +399,7 @@ export function BATS(options: { tableMin?: number } = {}) {
     // Retreat: profit drops below +$350.
     // Advance at profit ≥ +$500.
     .stage('expandedDarkAlpha', {
+      entry: { displayName: 'Expanded Dark Alpha', gate: B.gates.expandedDarkAlpha },
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         if (!table.point) {
           bets.dontPass(10);
@@ -404,6 +426,7 @@ export function BATS(options: { tableMin?: number } = {}) {
     // Swap Rule applies to all four lay numbers.
     // Retreat: profit drops below +$500.
     .stage('maxDarkAlpha', {
+      entry: { displayName: 'Max Dark Alpha', gate: B.gates.maxDarkAlpha },
       board: ({ bets, table }: StageContext) => {
         if (!table.point) {
           bets.dontPass(10);

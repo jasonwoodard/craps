@@ -103,6 +103,35 @@ export interface StageContext {
 // Stage configuration
 // ---------------------------------------------------------------------------
 
+/**
+ * Entry metadata for a stage. Declaring it makes the stage a legal funded
+ * entry point (session-lifecycle.md v4 §2). Slugs are the stable keys used
+ * in canonical specs (`CATS@entry=threePtMollyLoose`), URLs, and manifests;
+ * display names are presentation metadata and may change.
+ */
+export interface StageEntryMeta {
+  /** Stable slug id. Defaults to the stage's machine-state name. */
+  slug?: string;
+  /** Human-facing display name, e.g. "3-Point Molly — Loose". */
+  displayName: string;
+  /**
+   * Profit gate above origin for entering this stage, in dollars.
+   * At session start, origin = bankroll − gate(entryStage), so a funded
+   * entry begins with profit exactly equal to this gate.
+   */
+  gate: number;
+}
+
+/** Machine-level options (second argument to stageMachine()). */
+export interface StageMachineOptions {
+  /**
+   * Funded entry: the slug of the stage to start in. Default = the
+   * startingAt() stage with gate 0 (classic behavior). Resolved against
+   * the declared StageEntryMeta slugs; unknown slugs fail loudly.
+   */
+  entryStage?: string;
+}
+
 /** Configuration for a single stage. */
 export interface StageConfig {
   /**
@@ -110,6 +139,13 @@ export interface StageConfig {
    * Same BetReconciler API as StrategyDefinition.
    */
   board: (ctx: StageContext) => void;
+
+  /**
+   * Entry metadata — presence makes this stage a funded-entry point and
+   * lists it in the exported stage metadata. Stages without it (e.g. the
+   * regressed Accumulator phase) are internal machine states.
+   */
+  entry?: StageEntryMeta;
 
   /**
    * Advance guard: returns true when stepping up to the named stage is
@@ -132,6 +168,18 @@ export interface StageConfig {
 // ---------------------------------------------------------------------------
 // Stage Machine builder
 // ---------------------------------------------------------------------------
+
+/** One row of a machine's exported stage metadata (for UIs and loaders). */
+export interface StageMetadata {
+  /** Stable slug id (canonical spec key). */
+  slug: string;
+  /** Machine-state name the slug enters at. */
+  state: string;
+  /** Human-facing display name. */
+  displayName: string;
+  /** Entry gate above origin, in dollars. */
+  gate: number;
+}
 
 /** Fluent builder for a Stage Machine. */
 export interface StageMachineBuilder {
