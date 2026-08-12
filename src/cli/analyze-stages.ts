@@ -39,6 +39,8 @@ import {
 
 export interface AnalyzeArgs {
   strategy?: string;
+  /** Comparison mode: all specs, in flag order, when --strategy is repeated. */
+  strategies?: string[];
   jsonlDir?: string;
   rolls: number;
   bankroll: number;
@@ -101,6 +103,7 @@ const STAGE_ORDER = [
 export function parseArgs(argv: string[]): AnalyzeArgs {
   const single: Record<string, string> = {};
   const flags = new Set<string>();
+  const strategies: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -113,13 +116,17 @@ export function parseArgs(argv: string[]): AnalyzeArgs {
       if (next === undefined || next.startsWith('--')) {
         throw new Error(`Flag --${key} requires a value.`);
       }
-      single[key] = next;
+      if (key === 'strategy') {
+        strategies.push(next); // repeatable: comparison mode when > 1
+      } else {
+        single[key] = next;
+      }
       i++;
     }
   }
 
-  if (!single['strategy'] && !single['jsonl-dir']) {
-    throw new Error('Provide --strategy <name> (to run sessions) or --jsonl-dir <path> (to analyze existing JSONL).');
+  if (strategies.length === 0 && !single['jsonl-dir']) {
+    throw new Error('Provide --strategy <spec> (repeatable, to run sessions) or --jsonl-dir <path> (to analyze existing JSONL).');
   }
 
   const output = single['output'] ?? 'text';
@@ -128,7 +135,8 @@ export function parseArgs(argv: string[]): AnalyzeArgs {
   }
 
   return {
-    strategy: single['strategy'],
+    strategy: strategies[0],
+    strategies: strategies.length > 0 ? strategies : undefined,
     jsonlDir: single['jsonl-dir'],
     rolls: parsePositiveInt(single['rolls'], 'rolls', 1000),
     bankroll: parsePositiveInt(single['bankroll'], 'bankroll', 300),
@@ -476,14 +484,105 @@ export function runAnalysis(args: AnalyzeArgs): AnalyzeReport {
   return report;
 }
 
+// ---------------------------------------------------------------------------
+// Multi-spec comparison (v4 §2: shared seeds, side-by-side)
+// ---------------------------------------------------------------------------
+
+export interface CompareEntry {
+  /** Canonical spec string. */
+  spec: string;
+  report: AnalyzeReport;
+}
+
+/**
+ * Run every spec over the SAME seed range (0..seeds-1) — identical dice per
+ * seed — and return reports in flag order. The canonical normalized spec
+ * string labels each column.
+ */
+export function runComparison(args: AnalyzeArgs): CompareEntry[] {
+  const entries: CompareEntry[] = [];
+  for (const spec of args.strategies!) {
+    const canonical = parseStrategySpec(spec).canonical;
+    const report = runAnalysis({ ...args, strategy: spec, strategies: undefined });
+    entries.push({ spec: canonical, report });
+  }
+  return entries;
+}
+
+function printComparison(entries: CompareEntry[], args: AnalyzeArgs): void {
+  const width = Math.max(24, ...entries.map(e => e.spec.length + 2));
+  const label = (s: string) => s.padStart(width);
+  console.log(`\n=== Spec comparison (${args.seeds} shared seeds, up to ${args.rolls} rolls, $${args.bankroll} bankroll) ===\n`);
+  console.log('Metric'.padEnd(30) + entries.map(e => label(e.spec)).join(''));
+  console.log('-'.repeat(30 + width * entries.length));
+
+  const row = (name: string, value: (e: CompareEntry) => string) =>
+    console.log(name.padEnd(30) + entries.map(e => label(value(e))).join(''));
+
+  row('P&L p10', e => money(e.report.pnl.p10));
+  row('P&L p50', e => money(e.report.pnl.p50));
+  row('P&L p90', e => money(e.report.pnl.p90));
+  row('Sessions positive %', e => fmt(e.report.pctSessionsPositive));
+  row('Sessions ruined %', e => fmt(e.report.pctSessionsRuined));
+
+  if (entries.every(e => e.report.stopping)) {
+    row('Peak P&L p50', e => money(e.report.stopping!.peakPnl.p50));
+    row('Peak P&L p90', e => money(e.report.stopping!.peakPnl.p90));
+    for (const h of entries[0].report.stopping!.hitting) {
+      row(`P(hit ${h.k}·B before ruin) %`, e => {
+        const hit = e.report.stopping!.hitting.find(x => x.k === h.k)!;
+        return fmt(100 * hit.pHitBeforeRuin);
+      });
+    }
+  }
+
+  // Stage-reach rows over the union of stages, first-seen order.
+  const stageOrder: string[] = [];
+  for (const e of entries) {
+    for (const s of e.report.stages) {
+      if (!stageOrder.includes(s.stage)) stageOrder.push(s.stage);
+    }
+  }
+  for (const stage of stageOrder) {
+    row(`reach % ${stage}`, e => {
+      const s = e.report.stages.find(x => x.stage === stage);
+      return s ? fmt(100 * s.reachProbability) : '—';
+    });
+  }
+
+  // Stopping-menu summary per spec: banked p50 and trigger rate per rule.
+  if (entries.every(e => e.report.stopping)) {
+    for (const rule of entries[0].report.stopping!.rules) {
+      row(`stop ${rule.rule} banked p50`, e => {
+        const r = e.report.stopping!.rules.find(x => x.rule === rule.rule);
+        return r ? money(r.banked.p50) : '—';
+      });
+      row(`stop ${rule.rule} trigger %`, e => {
+        const r = e.report.stopping!.rules.find(x => x.rule === rule.rule);
+        return r ? fmt(100 * r.triggerRate) : '—';
+      });
+    }
+  }
+  console.log('');
+}
+
 if (require.main === module) {
   try {
     const args = parseArgs(process.argv.slice(2));
-    const report = runAnalysis(args);
-    if (args.output === 'json') {
-      process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+    if (args.strategies && args.strategies.length > 1) {
+      const entries = runComparison(args);
+      if (args.output === 'json') {
+        process.stdout.write(JSON.stringify(entries, null, 2) + '\n');
+      } else {
+        printComparison(entries, args);
+      }
     } else {
-      printText(report);
+      const report = runAnalysis(args);
+      if (args.output === 'json') {
+        process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+      } else {
+        printText(report);
+      }
     }
   } catch (err: any) {
     console.error(`Error: ${err.message}`);
