@@ -25,7 +25,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CrapsEngine } from '../engine/craps-engine';
 import { StrategyDefinition } from '../dsl/strategy';
-import { createStrategy } from './strategy-registry';
+import { createStrategy, getStageLadder, getStrategyMetadata } from './strategy-registry';
+import { parseStrategySpec } from './strategy-loader';
+import {
+  StreamingStoppingEvaluator,
+  StoppingConfig,
+  StoppingReport,
+} from './stopping-rules';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,15 +45,19 @@ export interface AnalyzeArgs {
   seeds: number;
   stopAtRuin: boolean;
   output: 'text' | 'json';
+  /** Trailing-floor drop d in dollars (default bankroll / 3). */
+  trailDrop?: number;
+  /** Fall-below-stage rule slug (default: first gated stage of the ladder). */
+  belowStage?: string;
 }
 
 /** Minimal per-roll view the aggregator needs, from either source. */
-interface RollView {
+export interface RollView {
   stageName: string;
   equityAfter: number; // bankroll + table load, after settlement
 }
 
-interface SessionView {
+export interface SessionView {
   rolls: RollView[];
   initialBankroll: number;
   endedAtRuin: boolean;
@@ -72,6 +82,8 @@ export interface AnalyzeReport {
   pnl: { p10: number; p50: number; p90: number };
   pctSessionsPositive: number;
   pctSessionsRuined: number;
+  /** Stopping-rule menu results (v4 §3); present when sessions were scored. */
+  stopping?: StoppingReport;
 }
 
 // Ladder display order; unknown stages append in encounter order.
@@ -123,6 +135,8 @@ export function parseArgs(argv: string[]): AnalyzeArgs {
     seeds: parsePositiveInt(single['seeds'], 'seeds', 2000),
     stopAtRuin: flags.has('stop-at-ruin'),
     output,
+    trailDrop: single['trail-drop'] !== undefined ? parsePositiveInt(single['trail-drop'], 'trail-drop', 0) : undefined,
+    belowStage: single['exit-below-stage'],
   };
 }
 
@@ -139,15 +153,16 @@ function parsePositiveInt(raw: string | undefined, name: string, defaultValue: n
 // Session sources
 // ---------------------------------------------------------------------------
 
-function runSessions(args: AnalyzeArgs): SessionView[] {
+function runSessions(args: AnalyzeArgs, onSession?: (s: SessionView) => void): SessionView[] {
   createStrategy(args.strategy!); // validate the spec up front
-  return runSessionsWithFactory(() => createStrategy(args.strategy!), args);
+  return runSessionsWithFactory(() => createStrategy(args.strategy!), args, onSession);
 }
 
 /** Run seeded sessions for any strategy factory and return session views. */
 export function runSessionsWithFactory(
   factory: () => StrategyDefinition,
   args: Pick<AnalyzeArgs, 'rolls' | 'bankroll' | 'seeds' | 'stopAtRuin'>,
+  onSession?: (s: SessionView) => void,
 ): SessionView[] {
   const sessions: SessionView[] = [];
   for (let seed = 0; seed < args.seeds; seed++) {
@@ -160,14 +175,16 @@ export function runSessionsWithFactory(
       stopAtRuin: args.stopAtRuin,
     });
     const result = engine.run();
-    sessions.push({
+    const view: SessionView = {
       initialBankroll: result.initialBankroll,
       endedAtRuin: result.endedAtRuin ?? false,
       rolls: result.rolls.map(r => ({
         stageName: r.stagePlayed ?? r.stageName ?? '(stageless)',
         equityAfter: r.bankrollAfter + r.tableLoadAfter,
       })),
-    });
+    };
+    if (onSession) onSession(view); // streaming consumers score per session
+    sessions.push(view);
   }
   return sessions;
 }
@@ -182,7 +199,7 @@ export function analyzeWithFactory(
 }
 
 /** Parse run-sim --output json JSONL files (one session per file). */
-function loadJsonlSessions(dir: string): SessionView[] {
+function loadJsonlSessions(dir: string, onSession?: (s: SessionView) => void): SessionView[] {
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.jsonl')).sort();
   if (files.length === 0) {
     throw new Error(`No .jsonl files found in ${dir}`);
@@ -210,13 +227,15 @@ function loadJsonlSessions(dir: string): SessionView[] {
     }
     if (rolls.length === 0) continue;
     const finalEquity = rolls[rolls.length - 1].equityAfter;
-    sessions.push({
+    const view: SessionView = {
       rolls,
       initialBankroll: initialBankroll ?? 0,
       // JSONL carries no explicit ruin marker: treat a session whose final
       // equity cannot fund a $10 flat bet as ruined.
       endedAtRuin: sawBets && finalEquity < 10,
-    });
+    };
+    if (onSession) onSession(view);
+    sessions.push(view);
   }
   return sessions;
 }
@@ -339,6 +358,43 @@ function printText(report: AnalyzeReport): void {
   console.log(`\nSession P&L: p10 ${money(report.pnl.p10)}  p50 ${money(report.pnl.p50)}  p90 ${money(report.pnl.p90)}`);
   console.log(`Sessions ending positive: ${fmt(report.pctSessionsPositive)}%`);
   console.log(`Sessions ending at ruin:  ${fmt(report.pctSessionsRuined)}%\n`);
+
+  if (report.stopping) printStopping(report.stopping);
+}
+
+function printStopping(stopping: StoppingReport): void {
+  console.log('=== Stopping-rule menu (banked P&L per rule; sessions play fully out) ===\n');
+  const header =
+    'Rule'.padEnd(14) +
+    ' | ' + 'Trigger %'.padStart(9) +
+    ' | ' + 'Ruin %'.padStart(7) +
+    ' | ' + 'Cens. %'.padStart(7) +
+    ' | ' + 'p10'.padStart(7) +
+    ' | ' + 'p50'.padStart(7) +
+    ' | ' + 'p90'.padStart(7) +
+    ' | ' + 'Pos %'.padStart(6) +
+    ' | ' + 'PeakCap'.padStart(7);
+  console.log(header);
+  console.log('-'.repeat(header.length));
+  for (const r of stopping.rules) {
+    console.log(
+      r.rule.padEnd(14) +
+      ' | ' + fmt(100 * r.triggerRate).padStart(9) +
+      ' | ' + fmt(100 * r.ruinRate).padStart(7) +
+      ' | ' + fmt(100 * r.censoredRate).padStart(7) +
+      ' | ' + money(r.banked.p10).padStart(7) +
+      ' | ' + money(r.banked.p50).padStart(7) +
+      ' | ' + money(r.banked.p90).padStart(7) +
+      ' | ' + fmt(r.pctPositive).padStart(6) +
+      ' | ' + (r.peakCapture === null ? '—' : r.peakCapture.toFixed(2)).padStart(7)
+    );
+  }
+  const peaks = stopping.peakPnl;
+  console.log(`\nPeak P&L: p10 ${money(peaks.p10)}  p25 ${money(peaks.p25)}  p50 ${money(peaks.p50)}  p75 ${money(peaks.p75)}  p90 ${money(peaks.p90)}  p99 ${money(peaks.p99)}`);
+  const hits = stopping.hitting
+    .map(h => `k=${h.k}: ${fmt(100 * h.pHitBeforeRuin)}% (censored ${fmt(100 * h.censoredFraction)}%)`)
+    .join('   ');
+  console.log(`P(hit k·B before ruin): ${hits}\n`);
 }
 
 function money(n: number): string {
@@ -350,11 +406,74 @@ function money(n: number): string {
 // Entry point
 // ---------------------------------------------------------------------------
 
+/**
+ * Build the stopping config for a spec: trailing-floor drop, and the
+ * fall-below-stage ladder level (default: the ladder's first gated stage).
+ * Returns the config plus the state → ladder-level map used to score rolls.
+ */
+export function buildStoppingContext(
+  args: Pick<AnalyzeArgs, 'strategy' | 'bankroll' | 'trailDrop' | 'belowStage'>,
+): { config: StoppingConfig; stateLevel: Map<string, number> | null } {
+  const config: StoppingConfig = {
+    bankroll: args.bankroll,
+    ...(args.trailDrop !== undefined ? { trailDrop: args.trailDrop } : {}),
+  };
+  let stateLevel: Map<string, number> | null = null;
+
+  if (args.strategy) {
+    const ladder = getStageLadder(args.strategy);
+    if (ladder) {
+      stateLevel = new Map(ladder.stateOrder.map((state, i) => [state, i]));
+      let slug = args.belowStage;
+      if (slug === undefined) {
+        const meta = getStrategyMetadata(parseStrategySpec(args.strategy).name);
+        slug = meta.stages.find(m => m.gate > 0)?.slug;
+      }
+      if (slug !== undefined) {
+        const state = ladder.slugToState.get(slug);
+        if (state === undefined) {
+          const valid = [...ladder.slugToState.keys()].join(', ');
+          throw new Error(`Unknown --exit-below-stage slug "${slug}". Valid slugs: ${valid}`);
+        }
+        config.belowStageLevel = stateLevel.get(state);
+        config.belowStageSlug = slug;
+      }
+    }
+  }
+  return { config, stateLevel };
+}
+
+/** Feed one materialized session through the streaming evaluator. */
+export function streamSession(
+  evaluator: StreamingStoppingEvaluator,
+  session: SessionView,
+  stateLevel: Map<string, number> | null,
+): void {
+  evaluator.beginSession();
+  let finalEquity = session.initialBankroll;
+  for (const roll of session.rolls) {
+    const level = stateLevel ? stateLevel.get(roll.stageName) : undefined;
+    evaluator.onRoll(roll.equityAfter, level);
+    finalEquity = roll.equityAfter;
+  }
+  evaluator.endSession(finalEquity, session.endedAtRuin);
+}
+
 export function runAnalysis(args: AnalyzeArgs): AnalyzeReport {
+  const { config, stateLevel } = buildStoppingContext(args);
+  const evaluator = new StreamingStoppingEvaluator(config);
+
+  // The streaming path: each session is scored roll-by-roll as it is
+  // produced (one pass; sessions still play fully out).
+  const onSession = (session: SessionView) => streamSession(evaluator, session, stateLevel);
+
   const sessions = args.jsonlDir
-    ? loadJsonlSessions(args.jsonlDir)
-    : runSessions(args);
-  return aggregate(sessions, { rollsPerSession: args.rolls, bankroll: args.bankroll });
+    ? loadJsonlSessions(args.jsonlDir, onSession)
+    : runSessions(args, onSession);
+
+  const report = aggregate(sessions, { rollsPerSession: args.rolls, bankroll: args.bankroll });
+  report.stopping = evaluator.report();
+  return report;
 }
 
 if (require.main === module) {
@@ -369,7 +488,7 @@ if (require.main === module) {
   } catch (err: any) {
     console.error(`Error: ${err.message}`);
     console.error('Usage:');
-    console.error('  npx ts-node src/cli/analyze-stages.ts --strategy CATS --rolls 1000 --bankroll 300 --seeds 2000 [--stop-at-ruin] [--output text|json]');
+    console.error('  npx ts-node src/cli/analyze-stages.ts --strategy CATS[@entry=slug,tableMin=n] --rolls 1000 --bankroll 300 --seeds 2000 [--stop-at-ruin] [--trail-drop n] [--exit-below-stage slug] [--output text|json]');
     console.error('  npx ts-node src/cli/analyze-stages.ts --jsonl-dir ./sessions [--output json]');
     process.exit(1);
   }

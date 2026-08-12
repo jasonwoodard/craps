@@ -143,6 +143,15 @@ export class StageMachineRuntime {
   }
 
   /**
+   * All machine states in declaration (ladder) order, including internal
+   * states without entry metadata. Index in this list is the state's ladder
+   * level — used by fall-below-stage stopping rules.
+   */
+  getStateOrder(): string[] {
+    return [...this.stageConfigs.keys()];
+  }
+
+  /**
    * Called by the StrategyDefinition wrapper on each reconcile pass.
    * Delegates to the current stage's board() function.
    */

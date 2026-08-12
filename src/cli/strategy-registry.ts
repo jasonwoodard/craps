@@ -182,3 +182,18 @@ export function getStrategyMetadata(name: string): StrategyMetadata {
 export function listStrategyNames(): string[] {
   return Object.keys(BUILT_IN_STRATEGIES);
 }
+
+/**
+ * Ladder info for stopping rules: machine states in ladder order plus the
+ * slug → state mapping. Returns null for non-staged strategies.
+ */
+export function getStageLadder(spec: string): { stateOrder: string[]; slugToState: Map<string, string> } | null {
+  const instance = createStrategy(spec);
+  const runtime = (instance as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
+  if (!runtime) return null;
+  const slugToState = new Map<string, string>();
+  for (const row of runtime.getStageMetadata()) {
+    slugToState.set(row.slug, row.state);
+  }
+  return { stateOrder: runtime.getStateOrder(), slugToState };
+}
