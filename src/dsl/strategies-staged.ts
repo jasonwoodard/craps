@@ -39,18 +39,24 @@
 import { stageMachine } from './stage-machine';
 import { StageContext, TableReadView } from './stage-machine-types';
 import { StrategyDefinition } from './strategy';
+import { catsUnits, batsUnits, CatsUnits } from './units';
 
 /** Options for CATS(). Defaults reproduce the strategy doc exactly. */
 export interface CATSOptions {
   /**
-   * Stage 1 → 2 (Little Molly) profit gate in dollars (default $70).
-   * All higher ladder gates scale proportionally (rounded to the dollar):
-   * $150/$200/$250/$400 × (stage2Gate / 70). The §3.4 hard-reset floor
-   * stays at $20 — it is a capital-preservation floor tied to the buy-in,
-   * not a rung of the gate ladder. Used for threshold-sensitivity analysis;
-   * the strategy's official thresholds are unchanged.
+   * Stage 1 → 2 (Little Molly) profit gate in dollars (default 7u = $70 at
+   * a $10 table). All higher ladder gates scale proportionally (rounded to
+   * the dollar). The §3.4 hard-reset floor does not scale with the gate —
+   * it is a capital-preservation floor, not a rung of the gate ladder.
+   * Used for threshold-sensitivity analysis; the strategy's official
+   * thresholds are unchanged.
    */
   stage2Gate?: number;
+  /**
+   * Table minimum (default $10). Every sizing quantity — flats, odds,
+   * buys, accumulator amounts, gates — derives from it via catsUnits().
+   */
+  tableMin?: number;
 }
 
 /**
@@ -58,14 +64,15 @@ export interface CATSOptions {
  * Register in StrategyRegistry as: `'CATS': CATS()`
  */
 export function CATS(options: CATSOptions = {}) {
-  const g2 = options.stage2Gate ?? 70;
-  const f = g2 / 70;
-  const G_LITTLE   = g2;                    // Stage 1 → 2 gate; Little Molly retreat floor
-  const G_MOLLY    = Math.round(150 * f);   // Stage 2 → 3 gate; stage-3 retreat floor
-  const G_LOOSE    = Math.round(200 * f);   // Tight ⇄ Loose mode-shift cushion
-  const G_EXPANDED = Math.round(250 * f);   // Stage 3 → 4 gate; Expanded Alpha retreat floor
-  const G_MAX      = Math.round(400 * f);   // Stage 4 → 5 gate; Max Alpha retreat floor
-  const HARD_RESET = 20;                    // §3.4 hard reset — not scaled
+  const U = catsUnits(options.tableMin ?? 10);
+  const g2 = options.stage2Gate ?? U.gates.littleMolly;
+  const f = g2 / U.gates.littleMolly;
+  const G_LITTLE   = g2;                                       // Stage 1 → 2 gate; Little Molly retreat floor
+  const G_MOLLY    = Math.round(U.gates.threePtMolly * f);     // Stage 2 → 3 gate; stage-3 retreat floor
+  const G_LOOSE    = Math.round(U.modeShiftCushion * f);       // Tight ⇄ Loose mode-shift cushion
+  const G_EXPANDED = Math.round(U.gates.expandedAlpha * f);    // Stage 3 → 4 gate; Expanded Alpha retreat floor
+  const G_MAX      = Math.round(U.gates.maxAlpha * f);         // Stage 4 → 5 gate; Max Alpha retreat floor
+  const HARD_RESET = U.hardReset;                              // §3.4 hard reset — not gate-scaled
 
   return stageMachine('CATS')
     .startingAt('accumulatorFull')
@@ -74,8 +81,8 @@ export function CATS(options: CATSOptions = {}) {
     // Place 6/8 at $18 each. On first hit of 6 or 8, transition to regressed.
     .stage('accumulatorFull', {
       board: ({ bets }: StageContext) => {
-        bets.place(6, 18);
-        bets.place(8, 18);
+        bets.place(6, U.accumulatorStart);
+        bets.place(8, U.accumulatorStart);
       },
       canAdvanceTo: () => true,
       on: {
@@ -91,8 +98,8 @@ export function CATS(options: CATSOptions = {}) {
     // Place 6/8 at $12 each. Advance to LittleMolly when profit >= +$70.
     .stage('accumulatorRegressed', {
       board: ({ bets, session, advanceTo }: StageContext) => {
-        bets.place(6, 12);
-        bets.place(8, 12);
+        bets.place(6, U.accumulatorRegressed);
+        bets.place(8, U.accumulatorRegressed);
         if (session.profit >= G_LITTLE) {
           advanceTo('littleMolly');
         }
@@ -106,8 +113,8 @@ export function CATS(options: CATSOptions = {}) {
     // Retreats to AccumulatorRegressed on profit < +$70 or a 7-out trigger.
     .stage('littleMolly', {
       board: ({ bets, session, advanceTo }: StageContext) => {
-        bets.passLine(10).withOdds(20);
-        bets.come(10).withOdds(20);
+        bets.passLine(U.flat).withOdds(U.oddsLittle);
+        bets.come(U.flat).withOdds(U.oddsLittle);
         if (session.profit >= G_MOLLY) {
           advanceTo('threePtMollyTight');
         }
@@ -125,10 +132,10 @@ export function CATS(options: CATSOptions = {}) {
     // Steps down to LittleMolly on profit < +$150 or a 7-out trigger.
     .stage('threePtMollyTight', {
       board: ({ bets, table, session, advanceTo }: StageContext) => {
-        const odds = tieredOdds(table);
-        bets.passLine(10).withOdds(odds.passLine);
-        bets.come(10).withOdds(odds.come1);
-        bets.come(10).withOdds(odds.come2);
+        const odds = tieredOdds(table, U);
+        bets.passLine(U.flat).withOdds(odds.passLine);
+        bets.come(U.flat).withOdds(odds.come1);
+        bets.come(U.flat).withOdds(odds.come2);
         if (session.profit >= G_LOOSE && table.hasSixOrEight) {
           advanceTo('threePtMollyLoose');
         }
@@ -149,9 +156,9 @@ export function CATS(options: CATSOptions = {}) {
     // +$200 cushion shifts back to Tight (mode change, not a step-down).
     .stage('threePtMollyLoose', {
       board: ({ bets, session, advanceTo }: StageContext) => {
-        bets.passLine(10).withOdds(50);
-        bets.come(10).withOdds(50);
-        bets.come(10).withOdds(50);
+        bets.passLine(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
         if (session.profit >= G_EXPANDED) {
           advanceTo('expandedAlpha');
         }
@@ -175,11 +182,11 @@ export function CATS(options: CATSOptions = {}) {
     // < +$250 or a 7-out trigger.
     .stage('expandedAlpha', {
       board: ({ bets, table, session, advanceTo }: StageContext) => {
-        bets.passLine(10).withOdds(50);
-        bets.come(10).withOdds(50);
-        bets.come(10).withOdds(50);
-        if (!table.coverage.has(4)) bets.buy(4, 20);
-        if (!table.coverage.has(10)) bets.buy(10, 20);
+        bets.passLine(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
+        if (!table.coverage.has(4)) bets.buy(4, U.buyAmount);
+        if (!table.coverage.has(10)) bets.buy(10, U.buyAmount);
         if (session.profit >= G_MAX) {
           advanceTo('maxAlpha');
         }
@@ -198,13 +205,13 @@ export function CATS(options: CATSOptions = {}) {
     // Steps down to ExpandedAlpha on profit < +$400 or a 7-out trigger.
     .stage('maxAlpha', {
       board: ({ bets, table }: StageContext) => {
-        bets.passLine(10).withOdds(50);
-        bets.come(10).withOdds(50);
-        bets.come(10).withOdds(50);
-        if (!table.coverage.has(4)) bets.buy(4, 20);
-        if (!table.coverage.has(10)) bets.buy(10, 20);
-        if (!table.coverage.has(5)) bets.buy(5, 20);
-        if (!table.coverage.has(9)) bets.buy(9, 20);
+        bets.passLine(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
+        bets.come(U.flat).withOdds(U.oddsLoose);
+        if (!table.coverage.has(4)) bets.buy(4, U.buyAmount);
+        if (!table.coverage.has(10)) bets.buy(10, U.buyAmount);
+        if (!table.coverage.has(5)) bets.buy(5, U.buyAmount);
+        if (!table.coverage.has(9)) bets.buy(9, U.buyAmount);
       },
       mustRetreatTo: (session) => {
         if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
@@ -224,7 +231,8 @@ export function CATS(options: CATSOptions = {}) {
  *
  * Register in StrategyRegistry as: `'CATSAccumulatorOnly': CATSAccumulatorOnly()`
  */
-export function CATSAccumulatorOnly() {
+export function CATSAccumulatorOnly(options: { tableMin?: number } = {}) {
+  const U = catsUnits(options.tableMin ?? 10);
   return stageMachine('CATSAccumulatorOnly')
     .startingAt('accumulatorFull')
 
@@ -232,8 +240,8 @@ export function CATSAccumulatorOnly() {
     // Place 6/8 at $18 each. On first hit of 6 or 8, de-leverage to regressed.
     .stage('accumulatorFull', {
       board: ({ bets }: StageContext) => {
-        bets.place(6, 18);
-        bets.place(8, 18);
+        bets.place(6, U.accumulatorStart);
+        bets.place(8, U.accumulatorStart);
       },
       canAdvanceTo: () => true,
       on: {
@@ -249,8 +257,8 @@ export function CATSAccumulatorOnly() {
     // Place 6/8 at $12 each. No further advancement — grind indefinitely.
     .stage('accumulatorRegressed', {
       board: ({ bets }: StageContext) => {
-        bets.place(6, 12);
-        bets.place(8, 12);
+        bets.place(6, U.accumulatorRegressed);
+        bets.place(8, U.accumulatorRegressed);
       },
     })
 
@@ -264,13 +272,13 @@ export function CATSAccumulatorOnly() {
  * Middle (6/8 covered, no 5/9): 2×/1×/1× = $20/$10/$10
  * Rough (no 6/8): 1×/1×/1× = $10/$10/$10
  */
-function tieredOdds(table: TableReadView) {
+function tieredOdds(table: TableReadView, units: CatsUnits) {
   if (table.hasSixOrEight && hasPointInSet(table.coverage, [5, 9])) {
-    return { passLine: 30, come1: 20, come2: 10 };
+    return units.tier.sweet;
   } else if (table.hasSixOrEight) {
-    return { passLine: 20, come1: 10, come2: 10 };
+    return units.tier.middle;
   }
-  return { passLine: 10, come1: 10, come2: 10 };
+  return units.tier.rough;
 }
 
 // ---------------------------------------------------------------------------
@@ -297,7 +305,8 @@ function layAmountToWin(point: number, targetWin: number): number {
  * Creates a fresh BATS strategy. Each call produces an independent runtime.
  * Register in StrategyRegistry as: `'BATS': BATS()`
  */
-export function BATS() {
+export function BATS(options: { tableMin?: number } = {}) {
+  const B = batsUnits(options.tableMin ?? 10);
   return stageMachine('BATS')
     .startingAt('bearishAccumulator')
 
@@ -307,13 +316,13 @@ export function BATS() {
     .stage('bearishAccumulator', {
       board: ({ bets, table, session, advanceTo }: StageContext) => {
         if (!table.point) {
-          bets.dontPass(10);
+          bets.dontPass(B.flat);
         } else {
-          bets.dontPass(10).withOdds(layAmountToWin(table.point, 10));
+          bets.dontPass(B.flat).withOdds(layAmountToWin(table.point, B.layWinAccumulator));
         }
-        if (session.profit >= 120) advanceTo('littleDolly');
+        if (session.profit >= B.gates.littleDolly) advanceTo('littleDolly');
       },
-      canAdvanceTo: (_target, session) => session.profit >= 120,
+      canAdvanceTo: (_target, session) => session.profit >= B.gates.littleDolly,
     })
 
     // --- Stage 2: Little Dolly ---
@@ -325,16 +334,16 @@ export function BATS() {
         if (!table.point) {
           bets.dontPass(10);
         } else {
-          const layAmt = layAmountToWin(table.point, 20); // 2× odds: win $20
-          bets.dontPass(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
+          const layAmt = layAmountToWin(table.point, B.layWinDolly); // 2× odds
+          bets.dontPass(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
         }
-        if (session.profit >= 225) advanceTo('threePtDolly');
+        if (session.profit >= B.gates.threePtDolly) advanceTo('threePtDolly');
       },
-      canAdvanceTo: (_target, session) => session.profit >= 225,
+      canAdvanceTo: (_target, session) => session.profit >= B.gates.threePtDolly,
       mustRetreatTo: (session) => {
         if (session.consecutiveComeOutLosses >= 2) return 'bearishAccumulator';
-        if (session.profit < 120) return 'bearishAccumulator';
+        if (session.profit < B.gates.littleDolly) return 'bearishAccumulator';
         return undefined;
       },
     })
@@ -348,17 +357,17 @@ export function BATS() {
         if (!table.point) {
           bets.dontPass(10);
         } else {
-          const layAmt = layAmountToWin(table.point, 50); // 5× odds: win $50
-          bets.dontPass(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
+          const layAmt = layAmountToWin(table.point, B.layWinThreePt); // 5× odds
+          bets.dontPass(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
         }
-        if (session.profit >= 350) advanceTo('expandedDarkAlpha');
+        if (session.profit >= B.gates.expandedDarkAlpha) advanceTo('expandedDarkAlpha');
       },
-      canAdvanceTo: (_target, session) => session.profit >= 350,
+      canAdvanceTo: (_target, session) => session.profit >= B.gates.expandedDarkAlpha,
       mustRetreatTo: (session) => {
         if (session.pointRepeaterStreak >= 2) return 'littleDolly';
-        if (session.profit < 225) return 'littleDolly';
+        if (session.profit < B.gates.threePtDolly) return 'littleDolly';
         return undefined;
       },
     })
@@ -373,19 +382,19 @@ export function BATS() {
         if (!table.point) {
           bets.dontPass(10);
         } else {
-          const layAmt = layAmountToWin(table.point, 50);
-          bets.dontPass(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
+          const layAmt = layAmountToWin(table.point, B.layWinThreePt);
+          bets.dontPass(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
         }
         // Swap Rule: skip Lay if a DC bet has already traveled to that number.
-        if (!table.dontCoverage.has(4))  bets.lay(4, 40);  // Lay $40 → win $20 on 4
-        if (!table.dontCoverage.has(10)) bets.lay(10, 40); // Lay $40 → win $20 on 10
-        if (session.profit >= 500) advanceTo('maxDarkAlpha');
+        if (!table.dontCoverage.has(4))  bets.lay(4, layAmountToWin(4, B.layWinStandalone));
+        if (!table.dontCoverage.has(10)) bets.lay(10, layAmountToWin(10, B.layWinStandalone));
+        if (session.profit >= B.gates.maxDarkAlpha) advanceTo('maxDarkAlpha');
       },
-      canAdvanceTo: (_target, session) => session.profit >= 500,
+      canAdvanceTo: (_target, session) => session.profit >= B.gates.maxDarkAlpha,
       mustRetreatTo: (session) => {
-        if (session.profit < 350) return 'threePtDolly';
+        if (session.profit < B.gates.expandedDarkAlpha) return 'threePtDolly';
         return undefined;
       },
     })
@@ -399,18 +408,18 @@ export function BATS() {
         if (!table.point) {
           bets.dontPass(10);
         } else {
-          const layAmt = layAmountToWin(table.point, 50);
-          bets.dontPass(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
-          bets.dontCome(10).withOdds(layAmt);
+          const layAmt = layAmountToWin(table.point, B.layWinThreePt);
+          bets.dontPass(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
+          bets.dontCome(B.flat).withOdds(layAmt);
         }
-        if (!table.dontCoverage.has(4))  bets.lay(4,  40); // win $20
-        if (!table.dontCoverage.has(5))  bets.lay(5,  30); // lay $30 → win $20
-        if (!table.dontCoverage.has(9))  bets.lay(9,  30); // lay $30 → win $20
-        if (!table.dontCoverage.has(10)) bets.lay(10, 40); // win $20
+        if (!table.dontCoverage.has(4))  bets.lay(4,  layAmountToWin(4, B.layWinStandalone));
+        if (!table.dontCoverage.has(5))  bets.lay(5,  layAmountToWin(5, B.layWinStandalone));
+        if (!table.dontCoverage.has(9))  bets.lay(9,  layAmountToWin(9, B.layWinStandalone));
+        if (!table.dontCoverage.has(10)) bets.lay(10, layAmountToWin(10, B.layWinStandalone));
       },
       mustRetreatTo: (session) => {
-        if (session.profit < 500) return 'expandedDarkAlpha';
+        if (session.profit < B.gates.maxDarkAlpha) return 'expandedDarkAlpha';
         return undefined;
       },
     })
@@ -427,7 +436,8 @@ export function BATS() {
  *
  * Register in StrategyRegistry as: `'BATSAccumulatorOnly': BATSAccumulatorOnly()`
  */
-export function BATSAccumulatorOnly() {
+export function BATSAccumulatorOnly(options: { tableMin?: number } = {}) {
+  const B = batsUnits(options.tableMin ?? 10);
   return stageMachine('BATSAccumulatorOnly')
     .startingAt('bearishAccumulatorFull')
 
@@ -436,9 +446,9 @@ export function BATSAccumulatorOnly() {
     .stage('bearishAccumulatorFull', {
       board: ({ bets, table }: StageContext) => {
         if (!table.point) {
-          bets.dontPass(10);
+          bets.dontPass(B.flat);
         } else {
-          bets.dontPass(10).withOdds(layAmountToWin(table.point, 20));
+          bets.dontPass(B.flat).withOdds(layAmountToWin(table.point, B.layWinDolly));
         }
       },
       canAdvanceTo: () => true,
@@ -454,9 +464,9 @@ export function BATSAccumulatorOnly() {
     .stage('bearishAccumulatorRegressed', {
       board: ({ bets, table }: StageContext) => {
         if (!table.point) {
-          bets.dontPass(10);
+          bets.dontPass(B.flat);
         } else {
-          bets.dontPass(10).withOdds(layAmountToWin(table.point, 10));
+          bets.dontPass(B.flat).withOdds(layAmountToWin(table.point, B.layWinAccumulator));
         }
       },
     })
