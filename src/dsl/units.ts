@@ -58,8 +58,6 @@ export interface CatsUnits {
   };
   /** Tight ⇄ Loose mode-shift cushion: 20u. */
   modeShiftCushion: number;
-  /** §3.4 hard-reset floor: 2u. */
-  hardReset: number;
   /** Classic declared session risk B: 30u. */
   classicRisk: number;
   /** Reference funded configs (v4 §4): declared risk for funded entries. */
@@ -94,7 +92,6 @@ export function catsUnits(tableMin: number = 10): CatsUnits {
       maxAlpha: 40 * u,
     },
     modeShiftCushion: 20 * u,
-    hardReset: 2 * u,
     classicRisk: 30 * u,
     referenceFunded: {
       tight: 20 * u,

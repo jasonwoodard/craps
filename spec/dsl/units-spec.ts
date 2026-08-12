@@ -55,13 +55,12 @@ describe('unit system', () => {
       expect(u.tier.rough).toEqual({ passLine: 10, come1: 10, come2: 10 });
     });
 
-    it('buys $20; accumulator $18 → $12; mode shift $200; risk $300; hard reset $20', () => {
+    it('buys $20; accumulator $18 → $12; mode shift $200; risk $300', () => {
       expect(u.buyAmount).toBe(20);
       expect(u.accumulatorStart).toBe(18);
       expect(u.accumulatorRegressed).toBe(12);
       expect(u.modeShiftCushion).toBe(200);
       expect(u.classicRisk).toBe(300);
-      expect(u.hardReset).toBe(20);
     });
 
     it('reference funded configs (v4 §4): $200 @ Tight, $150 @ Little Molly', () => {

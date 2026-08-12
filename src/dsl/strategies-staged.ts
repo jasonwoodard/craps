@@ -16,9 +16,11 @@
  *
  * Tight and Loose are MODES of one stage (stage 3): the §3.4 seven-out
  * step-down from either mode lands in littleMolly; Loose ⇄ Tight shifts on
- * the ±$200 cushion are mode changes, not step-downs. §3.4's hard reset
- * (profit < +$20) returns any stage to accumulatorRegressed. Profit follows
- * §3.7: (rack + working bets at face) − buy-in, settled per roll.
+ * the ±$200 cushion are mode changes, not step-downs. The former §3.4 hard
+ * reset (profit < +$20 → jump to Accumulator) is RETIRED (v4 decision #3):
+ * descent is handled entirely by the chained retreat floors, which reach
+ * the Accumulator from any stage with no dead zone. Profit follows §3.7:
+ * (rack + working bets at face) − origin, settled per roll.
  *
  * CATSAccumulatorOnly stages:
  *   accumulatorFull    → Place 6/8 at $18 each. Transitions on first 6/8 hit.
@@ -46,10 +48,8 @@ export interface CATSOptions {
   /**
    * Stage 1 → 2 (Little Molly) profit gate in dollars (default 7u = $70 at
    * a $10 table). All higher ladder gates scale proportionally (rounded to
-   * the dollar). The §3.4 hard-reset floor does not scale with the gate —
-   * it is a capital-preservation floor, not a rung of the gate ladder.
-   * Used for threshold-sensitivity analysis; the strategy's official
-   * thresholds are unchanged.
+   * the dollar). Used for threshold-sensitivity analysis; the strategy's
+   * official thresholds are unchanged.
    */
   stage2Gate?: number;
   /**
@@ -79,7 +79,6 @@ export function CATS(options: CATSOptions = {}) {
   const G_LOOSE    = Math.round(U.modeShiftCushion * f);       // Tight ⇄ Loose mode-shift cushion
   const G_EXPANDED = Math.round(U.gates.expandedAlpha * f);    // Stage 3 → 4 gate; Expanded Alpha retreat floor
   const G_MAX      = Math.round(U.gates.maxAlpha * f);         // Stage 4 → 5 gate; Max Alpha retreat floor
-  const HARD_RESET = U.hardReset;                              // §3.4 hard reset — not gate-scaled
 
   return stageMachine('CATS', { entryStage: options.entry })
     .startingAt('accumulatorFull')
@@ -152,7 +151,6 @@ export function CATS(options: CATSOptions = {}) {
       },
       canAdvanceTo: (_target, session) => session.profit >= G_LOOSE,
       mustRetreatTo: (session) => {
-        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
         if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
         return undefined;
       },
@@ -181,7 +179,6 @@ export function CATS(options: CATSOptions = {}) {
       },
       canAdvanceTo: (_target, session) => session.profit >= G_EXPANDED,
       mustRetreatTo: (session) => {
-        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
         if (session.profit < G_MOLLY || session.sevenOutStepDownTriggered) return 'littleMolly';
         if (session.profit < G_LOOSE) return 'threePtMollyTight';
         return undefined;
@@ -210,7 +207,6 @@ export function CATS(options: CATSOptions = {}) {
       },
       canAdvanceTo: (_target, session) => session.profit >= G_MAX,
       mustRetreatTo: (session) => {
-        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
         if (session.profit < G_EXPANDED || session.sevenOutStepDownTriggered) return 'threePtMollyLoose';
         return undefined;
       },
@@ -232,7 +228,6 @@ export function CATS(options: CATSOptions = {}) {
         if (!table.coverage.has(9)) bets.buy(9, U.buyAmount);
       },
       mustRetreatTo: (session) => {
-        if (session.profit < HARD_RESET) return 'accumulatorRegressed'; // §3.4 hard reset
         if (session.profit < G_MAX || session.sevenOutStepDownTriggered) return 'expandedAlpha';
         return undefined;
       },
