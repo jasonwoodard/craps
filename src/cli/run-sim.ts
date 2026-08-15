@@ -24,6 +24,7 @@ import { RunLogger } from '../logger/run-logger';
 import { StrategyDefinition } from '../dsl/strategy';
 import { lookupStrategy, createStrategy } from './strategy-registry';
 import { loadStrategyFile } from './strategy-loader';
+import { buildManifest, RunManifest } from './manifest';
 import { summarize, computeFullAggregates } from '../../server/lib/distribution';
 
 // ---------------------------------------------------------------------------
@@ -177,7 +178,7 @@ export function runSim(args: CliArgs): void {
     strategyName = args.strategyFile;
   } else {
     strategyName = args.strategy!;
-    strategy = lookupStrategy(strategyName);
+    strategy = createStrategy(strategyName); // spec-aware: NAME[@key=value,...]
   }
 
   const logger = new RunLogger({
@@ -196,7 +197,24 @@ export function runSim(args: CliArgs): void {
   });
 
   engine.run();
+  const manifest = buildManifest({
+    strategySpec: strategyName,
+    bankroll: args.bankroll,
+    rolls: args.rolls,
+    seeds: { seed: args.seed ?? null },
+  });
+  emitManifest(manifest, args.output as 'summary' | 'verbose' | 'json');
   logger.flush(args.output as 'summary' | 'verbose' | 'json');
+}
+
+/** Embed the run manifest in every output mode (v4 §5). */
+function emitManifest(manifest: RunManifest | RunManifest[], output: 'summary' | 'verbose' | 'json'): void {
+  const list = Array.isArray(manifest) ? manifest : [manifest];
+  if (output === 'json') {
+    for (const m of list) console.log(JSON.stringify({ type: 'manifest', manifest: m }));
+  } else {
+    for (const m of list) console.log(`manifest: ${JSON.stringify(m)}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -210,7 +228,7 @@ export function runDistribution(args: CliArgs): void {
     strategyName = args.strategyFile;
   } else {
     strategyName = args.strategy!;
-    lookupStrategy(strategyName); // validate the name up front
+    createStrategy(strategyName); // validate the spec up front
   }
 
   const N = args.seeds!;
@@ -238,7 +256,13 @@ export function runDistribution(args: CliArgs): void {
     bankroll: args.bankroll,
   });
 
-  process.stdout.write(JSON.stringify(aggregates, null, 2) + '\n');
+  const manifest = buildManifest({
+    strategySpec: strategyName,
+    bankroll: args.bankroll,
+    rolls: args.rolls,
+    seeds: { count: N },
+  });
+  process.stdout.write(JSON.stringify({ manifest, ...aggregates }, null, 2) + '\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +273,7 @@ export function runCompare(args: CliArgs): void {
   const strategies: Array<{ name: string; strategy: StrategyDefinition }> = [];
 
   for (const name of args.compare ?? []) {
-    strategies.push({ name, strategy: lookupStrategy(name) });
+    strategies.push({ name, strategy: createStrategy(name) });
   }
 
   for (const filePath of args.compareFiles ?? []) {
@@ -266,6 +290,14 @@ export function runCompare(args: CliArgs): void {
   }
 
   const results = table.run();
+
+  const manifests = strategies.map(({ name }) => buildManifest({
+    strategySpec: name,
+    bankroll: args.bankroll,
+    rolls: args.rolls,
+    seeds: { seed: args.seed ?? null },
+  }));
+  emitManifest(manifests, args.output === 'json' ? 'json' : 'summary');
 
   if (args.output === 'json') {
     printComparisonJson(results);

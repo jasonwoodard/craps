@@ -5,7 +5,7 @@
  * event dispatch, and transition evaluation.
  */
 
-import { StageConfig, StageContext, SessionState, TableReadView } from './stage-machine-types';
+import { StageConfig, StageContext, SessionState, TableReadView, StageMetadata } from './stage-machine-types';
 import { StrategyContext } from './strategy';
 import { CrapsTable } from '../craps-table';
 import { Outcome } from './outcome';
@@ -48,9 +48,30 @@ const NOOP_BET_RECONCILER: BetReconciler = {
   remove: () => {},
 };
 
+/**
+ * Build the ordered slug → metadata table from a machine's stage configs.
+ * Rows appear in stage-declaration order; only stages with entry metadata
+ * are included (internal states like accumulatorRegressed are omitted).
+ */
+export function collectStageMetadata(stages: Map<string, StageConfig>): StageMetadata[] {
+  const rows: StageMetadata[] = [];
+  for (const [state, config] of stages) {
+    if (!config.entry) continue;
+    rows.push({
+      slug: config.entry.slug ?? state,
+      state,
+      displayName: config.entry.displayName,
+      gate: config.entry.gate,
+    });
+  }
+  return rows;
+}
+
 export class StageMachineRuntime {
   private currentStage: string;
   private lastBoardStage: string;
+  /** Funded-entry gate (v4 §2): origin = initialBankroll − entryGate. */
+  private entryGate: number;
   private stageTrackers = new Map<string, Map<string, any>>();
   private sessionState: MutableSessionState;
   private stageConfigs: Map<string, StageConfig>;
@@ -63,9 +84,11 @@ export class StageMachineRuntime {
     startingStage: string,
     configs: Map<string, StageConfig>,
     _machineName: string,
+    entryGate: number = 0,
   ) {
     this.currentStage = startingStage;
     this.lastBoardStage = startingStage;
+    this.entryGate = entryGate;
     this.stageConfigs = configs;
     this.sessionState = {
       profit: 0,
@@ -85,6 +108,12 @@ export class StageMachineRuntime {
     // Capture initial bankroll on first call (before any bets are placed)
     if (bankroll !== undefined && this.initialBankroll === null) {
       this.initialBankroll = bankroll;
+      // Session start: equity = bankroll, so profit = bankroll − origin =
+      // entryGate exactly. Without this, the first reconcile's retreat
+      // check would see the constructor's profit 0 and cascade a funded
+      // entry down the ladder before the first roll. Default entry has
+      // gate 0 — identical to the previous initialization.
+      this.sessionState.profit = this.entryGate;
     }
   }
 
@@ -106,6 +135,20 @@ export class StageMachineRuntime {
   /** Returns session state for external inspection (e.g., tests). */
   getSessionState(): SessionState {
     return this.sessionState;
+  }
+
+  /** Ordered funded-entry stage metadata (slugs, display names, gates). */
+  getStageMetadata(): StageMetadata[] {
+    return collectStageMetadata(this.stageConfigs);
+  }
+
+  /**
+   * All machine states in declaration (ladder) order, including internal
+   * states without entry metadata. Index in this list is the state's ladder
+   * level — used by fall-below-stage stopping rules.
+   */
+  getStateOrder(): string[] {
+    return [...this.stageConfigs.keys()];
   }
 
   /**
@@ -144,8 +187,11 @@ export class StageMachineRuntime {
     rollValue: number,
   ): void {
     // Update profit per §3.7 accounting: (rack + working bets at face value)
-    // − buy-in, after payouts settle. Face value = flat + odds. Without table
-    // context (unit tests), felt load is 0 and profit is rack-only.
+    // − origin, after payouts settle. Face value = flat + odds. Origin is
+    // the funded-entry zero point (v4 §2): initialBankroll − entryGate, so
+    // a default entry (gate 0) reproduces the classic equity − buy-in and a
+    // funded entry starts with profit exactly at its stage's gate. Without
+    // table context (unit tests), felt load is 0 and profit is rack-only.
     // (initialBankroll is set in setTableContext on first reconcile call)
     if (this.initialBankroll !== null) {
       let feltLoad = 0;
@@ -154,7 +200,8 @@ export class StageMachineRuntime {
           feltLoad += bet.totalAmount;
         }
       }
-      this.sessionState.profit = bankroll + feltLoad - this.initialBankroll;
+      const origin = this.initialBankroll - this.entryGate;
+      this.sessionState.profit = bankroll + feltLoad - origin;
     }
 
     // Track seven-outs and hands played

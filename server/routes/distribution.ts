@@ -1,13 +1,22 @@
 import { Request, Response } from 'express';
 import { CrapsEngine } from '../../src/engine/craps-engine';
-import { BUILT_IN_STRATEGIES } from '../../src/cli/strategy-registry';
+import { createStrategy } from '../../src/cli/strategy-registry';
+import { buildManifest, manifestHash } from '../../src/cli/manifest';
 import { summarize, computeAggregates, SessionSummary } from '../lib/distribution';
+import { LruCache } from '../lib/memo';
+
+/** Memoized final aggregates keyed by manifest hash (v4 §5). */
+const cache = new LruCache<{ aggregates: ReturnType<typeof computeAggregates>; manifest: object }>();
 
 export function distributionStreamRoute(req: Request, res: Response): void {
   const { strategy, seeds, rolls, bankroll } = req.query as Record<string, string>;
 
-  if (!strategy || !BUILT_IN_STRATEGIES[strategy]) {
-    res.status(400).json({ error: `Unknown strategy: "${strategy}". Available: ${Object.keys(BUILT_IN_STRATEGIES).join(', ')}` });
+  // Spec-aware validation: NAME[@key=value,...]. createStrategy throws a
+  // descriptive error for unknown names, options, and entry slugs.
+  try {
+    createStrategy(strategy ?? '');
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
     return;
   }
 
@@ -34,7 +43,29 @@ export function distributionStreamRoute(req: Request, res: Response): void {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const strategyFn = BUILT_IN_STRATEGIES[strategy];
+  const manifest = buildManifest({
+    strategySpec: strategy,
+    bankroll: bankrollNum,
+    rolls: rollsNum,
+    seeds: { count: N },
+  });
+  const key = manifestHash(manifest);
+
+  const cached = cache.get(key);
+  if (cached) {
+    const payload = JSON.stringify({
+      progress: 1,
+      completed: N,
+      aggregates: cached.aggregates,
+      manifest,
+      cached: true,
+      done: true,
+    });
+    res.write(`data: ${payload}\n\n`);
+    res.end();
+    return;
+  }
+
   const batchSize = Math.max(1, Math.floor(N / 10));
   const allResults: SessionSummary[] = [];
 
@@ -42,7 +73,8 @@ export function distributionStreamRoute(req: Request, res: Response): void {
     if (res.destroyed) break;
 
     const engine = new CrapsEngine({
-      strategy: strategyFn,
+      // Fresh instance per session — stage machines carry runtime state.
+      strategy: createStrategy(strategy),
       bankroll: bankrollNum,
       rolls: rollsNum,
       seed: i,
@@ -51,11 +83,17 @@ export function distributionStreamRoute(req: Request, res: Response): void {
     allResults.push(summarize(engine.run(), i));
 
     if ((i + 1) % batchSize === 0 || i === N - 1) {
+      const aggregates = computeAggregates(allResults);
+      const done = i === N - 1;
+      if (done && !res.destroyed) {
+        cache.set(key, { aggregates, manifest });
+      }
       const payload = JSON.stringify({
         progress: (i + 1) / N,
         completed: i + 1,
-        aggregates: computeAggregates(allResults),
-        done: i === N - 1,
+        aggregates,
+        manifest,
+        done,
       });
       res.write(`data: ${payload}\n\n`);
     }

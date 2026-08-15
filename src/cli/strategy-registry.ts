@@ -1,4 +1,7 @@
-import { StrategyDefinition } from '../dsl/strategy';
+import { StrategyDefinition, STAGE_MACHINE_RUNTIME } from '../dsl/strategy';
+import { StageMachineRuntime } from '../dsl/stage-machine-state';
+import { StageMetadata } from '../dsl/stage-machine-types';
+import { parseStrategySpec, StrategySpecOptions } from './strategy-loader';
 import {
   PassLineWithOdds1X,
   PassLineWithOdds2X,
@@ -91,9 +94,10 @@ export const BUILT_IN_STRATEGIES: Record<string, StrategyDefinition> = {
  * Factories for strategies that carry per-session runtime state (stage
  * machines). Multi-session runs MUST create a fresh instance per session —
  * the singletons in BUILT_IN_STRATEGIES carry stage, profit baseline, and
- * counters from one session into the next.
+ * counters from one session into the next. These factories accept the
+ * canonical spec options ({ entry?, tableMin? }).
  */
-const STRATEGY_FACTORIES: Record<string, () => StrategyDefinition> = {
+const STRATEGY_FACTORIES: Record<string, (options?: StrategySpecOptions) => StrategyDefinition> = {
   'BATS':                BATS,
   'BATSAccumulatorOnly': BATSAccumulatorOnly,
   'CATS':                CATS,
@@ -105,6 +109,12 @@ const STRATEGY_FACTORIES: Record<string, () => StrategyDefinition> = {
   'DoDontWithCome2X':    DoDontWithCome2X,
   'DoDontWithCome3X':    DoDontWithCome3X,
 };
+
+/**
+ * Strategies whose factories understand canonical spec options. Specs with
+ * options on any other name fail loudly rather than silently ignoring them.
+ */
+const PARAMETERIZED = new Set(['BATS', 'BATSAccumulatorOnly', 'CATS', 'CATSAccumulatorOnly']);
 
 /**
  * Look up a built-in strategy by name. Throws a descriptive error if the name
@@ -120,12 +130,70 @@ export function lookupStrategy(name: string): StrategyDefinition {
 }
 
 /**
- * Create a strategy instance for one session. Stage-machine strategies get a
- * fresh runtime; stateless strategies return the shared function (their only
- * state lives in the per-engine ReconcileEngine trackers).
+ * Create a strategy instance for one session from a canonical spec string
+ * (`NAME` or `NAME@key=value[,key=value]`, e.g. `CATS@entry=threePtMollyLoose`).
+ * Stage-machine strategies get a fresh runtime; stateless strategies return
+ * the shared function (their only state lives in the per-engine
+ * ReconcileEngine trackers). Unknown entry slugs fail loudly with the valid
+ * list (thrown by the stage machine, which owns the metadata).
  */
-export function createStrategy(name: string): StrategyDefinition {
+export function createStrategy(spec: string): StrategyDefinition {
+  const parsed = parseStrategySpec(spec);
+  const factory = STRATEGY_FACTORIES[parsed.name];
+
+  const hasOptions = Object.keys(parsed.options).length > 0;
+  if (hasOptions && !PARAMETERIZED.has(parsed.name)) {
+    throw new Error(
+      `Strategy "${parsed.name}" does not accept spec options. ` +
+      `Parameterizable strategies: ${[...PARAMETERIZED].sort().join(', ')}.`
+    );
+  }
+
+  if (factory) return factory(parsed.options);
+  return lookupStrategy(parsed.name);
+}
+
+/** Per-strategy stage metadata for UIs: ordered slugs, display names, gates. */
+export interface StrategyMetadata {
+  name: string;
+  /** Ordered funded-entry stages; empty for non-staged strategies. */
+  stages: StageMetadata[];
+  /** Whether the strategy accepts canonical spec options. */
+  parameterized: boolean;
+}
+
+/**
+ * Export a strategy's stage metadata so any UI can render an entry-stage
+ * dropdown generically. Instantiates the factory (cheap, no table context)
+ * and reads the stage machine's declared metadata.
+ */
+export function getStrategyMetadata(name: string): StrategyMetadata {
   const factory = STRATEGY_FACTORIES[name];
-  if (factory) return factory();
-  return lookupStrategy(name);
+  const instance = factory ? factory() : lookupStrategy(name);
+  const runtime = (instance as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
+  return {
+    name,
+    stages: runtime ? runtime.getStageMetadata() : [],
+    parameterized: PARAMETERIZED.has(name),
+  };
+}
+
+/** All registry names, for UIs and error messages. */
+export function listStrategyNames(): string[] {
+  return Object.keys(BUILT_IN_STRATEGIES);
+}
+
+/**
+ * Ladder info for stopping rules: machine states in ladder order plus the
+ * slug → state mapping. Returns null for non-staged strategies.
+ */
+export function getStageLadder(spec: string): { stateOrder: string[]; slugToState: Map<string, string> } | null {
+  const instance = createStrategy(spec);
+  const runtime = (instance as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
+  if (!runtime) return null;
+  const slugToState = new Map<string, string>();
+  for (const row of runtime.getStageMetadata()) {
+    slugToState.set(row.slug, row.state);
+  }
+  return { stateOrder: runtime.getStateOrder(), slugToState };
 }

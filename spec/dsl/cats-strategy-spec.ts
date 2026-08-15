@@ -219,12 +219,16 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(result).toBe('littleMolly');
     });
 
-    it('hard-resets to AccumulatorRegressed below +$20', () => {
+    it('deep losses retreat one link at a time — the chain, not a hard reset', () => {
+      // The former §3.4 hard reset (profit < +$20 → jump to Accumulator)
+      // is retired (v4 decision #3). A deep crash returns littleMolly from
+      // this stage; evaluateRetreats chains the descent to the Accumulator
+      // in the same evaluation (see the no-dead-zone spec below).
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('threePtMollyTight');
       const result = config.mustRetreatTo({ profit: 10, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'threePtMollyTight' });
-      expect(result).toBe('accumulatorRegressed');
+      expect(result).toBe('littleMolly');
     });
   });
 
@@ -290,12 +294,12 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(result).toBe('threePtMollyLoose');
     });
 
-    it('hard-resets to AccumulatorRegressed below +$20', () => {
+    it('deep losses retreat one link at a time — the chain, not a hard reset', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('expandedAlpha');
       const result = config.mustRetreatTo({ profit: 15, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'expandedAlpha' });
-      expect(result).toBe('accumulatorRegressed');
+      expect(result).toBe('threePtMollyLoose');
     });
   });
 
@@ -323,12 +327,12 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(result).toBe('expandedAlpha');
     });
 
-    it('hard-resets to AccumulatorRegressed below +$20', () => {
+    it('deep losses retreat one link at a time — the chain, not a hard reset', () => {
       const strategy = CATS();
       const runtime = getRuntime(strategy);
       const config = (runtime as any).stageConfigs.get('maxAlpha');
       const result = config.mustRetreatTo({ profit: 0, consecutiveSevenOuts: 0, sevenOutStepDownTriggered: false, handsPlayed: 10, stage: 'maxAlpha' });
-      expect(result).toBe('accumulatorRegressed');
+      expect(result).toBe('expandedAlpha');
     });
   });
 
@@ -419,7 +423,7 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(400))).toBe(true);
     });
 
-    it('scales the higher gates proportionally, keeping the $20 hard reset fixed', () => {
+    it('scales the higher gates proportionally', () => {
       // stage2Gate $40 → f = 4/7: gates become $40/$86/$114/$143/$229.
       const runtime = getRuntime(CATS({ stage2Gate: 40 }));
       const configs = (runtime as any).stageConfigs;
@@ -431,9 +435,8 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(configs.get('threePtMollyLoose').canAdvanceTo('expandedAlpha', s(143))).toBe(true);
       expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(229))).toBe(true);
       expect(configs.get('expandedAlpha').canAdvanceTo('maxAlpha', s(228))).toBe(false);
-      // Hard reset stays at $20 regardless of scale.
-      expect(configs.get('maxAlpha').mustRetreatTo(s(19))).toBe('accumulatorRegressed');
-      expect(configs.get('maxAlpha').mustRetreatTo(s(20))).toBe('expandedAlpha'); // < scaled $229 gate
+      // Hard reset retired: deep losses step down one link of the chain.
+      expect(configs.get('maxAlpha').mustRetreatTo(s(19))).toBe('expandedAlpha');
     });
   });
 
@@ -498,10 +501,42 @@ describe('CATS strategy (Stage Machine implementation)', () => {
       expect(runtime.getCurrentStage()).toBe('littleMolly');
     });
 
-    it('hard reset: profit below +$20 returns any stage to accumulatorRegressed', () => {
+    it('no dead zone: a deep crash from maxAlpha chains to the Accumulator in one evaluation', () => {
+      // Hard reset retired (v4 decision #3): the same observable endpoint is
+      // reached purely through the retreat chain. The floors (400/250/150/70)
+      // tile the profit axis with no gap, and evaluateRetreats loops, so
+      // profit 10 descends max → expanded → loose → little → accumulator
+      // before the next board is declared.
       const { strategy, runtime } = makeRuntimeAt('maxAlpha', 10);
       declaredBets(strategy);
       expect(runtime.getCurrentStage()).toBe('accumulatorRegressed');
+    });
+
+    it('no dead zone: every retreat floor tiles the profit axis from every stage', () => {
+      // For each stage and each profit just below each floor, the chain
+      // must terminate in the accumulator band or a stable stage — never
+      // loop and never strand. Exercise the full grid of floors ± $1.
+      const probes = [-60, 0, 19, 20, 69, 70, 149, 150, 199, 200, 249, 250, 399, 400];
+      const stages = ['littleMolly', 'threePtMollyTight', 'threePtMollyLoose', 'expandedAlpha', 'maxAlpha'];
+      for (const stage of stages) {
+        for (const profit of probes) {
+          const { strategy, runtime } = makeRuntimeAt(stage, profit);
+          declaredBets(strategy); // one reconcile: retreats evaluate, board runs
+          const landed = (runtime as any).currentStage as string;
+          const floors: Record<string, number> = {
+            accumulatorFull: -Infinity,
+            accumulatorRegressed: -Infinity,
+            littleMolly: 70,
+            threePtMollyTight: 150,
+            threePtMollyLoose: 200,
+            expandedAlpha: 250,
+            maxAlpha: 400,
+          };
+          expect(profit >= floors[landed])
+            .withContext(`${stage} @ ${profit} landed ${landed}`)
+            .toBe(true);
+        }
+      }
     });
   });
 

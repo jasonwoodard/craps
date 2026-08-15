@@ -515,7 +515,7 @@ At the table, ask one question: **Do I have a 6 or 8 working?**
 
 **Profit threshold step-down:** If profit falls below the current stage's entry threshold, step down immediately.
 
-**Hard reset:** If profit falls below +$20 from any stage, return to the Accumulator. Rebuild the buffer before committing Alpha load again.
+**Hard reset — retired (v1.3):** earlier revisions added a separate rule sending any stage straight to the Accumulator below +$20. It is retired as redundant: the step-down floors above already tile the whole profit range, so sustained losses reach the Accumulator through the normal chain from any stage — one mechanism instead of two, with the same endpoint. (Recorded as decision #3 in `docs/reqs/session-lifecycle.md`.)
 
 **Never chase:** A step-down is the strategy working. The Accumulator is always there. Return to it without hesitation.
 
@@ -556,6 +556,26 @@ The step-up and step-down thresholds are meaningless without a definition of wha
 
 ---
 
+## 3.8 Unit System
+
+All CATS sizing derives from the table minimum — one **unit (u)** = the table minimum; place bets use the smallest proper place bet at or above it. Rote phrasing: **gates at seven, fifteen, twenty-five, forty minimums; buys are two minimums; flats are one.**
+
+| Quantity | Canonical spec | $10 table | $15 table |
+|---|---|---|---|
+| Pass/Come flat | 1u | $10 | $15 |
+| Odds — Little Molly | 2× flat | $20 | $30 |
+| Odds — Loose | 5× flat | $50 | $75 |
+| Odds — Tight | tier 3×/2×/1× flat | $30/$20/$10 | $45/$30/$15 |
+| Accumulator start (each 6/8) | min place bet + $6 | $18 | $24 |
+| Accumulator regressed (each) | min place bet | $12 | $18 |
+| Buy 4/10, 5/9 (each) | 2u | $20 | $30 |
+| **Gates above origin** | **7 / 15 / 25 / 40 minimums** | $70/150/250/400 | $105/225/375/600 |
+| Classic declared risk B | 30u | $300 | $450 |
+
+The engine implements this as `src/dsl/units.ts`; the $10 column is the exact ladder this document has always specified.
+
+---
+
 # §4 Simulation Findings
 
 *CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what the repo's TypeScript engine shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. The engine implements all five stages as `CATS()` in `src/dsl/strategies-staged.ts` (including the Swap Rule, §3.7 profit accounting, and the §3.4 step-down/hard-reset rules); the figures below come from `src/cli/analyze-stages.ts` over 2,000 sessions of up to 1,000 rolls at a $10 table with a $300 buy-in, sessions ending at ruin.*
@@ -591,6 +611,8 @@ Per-stage results from the same 2,000-session run (`analyze-stages.ts --strategy
 **Cost validation.** The engine's measured cost of the regressed Accumulator board is **$7.6 per 100 rolls** against the theoretical $7.8 (§1.4's come-out-adjusted Place 6/8 pair) — the anchor figure for the stage the strategy spends 80%+ of its time in. Bet-level payout math is pinned by the spec suite (Buy 4/10 at 1.67% and Buy 5/9 at 2.00% verified empirically over 200k resolutions each within ±0.3pp). Per-stage empirical E[loss] for the brief upper stages is not separately reportable with useful precision: their samples are small, concentrated in a handful of hot sessions, and the Swap Rule keeps part of the Buy load off the felt (which also means §2.5–2.6's ~$29 and ~$52 per-100-roll figures are ceilings — the working board is usually lighter than the fully-loaded one those figures assume).
 
 Threshold sensitivity (how stage-reach and P&L respond to moving the +$70/+$150/+$250 gates) is tracked separately — see `docs/cats-threshold-sensitivity.md`.
+
+**Funded entry is now simulatable:** the engine accepts `CATS@entry=<stage>` (any stage, any bankroll), setting profit's zero point so a session can begin mid-ladder — e.g. `CATS@entry=threePtMollyLoose` at $300 starts at Loose with a +$250 cushion declared. Side-by-side funded-vs-classic comparisons on identical dice run via `analyze-stages`; see `docs/analytics-guide.md`. Findings from those configurations are deliberately not written up here yet — that analysis is reserved for a separate revision.
 
 ---
 

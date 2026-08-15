@@ -1,4 +1,4 @@
-import { parseArgs, aggregate, runAnalysis } from '../../src/cli/analyze-stages';
+import { parseArgs, aggregate, runAnalysis, runComparison } from '../../src/cli/analyze-stages';
 
 describe('analyze-stages CLI', () => {
 
@@ -87,6 +87,41 @@ describe('analyze-stages CLI', () => {
     });
   });
 
+  describe('multi-spec comparison mode', () => {
+    it('parses repeated --strategy flags in order', () => {
+      const args = parseArgs([
+        '--strategy', 'CATS@entry=accumulator',
+        '--strategy', 'CATS@entry=threePtMollyLoose',
+        '--seeds', '5', '--rolls', '50',
+      ]);
+      expect(args.strategies).toEqual(['CATS@entry=accumulator', 'CATS@entry=threePtMollyLoose']);
+      expect(args.strategy).toBe('CATS@entry=accumulator');
+    });
+
+    it('runs all specs on shared seeds and labels columns with canonical specs', () => {
+      const args = parseArgs([
+        '--strategy', 'CATS', '--strategy', 'CATS@entry=threePtMollyLoose',
+        '--seeds', '8', '--rolls', '60', '--bankroll', '300', '--stop-at-ruin',
+      ]);
+      const entries = runComparison(args);
+      expect(entries.map(e => e.spec)).toEqual(['CATS', 'CATS@entry=threePtMollyLoose']);
+      expect(entries[0].report.sessions).toBe(8);
+      expect(entries[1].report.sessions).toBe(8);
+      // Shared seeds: the first spec's report equals a standalone run of it.
+      const standalone = runAnalysis({
+        strategy: 'CATS', rolls: 60, bankroll: 300, seeds: 8,
+        stopAtRuin: true, output: 'json',
+      });
+      // generatedAt is a wall-clock stamp — it is excluded from run identity
+      // (manifestHash) and from determinism comparisons.
+      const stripStamp = (r: any) => ({ ...r, manifest: { ...r.manifest, generatedAt: 'X' } });
+      expect(stripStamp(entries[0].report)).toEqual(stripStamp(standalone));
+      // Stopping menu present per spec.
+      expect(entries[0].report.stopping).toBeDefined();
+      expect(entries[1].report.stopping).toBeDefined();
+    });
+  });
+
   describe('runAnalysis (engine integration, small run)', () => {
     it('produces a coherent report for CATS with deterministic seeds', () => {
       const report = runAnalysis({
@@ -104,11 +139,13 @@ describe('analyze-stages CLI', () => {
       // Time percentages sum to ~100.
       const totalTime = report.stages.reduce((sum, s) => sum + s.timeInStagePct, 0);
       expect(totalTime).toBeCloseTo(100, 6);
-      // Deterministic: same seeds → same report.
+      // Deterministic: same seeds → same report (generatedAt is wall-clock
+      // and excluded from run identity).
       const again = runAnalysis({
         strategy: 'CATS', rolls: 200, bankroll: 300, seeds: 10, stopAtRuin: true, output: 'json',
       });
-      expect(again).toEqual(report);
+      const stripStamp = (r: any) => ({ ...r, manifest: { ...r.manifest, generatedAt: 'X' } });
+      expect(stripStamp(again)).toEqual(stripStamp(report));
     });
   });
 });

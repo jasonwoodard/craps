@@ -1,6 +1,16 @@
 import { Request, Response } from 'express';
-import { BUILT_IN_STRATEGIES } from '../../src/cli/strategy-registry';
+import { listStrategyNames, getStrategyMetadata } from '../../src/cli/strategy-registry';
 
-export function strategiesRoute(_req: Request, res: Response): void {
-  res.json(Object.keys(BUILT_IN_STRATEGIES));
+/**
+ * Strategy catalog. Returns names (back-compat: an array of strings unless
+ * ?metadata=1), or the full per-strategy stage metadata — ordered slugs,
+ * display names, entry gates — so the UI can render a funded-entry dropdown
+ * generically for any staged strategy (v4 §2).
+ */
+export function strategiesRoute(req: Request, res: Response): void {
+  if (req.query.metadata === '1') {
+    res.json(listStrategyNames().map(name => getStrategyMetadata(name)));
+    return;
+  }
+  res.json(listStrategyNames());
 }

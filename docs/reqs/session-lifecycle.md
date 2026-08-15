@@ -1,6 +1,22 @@
 # Design Note — Funded Entry, Units, and Run Architecture (v4)
 
-*Status: decisions recorded; two items pending review (§4 units, §5 storage). Supersedes v3. On approval of §4–5, this note converts to a Claude Code work order.*
+*Status: **approved and implemented.** The §4 (units) and §5 (storage) review items were approved and the full §6 scope shipped in Phase 3 (branch `claude/cats-phase-2-simulator-ea6qnf`). Supersedes v3.*
+
+**Implementation record (Phase 3 commits):**
+
+| §6 scope item | Commit |
+|---|---|
+| 3. Unit-system module (`src/dsl/units.ts`), literals replaced, $10/$15 no-change proof | `7522b7e` |
+| 1a. Stage-machine `entryStage` + origin-based profit (bit-identity gate passed, seeds 0–99) | `e9607b5` |
+| 1b. Hard-reset retirement (decision #3; no-dead-zone spec) | `e9dd168` |
+| 2. Registry parameterization, `@entry=` canonical specs, stage metadata export | `27afcf3` |
+| 7. BATS acceptance: `BATS@entry=threePtDolly`, zero BATS-specific code | `c123649` |
+| 4. Streaming stopping-menu evaluator (dual-path gate passed, 500 seeds) | `36a7a09` |
+| 5. Multi-spec comparison on shared seeds (target workflow verbatim) | `ff3f521` |
+| 6. Versioned manifest in all outputs; server memoization by manifest hash | `8f3bee4` |
+| 8. Doc sync (`analytics-guide.md` I/O contracts, `cats-strategy.md` unit table + hard-reset note) | this commit |
+
+*Interpretation note recorded at implementation:* the entry-gate ladder gives `threePtMollyLoose` gate 25u (shared with `expandedAlpha`), per the work order's pinned example — a Loose entry at exactly its gate plays one roll on the Loose board and immediately qualifies the ≥25u advance (decision #1: no guard rails; the physics handles it).
 
 ---
 
@@ -12,8 +28,8 @@
 | 2 | Seven-out counter at funded entry | Starts at zero; identical semantics across entry configs. Flagged as an observation target in first funded-entry runs |
 | 3 | Hard-reset rule (§3.4) | **Retired on implementation** — redundant with Accumulator-band entry |
 | 4 | Turbo | Out of main CATS; not currently implemented in the engine (Stage 1b was never built). Future paired experiment parked: "Turbo-Accumulator-only vs Accumulator-only" |
-| 5 | Min-ratio units | Proposal in §4 — **pending review** |
-| 6 | Output storage | Architecture in §5 — **pending review** |
+| 5 | Min-ratio units | Proposal in §4 — **approved; implemented** (`7522b7e`) |
+| 6 | Output storage | Architecture in §5 — **approved; implemented** (`8f3bee4`; Firestore cache left as TODO — not among existing deps) |
 | 7 | BATS | Same mechanism, zero BATS-specific code — the generality test (§2) |
 
 ## 2. Generalized arbitrary stage entry
@@ -37,7 +53,7 @@
 
 Exit rules are stopping times (v3), which enables a stronger form: **evaluate the whole standard menu in one pass during simulation.** Each rule tracks its trigger state per roll; when it fires, its banked P&L is recorded and the session continues playing out for the remaining rules and the played-fully-out baseline. No trajectory persistence is required for the standard menu {none, hard targets kB, trailing floor, fall-below-stage, roll cap}. Trajectory archival is needed only to evaluate *newly invented* rules against *old* runs — a local/CLI workflow, not a serving-path one. Censoring reporting per v3 stands.
 
-## 4. Unit system (REVIEW ITEM)
+## 4. Unit system (APPROVED — implemented in `7522b7e`)
 
 **u = table minimum** for line bets, gates, and risk; **p = smallest proper place bet ≥ u** (7:6 quantization to $6 increments) for place bets, with explicit rounding instead of implicit fudging.
 
@@ -57,7 +73,7 @@ Exit rules are stopping times (v3), which enables a stronger form: **evaluate th
 
 Verification: reproduces every v1.2 hand-scaled $10/$15 figure — a formalization, not a change. **Operational-ease note (recorded, not yet optimized for):** unit phrasing is more memorable than dollars — "gates at seven, fifteen, twenty-five, forty minimums; buys are two minimums; flats are one" — and future rule-writing should prefer unit-speak. This is a simulation of a human-executed system; memorability is a real requirement.
 
-## 5. Run architecture and storage (REVIEW ITEM)
+## 5. Run architecture and storage (APPROVED — implemented in `8f3bee4`)
 
 **Principle: determinism makes the manifest the archive.** A run is fully reproducible from `{strategySpec, B, rolls, seeds, engineVersion (git sha)}` — a few hundred bytes. Therefore:
 
