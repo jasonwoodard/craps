@@ -19,14 +19,21 @@ import { fmtPnL } from '../lib/stages';
 interface Props {
   rolls: RollRecord[];
   initialBankroll: number;
-  strategyName: string;
+  /** Canonical spec of the run (`CATS@entry=threePtMollyLoose`). */
+  strategySpec: string;
+  /** Table minimum the run used; CATS gates scale with it. */
+  tableMin?: number;
+  /** Profit's zero point: B - gate(entry). Defaults to the buy-in. */
+  origin?: number;
 }
 
-export function TrendPanel({ rolls, initialBankroll, strategyName }: Props) {
+export function TrendPanel({ rolls, initialBankroll, strategySpec, tableMin, origin }: Props) {
   const rollingPnL = computeRollingPnL(rolls);
   const consecutiveSevenOuts = computeConsecutiveSevenOuts(rolls);
-  const isCats = isCATSStrategy(strategyName);
-  const thresholdData = isCats ? computeThresholdProximity(rolls, initialBankroll) : null;
+  const isCats = isCATSStrategy(strategySpec);
+  const thresholdData = isCats
+    ? computeThresholdProximity(rolls, initialBankroll, { tableMin, origin })
+    : null;
 
   const rollingData = rolls.map((r, i) => ({
     roll: r.rollNumber,

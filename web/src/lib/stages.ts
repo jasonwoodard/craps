@@ -23,22 +23,6 @@ export interface StageVisitSummary {
   sevenOuts: number;
 }
 
-export const STAGE_COLORS: Record<string, string> = {
-  accumulatorFull: '#fef3c7',      // amber-100
-  accumulatorRegressed: '#fffbeb', // amber-50
-  littleMolly: '#dcfce7',          // green-100
-  threePtMollyTight: '#dbeafe',    // blue-100
-  threePtMollyLoose: '#e0e7ff',    // indigo-100
-};
-
-export const STAGE_LABELS: Record<string, string> = {
-  accumulatorFull: 'Accumulator Full',
-  accumulatorRegressed: 'Accumulator Regressed',
-  littleMolly: 'Little Molly',
-  threePtMollyTight: 'Three Pt Molly Tight',
-  threePtMollyLoose: 'Three Pt Molly Loose',
-};
-
 export function hasStageData(rolls: RollRecord[]): boolean {
   return rolls.some(r => r.stageName != null);
 }

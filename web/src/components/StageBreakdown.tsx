@@ -1,16 +1,21 @@
 import type { RollRecord } from '@shared/simulation';
-import { computeStageVisitSummaries, fmtPnL, hasStageData, STAGE_COLORS, STAGE_LABELS } from '../lib/stages';
+import { computeStageVisitSummaries, fmtPnL, hasStageData } from '../lib/stages';
+import { useStageNaming } from '../lib/strategy-meta';
 import { InfoTip } from './InfoTip';
 
 interface Props {
   rolls: RollRecord[];
+  /** Canonical spec of the run, so stage names come from its ladder. */
+  strategySpec?: string;
+  tableMin?: number;
 }
 
 function fmt(n: number): string {
   return `$${Math.abs(n)}`;
 }
 
-export function StageBreakdown({ rolls }: Props) {
+export function StageBreakdown({ rolls, strategySpec, tableMin }: Props) {
+  const stageNaming = useStageNaming(strategySpec, tableMin);
   if (!hasStageData(rolls)) return null;
 
   const summaries = computeStageVisitSummaries(rolls);
@@ -39,8 +44,8 @@ export function StageBreakdown({ rolls }: Props) {
           </thead>
           <tbody>
             {summaries.map((s, i) => {
-              const stageColor = STAGE_COLORS[s.stageName] ?? '#f5f5f5';
-              const label = STAGE_LABELS[s.stageName] ?? s.stageName;
+              const stageColor = stageNaming.color(s.stageName);
+              const label = stageNaming.label(s.stageName);
               const pnlClass = s.netPnL >= 0 ? 'text-green-700' : 'text-red-600';
               return (
                 <tr

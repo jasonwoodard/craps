@@ -53,11 +53,11 @@ export function SessionPage() {
       <p className="text-sm text-slate-500 font-mono mb-4">See how a strategy plays out over a single session.</p>
       <SummaryPanel result={data} params={params} />
       <div className="rounded border border-slate-200">
-        <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} />
+        <SessionChart rolls={data.rolls} initialBankroll={data.initialBankroll} strategySpec={params.strategy} />
       </div>
-      <StageBreakdown rolls={data.rolls} />
-      <StageOverlayChart rolls={data.rolls} />
-      <TrendPanel rolls={data.rolls} initialBankroll={data.initialBankroll} strategyName={params.strategy} />
+      <StageBreakdown rolls={data.rolls} strategySpec={params.strategy} />
+      <StageOverlayChart rolls={data.rolls} strategySpec={params.strategy} />
+      <TrendPanel rolls={data.rolls} initialBankroll={data.initialBankroll} strategySpec={params.strategy} />
     </div>
   );
 }
