@@ -11,7 +11,7 @@ export function StrategiesPage() {
         stages={CATS_STAGES}
       >
         <p>
-          CATS (Conservative Accumulator → Three-point Strategy) is a stage machine: it defines
+          CATS (Craps Alpha-Transition Strategy) is a stage machine: it defines
           five distinct betting modes and rules for moving between them based on session profit
           and recent seven-out history. The strategy starts in its most conservative state and
           escalates only when the session is winning, retreating automatically when it isn't.

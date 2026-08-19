@@ -1,9 +1,10 @@
 /**
  * Unit-system spec — the no-change proof.
  *
- * Every dollar figure in cats-strategy.md v1.2 must be reproduced exactly at
- * $10 and $15 table minimums. If any figure at $10 differs from the doc,
- * that is a regression in the unit module — fix the module, never this spec.
+ * Every dollar figure in cats-strategy.md (the v1.2 tables, unchanged through
+ * v1.3) must be reproduced exactly at $10 and $15 table minimums. If any
+ * figure at $10 differs from the doc, that is a regression in the unit
+ * module — fix the module, never this spec.
  */
 import { catsUnits, batsUnits, minPlaceBet, placeStep } from '../../src/dsl/units';
 import { CATS } from '../../src/dsl/strategies-staged';
