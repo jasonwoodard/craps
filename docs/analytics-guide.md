@@ -127,9 +127,9 @@ The committed baseline run lives in `docs/cats-threshold-sensitivity.md`. Its he
 
 Schemas are versioned by the manifest's `schemaVersion` (currently **1**).
 
-### 8.1 JSONL per-roll record (produced by `run-sim --output json`)
+### 8.1 JSONL run stream (produced by `run-sim --output json`)
 
-One JSON object per line. Three record types; consumers must skip lines whose `type` they do not recognize.
+One JSON object per line, in this order: **`manifest` first**, then one `roll` line per roll, then `summary` last. Consumers must skip lines whose `type` they do not recognize — that is the forward-compatibility rule for new record types.
 
 ```jsonc
 // First line of a run:
@@ -143,8 +143,8 @@ One JSON object per line. Three record types; consumers must skip lines whose `t
   "players": [{
     "id": "player1",
     "strategy": "CATS@entry=littleMolly",       // canonical spec
-    "stageName": "littleMolly",                  // stage AFTER the roll's events settle
-    "stagePlayed": "littleMolly",                // stage whose board PLAYED the roll — use for attribution
+    "stageName": "littleMolly",                  // OPTIONAL — stage AFTER the roll's events settle
+    "stagePlayed": "littleMolly",                // OPTIONAL — stage whose board PLAYED the roll; use for attribution
     "bankroll": { "before": 300, "after": 264, "change": -36 },
     "tableLoad": { "before": 36, "after": 36, "betCount": 2 },
     "activeBets": [{ "type": "place", "point": 6, "amount": 18, "odds": 0 }],
@@ -153,18 +153,48 @@ One JSON object per line. Three record types; consumers must skip lines whose `t
 }
 
 // Last line:
-{ "type": "summary", "meta": { /* strategy, seed, timestamp… */ }, /* bankroll, activity, diceDistribution */ }
+{
+  "type": "summary",
+  "meta": { "strategy": "CATS@entry=littleMolly", "startBankroll": 300,
+            "totalRolls": 12, "seed": 7, "timestamp": "2026-08-12T15:38:49.740Z" },
+  "bankroll":  { "final": 244, "peak": 300, "trough": 216, "maxDrawdown": 84, "netChange": -56 },
+  "tableLoad": { "avg": 36.17, "max": 60, "min": 10, "avgWhenActive": 36.17 },
+  "activity":  { "rollsWithWin": 2, "rollsWithLoss": 1, "rollsWithPush": 0, "rollsNoAction": 9,
+                 "winRate": 0.1667, "lossRate": 0.0833, "pushRate": 0 },
+  "diceDistribution": { "bySum":     { "2": 0, "3": 0, "…": 0, "12": 1 },
+                        "byDieFace": { "1": 3, "2": 3, "…": 0, "6": 4 } }
+}
 ```
+
+**Field-level contract.**
+
+| Path | Type | Notes |
+|---|---|---|
+| `roll.number` | int ≥ 1 | 1-based roll index within the session |
+| `gameState.pointBefore` / `pointAfter` | int \| `null` | `null` = come-out (no point established) |
+| `players[]` | array | **always length 1** as emitted today; the array shape is reserved for multi-player runs. Consumers should still index defensively. |
+| `players[].stageName`, `.stagePlayed` | string, **optional** | **omitted entirely** for non-staged strategies — do not assume the keys exist |
+| `players[].bankroll.*` | number | **rack only**, not equity: money moved onto the felt shows as a negative `change` |
+| `players[].tableLoad.before/after` | number | face value on the felt; `after` is post-settlement (winning bets already taken down) |
+| `players[].tableLoad.betCount` | int | `activeBets.length` |
+| `players[].activeBets[]` | `{ type, point, amount, odds }` | `point`: int \| `null`; `odds` = odds/lay-odds rider on that bet, `0` if none |
+| `players[].outcomes[]` | `{ type, point, result, payout }` | `result`: `"win" \| "loss" \| "push"`; may be empty |
+
+`type` (on both `activeBets` and `outcomes`) is one of: `passLine`, `come`, `place`, `field`, `dontPass`, `dontCome`, `buy`, `lay`, `hardways`, `ce`, `unknown`.
+
+> **`payout` is not uniform across bet types — do not sum it as profit.** For `passLine`, `come`, `dontPass`, and `dontCome` it is **profit only** (even money plus the odds payout; the returned flat and odds riders are *not* included). For `place`, `buy`, `field`, and the rest it is **stake + profit**. The outcome record does not carry the stake, so `payout` alone cannot be normalized to profit. Losses and pushes both report `payout: 0`. **For any money question, use the bankroll/tableLoad fields, not `outcomes[].payout`** — that is why the aggregator below reads equity rather than outcomes.
 
 The aggregator consumes exactly these fields per roll:
 
 | Field | Used for |
 |---|---|
-| `players[0].stagePlayed` (fallback `stageName`) | per-stage attribution, fall-below-stage rule |
+| `players[0].stagePlayed` (fallback `stageName`, then `"(stageless)"`) | per-stage attribution, fall-below-stage rule |
 | `players[0].bankroll.after + tableLoad.after` | **equityAfter** — the per-roll equity trajectory |
 | `players[0].activeBets.length` + `tableLoad.before` | ruin detection (a roll beginning with an empty felt ends a ruined session) |
 
-Notes: `stageName` is captured after post-roll events, so a stage's exit-winning roll is credited to the *next* stage under `stageName`; `stagePlayed` is the attribution-correct field. `tableLoad.after` is a post-settlement snapshot (winning bets already taken down).
+Notes: `stageName` is captured after post-roll events, so a stage's exit-winning roll is credited to the *next* stage under `stageName`; `stagePlayed` is the attribution-correct field.
+
+**Compare mode is a different stream.** `run-sim --compare A B --output json` emits **one `manifest` line per strategy followed by one `summary` line per strategy, and no `roll` lines** — it is a summary-level comparison, not two interleaved trajectories. (Its `summary.meta.seed` is `null` even when `--seed` was given; the authoritative seed is in each manifest.) For per-roll data on multiple strategies, run each strategy separately.
 
 ### 8.2 Analyze report (JSON) — `analyze-stages --output json`
 
@@ -199,7 +229,7 @@ Comparison mode emits an **array** of `{ "spec": "<canonical>", "report": <analy
 {
   "rules": [{
     "rule": "target-2x",               // none | target-{2,3,6}x | trail | below-stage | cap-{100,200,300}
-    "params": { "k": 2 },              // trail: {drop}; below-stage: {slug}; caps: {rolls}
+    "params": { "k": 2 },              // OPTIONAL — absent for "none"; trail: {drop}; below-stage: {slug}; caps: {rolls}
     "triggerRate": 0.18,               // fired before session end
     "ruinRate": 0.15,                  // session ruined before the rule fired
     "censoredRate": 0.67,              // horizon reached without firing — banked = final P&L
@@ -211,6 +241,12 @@ Comparison mode emits an **array** of `{ "spec": "<canonical>", "report": <analy
   "peakPnl": { "p10": 12, "p25": 39, "p50": 77, "p75": 208, "p90": 515, "p99": 1346 }
 }
 ```
+
+`rules` is emitted in a fixed order — `none`, `target-2x`, `target-3x`, `target-6x`, `trail`, `below-stage`, `cap-100`, `cap-200`, `cap-300` — with `below-stage` **omitted** when no ladder is resolvable (§9.6). Cap rules whose N exceeds the run's roll cap are still present; they simply never fire (`censoredRate` 1.0).
+
+Per rule, `triggerRate + ruinRate + censoredRate = 1` — the three-way partition of §5 — and `banked` is the P&L distribution over *all* sessions under that rule (exit equity − B when triggered, final P&L otherwise), not just the triggered ones. `peakCapture` is `null` when no session peaked positive (§9.5).
+
+**Scales.** `reachProbability`, `triggerRate`, `ruinRate`, `censoredRate`, `peakCapture`, `pHitBeforeRuin`, and `censoredFraction` are **0–1 fractions**. `timeInStagePct`, `pctSessionsPositive`, `pctSessionsRuined`, and the stopping report's `pctPositive` are **0–100 percentages**. Nothing in §8.2–8.3 is rounded — expect raw float precision (`129.00000000000003`, `8.666666666666666`); round at the presentation layer, and compare with a tolerance rather than for equality. Only the `summary` line of §8.1 carries pre-rounded values.
 
 ### 8.4 Run manifest (embedded in every output mode)
 
@@ -228,6 +264,40 @@ Comparison mode emits an **array** of `{ "spec": "<canonical>", "report": <analy
 ```
 
 Determinism makes the manifest the archive: a run is fully reproducible from the identity fields. The server memoizes aggregates keyed by `manifestHash(manifest)` — a sha256 of the recursively key-sorted manifest minus `generatedAt`. The server never persists trajectories; JSONL archives are a local/CLI workflow for retroactive rule analysis.
+
+`seeds` is a union: `{ "count": N }` for multi-session runs (seeds 0..N−1) and `{ "seed": n | null }` for a single session. `strategySpec` is the canonical spec string (`NAME` or `NAME@key=value,...`), or `"jsonl:<dir>"` when `--jsonl-dir` was used **without** a `--strategy` spec (with one, the spec wins). `engineVersion` is `git rev-parse --short HEAD`, falling back to the `ENGINE_VERSION` environment variable and then to `"unknown"` outside a checkout.
+
+### 8.5 Distribution report — `run-sim --output distribution`
+
+The multi-seed aggregate the web UI and server consume. A single pretty-printed JSON object (not JSONL):
+
+```jsonc
+{
+  "manifest": { /* see §8.4 */ },
+  "p10": [298, 288, …],           // per-roll bankroll percentile bands
+  "p50": [301, 301, …],
+  "p90": [304, 310, …],
+  "p95": [305, 312, …],
+  "p99": [306, 314, …],
+  "ruinByRoll": [0, 0, 0.02, …],  // P(ruined at or before roll i+1)
+  "finalBankroll": { "p10": 248, "p50": 303, "p90": 318, "p95": 319, "p99": 319, "mean": 289 },
+  "peakBankroll":  { "p10": 318, "p50": 323, "p90": 330, "mean": 324 },
+  "rollsToPeak":   { "p10": 5, "p50": 15, "p90": 17, "mean": 12 },
+  "winRate": 0.6,                 // fraction of sessions whose final rack beat the buy-in
+  "ruinRate": 0,
+  "seedCount": 5,
+  "generatedAt": "2026-08-12T15:38:49.740Z",
+  "params": { "strategy": "CATS", "rolls": 20, "bankroll": 300 }
+}
+```
+
+Reading it correctly:
+
+- **The bands are rack bankroll, not equity, and not P&L.** Each array holds one entry per roll (index `i` = after roll `i+1`), taken from the per-roll `bankrollAfter`. Money sitting on the felt is *not* included, so a band dipping as a stage steps up is capital deployment, not loss. This is a different accounting convention from §8.2's `pnl` (equity − B); the two are not directly comparable. Subtract `params.bankroll` for a rack-relative P&L view.
+- **Array lengths are ragged-safe.** Length is the longest session's roll count, and sessions that ended early contribute `0` for the rolls they never played — a floor artifact of the padding, not a real trajectory.
+- **`ruinByRoll` is a fraction, not a count** — P(rack ≤ 0 at or before roll `i+1`). Note this rack-based ruin test differs from `analyze-stages`' `--stop-at-ruin` definition (a roll beginning with an empty felt), so the two ruin figures will not agree exactly.
+- **Every dollar and roll figure here is `Math.round`ed** to a whole number, unlike §8.2–8.3. `winRate`, `ruinRate`, and `ruinByRoll` remain 0–1 fractions.
+- `generatedAt` and `params` predate the manifest and are retained for compatibility; `manifest` is the authoritative identity block.
 
 ## 9. Limitations — read before quoting numbers
 
