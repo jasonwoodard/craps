@@ -68,24 +68,29 @@ export function CatsStrategyPage() {
     gateAtFifteen: gatesAtFifteen.get(stage.slug) ?? 0,
   }));
 
+  // Display names are metadata: read them, never restate them. Until the
+  // catalog arrives the cell is a dash rather than a second copy of the name.
+  const displayNameOf = (slug: string) =>
+    metaTen?.stages.find(s => s.slug === slug)?.displayName ?? '—';
+
   const entryConfigs = [
     {
       name: 'Classic',
-      entry: metaTen?.stages[0]?.displayName ?? 'Accumulator',
+      entry: displayNameOf(metaTen?.stages[0]?.slug ?? ''),
       riskTen: U10.classicRisk,
       riskFifteen: U15.classicRisk,
       note: 'Grind the Accumulator; every escalation is funded by profit.',
     },
     {
       name: 'Funded — Tight',
-      entry: metaTen?.stages.find(s => s.slug === 'threePtMollyTight')?.displayName ?? '3-Point Molly — Tight',
+      entry: displayNameOf('threePtMollyTight'),
       riskTen: U10.referenceFunded.tight,
       riskFifteen: U15.referenceFunded.tight,
       note: 'Skip the grind and start at stage 3 — the cushion is your own money.',
     },
     {
       name: 'Funded — Little Molly',
-      entry: metaTen?.stages.find(s => s.slug === 'littleMolly')?.displayName ?? 'Little Molly',
+      entry: displayNameOf('littleMolly'),
       riskTen: U10.referenceFunded.littleMolly,
       riskFifteen: U15.referenceFunded.littleMolly,
       note: 'A short middle path: line bets from the first roll, modest declared risk.',
