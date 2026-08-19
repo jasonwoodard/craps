@@ -1,9 +1,22 @@
 import { useState, useEffect, useRef, type ReactNode, type KeyboardEvent } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router';
+import { canonicalizeSpec, parseStrategySpec } from '@engine/cli/strategy-spec';
+import { findStrategy, useStrategyCatalog } from '../lib/strategy-meta';
+
+/** Table minimums the toolbar offers as one-click presets; any value >= $5 is accepted. */
+export const TABLE_MIN_PRESETS = [10, 15, 25];
+/** The engine's default table minimum — omitted from canonical specs. */
+export const DEFAULT_TABLE_MIN = 10;
+/** Below this there is no table; the unit system needs u > 0. */
+export const MIN_TABLE_MIN = 5;
 
 interface FormState {
+  /** Base registry names; spec options live in their own fields. */
   strategyA: string;
   strategyB: string;
+  /** Funded-entry stage slug, or '' for classic entry. */
+  entryA: string;
+  tableMin: string;
   rolls: string;
   bankroll: string;
   seed: string;
@@ -14,6 +27,7 @@ interface FormErrors {
   rolls?: string;
   bankroll?: string;
   seed?: string;
+  tableMin?: string;
 }
 
 interface PillProps {
@@ -100,11 +114,39 @@ const PILL_TO_FORM_KEY: Partial<Record<string, keyof FormState>> = {
   strategy: 'strategyA',
   baseline: 'strategyA',
   test:     'strategyB',
+  entry:    'entryA',
+  tableMin: 'tableMin',
   rolls:    'rolls',
   bankroll: 'bankroll',
   seed:     'seed',
   seeds:    'seeds',
 };
+
+/** Split a URL spec into the toolbar's separate controls; unparseable specs fall back to the raw name. */
+function splitSpec(spec: string): { name: string; entry: string; tableMin: number } {
+  try {
+    const parsed = parseStrategySpec(spec);
+    return {
+      name: parsed.name,
+      entry: parsed.options.entry ?? '',
+      tableMin: parsed.options.tableMin ?? DEFAULT_TABLE_MIN,
+    };
+  } catch {
+    return { name: spec, entry: '', tableMin: DEFAULT_TABLE_MIN };
+  }
+}
+
+/**
+ * Compose the canonical spec the URL, the run request, and the manifest all
+ * share. The engine's default table minimum is omitted so a plain CATS run at
+ * a $10 table stays `CATS` and a funded entry stays `CATS@entry=<slug>`.
+ */
+export function buildSpec(name: string, entry: string, tableMin: number): string {
+  return canonicalizeSpec(name, {
+    ...(entry ? { entry } : {}),
+    ...(tableMin !== DEFAULT_TABLE_MIN ? { tableMin } : {}),
+  });
+}
 
 export function RunToolbar() {
   const navigate = useNavigate();
@@ -119,13 +161,17 @@ export function RunToolbar() {
   const isDistribution = location.pathname === '/distribution';
   const isCompare = location.pathname === '/session-compare';
   const isDistributionCompare = location.pathname === '/distribution-compare';
-  const isStaticPage = location.pathname === '/strategies' || location.pathname === '/guide';
+  const isStaticPage = location.pathname.startsWith('/strategies') || location.pathname === '/guide';
 
   const [form, setForm] = useState<FormState>(() => {
     const strategiesParts = searchParams.get('strategies')?.split(',').map(s => s.trim()) ?? [];
+    const specA = searchParams.get('strategy') ?? strategiesParts[0] ?? 'CATS';
+    const a = splitSpec(specA);
     return {
-      strategyA: searchParams.get('strategy') ?? strategiesParts[0] ?? 'CATS',
-      strategyB: searchParams.get('test') ?? strategiesParts[1] ?? 'ThreePointMolly3X',
+      strategyA: a.name,
+      strategyB: splitSpec(searchParams.get('test') ?? strategiesParts[1] ?? 'ThreePointMolly3X').name,
+      entryA:    a.entry,
+      tableMin:  String(a.tableMin),
       rolls:     searchParams.get('rolls')    ?? '500',
       bankroll:  searchParams.get('bankroll') ?? '300',
       seed:      searchParams.get('seed')     ?? '',
@@ -133,12 +179,35 @@ export function RunToolbar() {
     };
   });
 
+  const tableMinNum = Number(form.tableMin);
+  const catalogTableMin = Number.isInteger(tableMinNum) && tableMinNum >= MIN_TABLE_MIN
+    ? tableMinNum
+    : DEFAULT_TABLE_MIN;
+  const { catalog } = useStrategyCatalog(catalogTableMin);
+  const meta = findStrategy(catalog, form.strategyA);
+
+  // Stage lists, display names, and gates come from metadata only — never from
+  // a table in web/ (webui-plan.md cross-phase guardrail).
+  const entryStages = meta?.stages ?? [];
+  const isStaged = entryStages.length > 1;
+  const isParameterized = meta?.parameterized ?? false;
+  const showEntryPill = isStaged && !isCompare && !isDistributionCompare;
+  const showTableMinPill = isParameterized && !isCompare && !isDistributionCompare;
+
   useEffect(() => {
     fetch('/api/strategies')
       .then(res => res.json() as Promise<string[]>)
       .then(setStrategies)
       .catch(() => {/* keep default */});
   }, []);
+
+  // An entry slug is only meaningful for the strategy that declares it.
+  useEffect(() => {
+    if (!catalog || !form.entryA) return;
+    if (!entryStages.some(s => s.slug === form.entryA)) {
+      setForm(f => ({ ...f, entryA: '' }));
+    }
+  }, [catalog, form.strategyA, form.entryA, entryStages]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -160,6 +229,11 @@ export function RunToolbar() {
       const seed = Number(form.seed);
       if (!Number.isInteger(seed)) errs.seed = 'Must be an integer';
     }
+    if (showTableMinPill) {
+      if (!form.tableMin || !Number.isInteger(tableMinNum) || tableMinNum < MIN_TABLE_MIN) {
+        errs.tableMin = `Must be a whole dollar amount of at least $${MIN_TABLE_MIN}`;
+      }
+    }
     return errs;
   }
 
@@ -169,25 +243,31 @@ export function RunToolbar() {
       setErrors(errs);
       if (errs.rolls) setOpenPill('rolls');
       else if (errs.bankroll) setOpenPill('bankroll');
+      else if (errs.tableMin) setOpenPill('tableMin');
       else if (errs.seed) setOpenPill('seed');
       return;
     }
     setErrors({});
     setOpenPill(null);
     const base = isStaticPage ? '/session' : location.pathname;
+    const specA = buildSpec(
+      form.strategyA,
+      showEntryPill ? form.entryA : '',
+      showTableMinPill ? tableMinNum : DEFAULT_TABLE_MIN,
+    );
     const params = new URLSearchParams({
       rolls: form.rolls,
       bankroll: form.bankroll,
       ...(form.seed !== '' ? { seed: form.seed } : {}),
     });
     if (isCompare) {
-      params.set('strategies', `${form.strategyA},${form.strategyB}`);
+      params.set('strategies', `${specA},${form.strategyB}`);
     } else if (isDistributionCompare) {
-      params.set('strategy', form.strategyA);
+      params.set('strategy', specA);
       params.set('test', form.strategyB);
       params.set('seeds', form.seeds);
     } else {
-      params.set('strategy', form.strategyA);
+      params.set('strategy', specA);
       if (isDistribution) params.set('seeds', form.seeds);
     }
     navigate(`${base}?${params.toString()}`);
@@ -237,6 +317,11 @@ export function RunToolbar() {
       onBlur: commitInline,
     };
   }
+
+  const classicStage = entryStages[0];
+  const entryLabel = form.entryA
+    ? entryStages.find(s => s.slug === form.entryA)?.displayName ?? form.entryA
+    : classicStage ? `${classicStage.displayName} (classic)` : 'Classic';
 
   return (
     <div
@@ -322,6 +407,79 @@ export function RunToolbar() {
                 </li>
               ))}
             </ul>
+          </Pill>
+        )}
+
+        {showEntryPill && (
+          <Pill
+            id="entry"
+            label="Entry Stage"
+            displayValue={entryLabel}
+            wide
+            isDropdown
+            open={openPill === 'entry'}
+            onToggle={togglePill}
+          >
+            <ul className="pill-option-list" role="listbox" aria-label="Entry stage">
+              {entryStages.map((stage, i) => {
+                // The gate-0 stage IS classic entry, so it writes a bare spec.
+                const value = i === 0 ? '' : stage.slug;
+                const selected = form.entryA === value;
+                return (
+                  <li
+                    key={stage.slug}
+                    role="option"
+                    aria-selected={selected}
+                    data-slug={stage.slug}
+                    className={`pill-option${selected ? ' pill-option--active' : ''}`}
+                    onClick={() => { setField('entryA', value); setOpenPill(null); }}
+                  >
+                    {i === 0 ? `${stage.displayName} (classic)` : stage.displayName}
+                    {stage.gate > 0 && <span className="pill-option__hint"> · buy in at +${stage.gate}</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          </Pill>
+        )}
+
+        {showTableMinPill && (
+          <Pill
+            id="tableMin"
+            label="Table Min"
+            displayValue={form.tableMin}
+            suffix="$"
+            isDropdown
+            open={openPill === 'tableMin'}
+            onToggle={togglePill}
+            error={errors.tableMin}
+          >
+            <ul className="pill-option-list" role="listbox" aria-label="Table minimum">
+              {TABLE_MIN_PRESETS.map(preset => (
+                <li
+                  key={preset}
+                  role="option"
+                  aria-selected={tableMinNum === preset}
+                  className={`pill-option${tableMinNum === preset ? ' pill-option--active' : ''}`}
+                  onClick={() => { setField('tableMin', String(preset)); setOpenPill(null); }}
+                >
+                  ${preset}
+                </li>
+              ))}
+            </ul>
+            <label className="pill-popover__field">
+              <span className="pill-popover__field-label">Other</span>
+              <input
+                type="number"
+                min={MIN_TABLE_MIN}
+                step={1}
+                value={form.tableMin}
+                onChange={e => setField('tableMin', e.target.value)}
+                aria-label="Custom table minimum"
+                className="pill__inline-input"
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitInline(); } }}
+              />
+            </label>
           </Pill>
         )}
 
