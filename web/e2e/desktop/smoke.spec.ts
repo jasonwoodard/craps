@@ -12,6 +12,8 @@ const DESTINATIONS = [
   { path: `/distribution?strategy=CATS&${RUN}&seeds=20`,                    heading: 'Distribution Analysis' },
   { path: `/distribution-compare?strategy=CATS&test=PassLineOnly&${RUN}&seeds=20`, heading: 'Distribution Compare' },
   { path: '/strategies',                                                     heading: 'Strategies' },
+  { path: '/strategies/cats',                                                heading: 'CATS' },
+  { path: '/strategies/bats',                                                heading: 'BATS' },
   { path: '/guide',                                                          heading: 'Guide' },
 ];
 
@@ -69,4 +71,27 @@ test('the distribution view carries its manifest too', async ({ page }) => {
   const chip = page.getByTestId('manifest-chip');
   await expect(chip).toContainText('CATS', { timeout: 60_000 });
   await expect(chip).toContainText('seeds 0–19');
+});
+
+test('the strategies overview links to both ladder pages', async ({ page }) => {
+  await page.goto('/strategies');
+  await page.getByRole('link', { name: /CATS/ }).first().click();
+  await expect(page).toHaveURL(/\/strategies\/cats$/);
+  await expect(page.getByRole('heading', { name: 'CATS', exact: true })).toBeVisible();
+  await expect(page.getByText('Craps Alpha-Transition Strategy')).toBeVisible();
+
+  await page.goto('/strategies');
+  await page.getByRole('link', { name: /BATS/ }).first().click();
+  await expect(page).toHaveURL(/\/strategies\/bats$/);
+  await expect(page.getByText('Bearish Alpha-Transition Strategy')).toBeVisible();
+});
+
+test('the CATS ladder renders live engine gates at $10 and $15', async ({ page }) => {
+  await page.goto('/strategies/cats');
+  const ladder = page.getByTestId('ladder');
+  await expect(ladder).toBeVisible();
+  // $70/$150/$250/$400 at a $10 table; $105/$225/$375/$600 at $15.
+  const row = ladder.getByRole('row').filter({ hasText: 'Little Molly' });
+  await expect(row.getByRole('cell').nth(2)).toHaveText('+$70');
+  await expect(row.getByRole('cell').nth(3)).toHaveText('+$105');
 });

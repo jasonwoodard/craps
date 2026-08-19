@@ -31,8 +31,10 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], ...launch } },
-    { name: 'mobile', use: { ...devices['Pixel 5'], ...launch } },
+    // The analytics app is desktop-only by design, so each project runs its
+    // own specs rather than the same suite at two viewports.
+    { name: 'desktop', testDir: './e2e/desktop', use: { ...devices['Desktop Chrome'], ...launch } },
+    { name: 'mobile',  testDir: './e2e/mobile',  use: { ...devices['Pixel 5'], ...launch } },
   ],
   webServer: [
     {

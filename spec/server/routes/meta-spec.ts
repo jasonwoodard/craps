@@ -75,6 +75,24 @@ describe('GET /api/meta/strategies', () => {
     ]);
   });
 
+  it('pins the CATS and BATS entry display names', () => {
+    // web/'s units-parity test stubs the catalog with these strings; a rename
+    // in the stage machines has to fail loudly here, not silently there.
+    const cat = catalog();
+    expect(strategy(cat, 'CATS').stages.map(s => s.displayName)).toEqual([
+      'Accumulator', 'Little Molly', '3-Point Molly — Tight',
+      '3-Point Molly — Loose', 'Expanded Alpha', 'Max Alpha',
+    ]);
+    expect(strategy(cat, 'BATS').stages.map(s => s.displayName)).toEqual([
+      'Bearish Accumulator', 'Little Dolly', '3-Point Dolly',
+      'Expanded Dark Alpha', 'Max Dark Alpha',
+    ]);
+    expect(strategy(cat, 'BATS').stages.map(s => s.slug)).toEqual([
+      'bearishAccumulator', 'littleDolly', 'threePtDolly',
+      'expandedDarkAlpha', 'maxDarkAlpha',
+    ]);
+  });
+
   it('includes internal machine states in stateOrder but not in stages', () => {
     const cats = strategy(catalog(), 'CATS');
     expect(cats.stateOrder).toContain('accumulatorRegressed');

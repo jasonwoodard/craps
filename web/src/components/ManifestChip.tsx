@@ -72,7 +72,7 @@ export function ManifestChip({ manifest, note }: Props) {
       {open && (
         <div className="mt-2 rounded border border-slate-200 bg-white p-3">
           <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-1 font-mono text-xs">
-            {rows.map(([key, value]) => (
+            {rows.filter(([, value]) => value !== '').map(([key, value]) => (
               <div key={key} className="contents">
                 <dt className="text-slate-400">{key}</dt>
                 <dd className="text-slate-700 break-all">{value}</dd>
