@@ -7,7 +7,9 @@
  *       [--seeds 2000] [--output text|json]
  *
  * For each gate value, all higher ladder gates scale proportionally
- * (CATS({ stage2Gate })); the §3.4 hard-reset floor stays at $20. Reports,
+ * (CATS({ stage2Gate })). The former §3.4 hard reset is RETIRED (v4 decision
+ * #3) and is not part of this sweep; descent runs through the chained
+ * step-down floors, which scale with the gates. Reports,
  * per gate: Stage-2 (Little Molly) reach probability, median rolls to
  * Stage 2, session P&L p10/p50/p90, and ruin rate. Sessions end at ruin.
  *

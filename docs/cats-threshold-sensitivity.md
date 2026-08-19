@@ -2,8 +2,8 @@
 
 Sensitivity sweep of the Stage 1 → Stage 2 (Little Molly) profit gate,
 holding all higher ladder gates proportional (`CATS({ stage2Gate })` scales
-$150/$200/$250/$400 by `gate/70`, rounded to the dollar; the §3.4 hard-reset
-floor stays at $20). Produced by `src/cli/sweep-thresholds.ts`:
+$150/$200/$250/$400 by `gate/70`, rounded to the dollar). Produced by
+`src/cli/sweep-thresholds.ts`:
 
 ```
 npx ts-node src/cli/sweep-thresholds.ts --gates 40,55,70,85,100 \

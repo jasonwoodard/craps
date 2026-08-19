@@ -1,10 +1,10 @@
 # CATS: Craps Alpha-Transition Strategy
 
-**Version:** 1.2  | Copyright 2026 Jason Woodard
+**Version:** 1.3  | Copyright 2026 Jason Woodard
 
 **Table Basis:** $10 / $15 minimum, 5× odds  
 
-**Status:** Complete — v1.2 correctness pass: standardized edge metrics (per-bet combined edge + expected loss per 100 rolls), corrected §1.1 and Turbo figures, reconciled Tight Molly loads, added §3.7 accounting definitions and §4 simulation findings
+**Status:** Complete — v1.3 doc sync: retired the §3.4 hard reset (struck, not deleted), added the §3.8 unit system, and noted funded entry (`CATS@entry=<stage>`) as simulatable. Builds on the v1.2 correctness pass: standardized edge metrics (per-bet combined edge + expected loss per 100 rolls), corrected §1.1 and Turbo figures, reconciled Tight Molly loads, added §3.7 accounting definitions and §4 simulation findings
 
 ---
 
@@ -123,6 +123,8 @@ $$\text{Combined edge} = \frac{1.41\%}{1 + k \cdot \tfrac{2}{3}} \quad \text{(fl
 > **On the Loose Molly figure:** The original CATS document cited 0.37% for the 3-Point Molly, reflecting the standard 3-4-5× odds structure (weighted average ~4.17×). CATS uses flat 5× on all numbers, which improves the combined per-bet edge from 0.374% to **0.326%**. (An earlier draft claimed 0.235% — that figure came from assuming odds are always on, a metric artifact rather than a real improvement. Flat 5× is better than 3-4-5×, just not by that much.)
 
 > **What the two metrics reveal together:** Per-dollar efficiency improves dramatically up the ladder (1.52% → 0.33%), but per-roll cost does not fall — it rises, because load grows faster than edge shrinks. The Accumulator and Little Molly both cost ~$8/100 rolls; the Mollys ~$13; the Buy stages $29–52. What the ladder buys with that rising spend is coverage and fat-tail exposure, not cheaper play. Be honest with yourself about that trade — §2.5 and §2.6 price it explicitly.
+
+> **A note on dollars vs. units.** Every dollar figure in this section is the $10-table instantiation of a table-minimum-relative spec: one **unit (u)** = the table minimum, and place bets use the smallest proper place bet at or above it. The canonical unit table — flats, odds multiples, buys, and the **7 / 15 / 25 / 40 minimums** gate ladder — lives in §3.8 and is what the engine implements; read the dollars here as its $10 column, not as constants.
 
 ---
 
@@ -515,7 +517,9 @@ At the table, ask one question: **Do I have a 6 or 8 working?**
 
 **Profit threshold step-down:** If profit falls below the current stage's entry threshold, step down immediately.
 
-**Hard reset — retired (v1.3):** earlier revisions added a separate rule sending any stage straight to the Accumulator below +$20. It is retired as redundant: the step-down floors above already tile the whole profit range, so sustained losses reach the Accumulator through the normal chain from any stage — one mechanism instead of two, with the same endpoint. (Recorded as decision #3 in `docs/reqs/session-lifecycle.md`.)
+~~**Hard reset:** If profit falls below +$20 from any stage, return to the Accumulator. Rebuild the buffer before committing Alpha load again.~~
+
+**↑ Hard reset — RETIRED in v1.3.** The struck rule above is kept for the record; it is **not** current behavior and the engine does not implement it. It is retired as redundant: the two step-down rules above already tile the whole profit range, so sustained losses walk back to the Accumulator one link at a time from any stage — the same endpoint as the jump, reached by one mechanism instead of two. (Recorded as decision #3 in `docs/reqs/session-lifecycle.md`; retirement shipped in `e9dd168`, and `spec/dsl/cats-strategy-spec.ts` pins the chained retreat.)
 
 **Never chase:** A step-down is the strategy working. The Accumulator is always there. Return to it without hesitation.
 
@@ -566,19 +570,21 @@ All CATS sizing derives from the table minimum — one **unit (u)** = the table 
 | Odds — Little Molly | 2× flat | $20 | $30 |
 | Odds — Loose | 5× flat | $50 | $75 |
 | Odds — Tight | tier 3×/2×/1× flat | $30/$20/$10 | $45/$30/$15 |
-| Accumulator start (each 6/8) | min place bet + $6 | $18 | $24 |
-| Accumulator regressed (each) | min place bet | $12 | $18 |
+| Accumulator start (each 6/8) | minimum place bet + $6 (one place increment) | $18 | $24 |
+| Accumulator regressed (each) | minimum place bet | $12 | $18 |
 | Buy 4/10, 5/9 (each) | 2u | $20 | $30 |
 | **Gates above origin** | **7 / 15 / 25 / 40 minimums** | $70/150/250/400 | $105/225/375/600 |
 | Classic declared risk B | 30u | $300 | $450 |
+| Reference funded configs | B 20u @ Tight; B 15u @ Little Molly | $200 / $150 | $300 / $225 |
+| Vig (Buy bets) | floor(5% of bet), min $1, win-only | $1 | $1 |
 
-The engine implements this as `src/dsl/units.ts`; the $10 column is the exact ladder this document has always specified.
+The engine implements this as `src/dsl/units.ts`; the $10 column is the exact ladder this document has always specified. The "reference funded configs" row is a simulator entry point, not a table rule — see §4 and `docs/analytics-guide.md`.
 
 ---
 
 # §4 Simulation Findings
 
-*CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what the repo's TypeScript engine shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. The engine implements all five stages as `CATS()` in `src/dsl/strategies-staged.ts` (including the Swap Rule, §3.7 profit accounting, and the §3.4 step-down/hard-reset rules); the figures below come from `src/cli/analyze-stages.ts` over 2,000 sessions of up to 1,000 rolls at a $10 table with a $300 buy-in, sessions ending at ruin.*
+*CATS lives in a simulator repository; the strategy must answer to its own engine. This section reports what the repo's TypeScript engine shows about the ladder as specified — the numbers a player should know before choosing a buy-in and a session plan. The engine implements all five stages as `CATS()` in `src/dsl/strategies-staged.ts` (including the Swap Rule, §3.7 profit accounting, and the §3.4 step-down chain — the retired hard reset is not implemented); the figures below come from `src/cli/analyze-stages.ts` over 2,000 sessions of up to 1,000 rolls at a $10 table with a $300 buy-in, sessions ending at ruin. Funded entry is now simulatable as well: a spec of the form `CATS@entry=<stage>` (e.g. `CATS@entry=threePtMollyLoose`) starts a session in that stage with profit measured from its gate, so the §5.4 Power Session can be run rather than argued about — see `docs/analytics-guide.md`.*
 
 ## 4.1 Stage 1 gate: how often the path gets trodden
 
@@ -820,8 +826,10 @@ What the player varied: *when* to step up, *which mode* of Molly to play, and *w
 
 ---
 
-*— End of v1.2 —*
+*— End of v1.3 —*
 
 *v1.2 changelog: standardized on two named edge metrics (§1.4) and propagated corrected figures throughout; fixed §1.1 (twelve loses for Pass, pushes for Don't Pass); Turbo blended edge corrected to 3.90% with burn-rate warning; Tight Molly loads reconciled as coverage-dependent ($90–120); retired the Little/Tight "0.470% identity" as a metric artifact; reframed the consecutive-7-out rule as pre-commitment; reframed odds-multiple and step-up-timing choices as variance decisions with correct EV signs; priced Stages 4–5 in $/100 rolls against the fourth-Come alternative; added §3.7 accounting definitions, §4 simulation findings, Turbo carve-out, and the §1.7 cushion caveat.*
+
+*v1.3 changelog: retired the §3.4 hard reset (historical text struck in place, not deleted) — descent from any stage now runs entirely through the chained step-down floors, per decision #3 in `docs/reqs/session-lifecycle.md`; added §3.8 the unit system (table-minimum-relative sizing, gates as **7 / 15 / 25 / 40 minimums**) with a pointer from §1.4, and completed it with the reference funded-entry configs and the Buy vig convention; noted in §4 that funded entry is simulatable as `CATS@entry=<stage>`. Strategy content is unchanged from v1.2 — this revision retires one redundant rule and formalizes sizing that was already specified in dollars.*
 
 **BATS Strategy** — deferred to a companion paper. Same Alpha-Transition architecture, darkside mechanics. See §6 stub for known audit items before drafting.

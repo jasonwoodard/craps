@@ -477,7 +477,13 @@ natural predator.
 **Profit threshold step-down:** If profit falls below the current stage's entry
 threshold, step down immediately — same rule as CATS.
 
-**Hard reset:** Profit < +$20 from any stage → return to Bearish Accumulator.
+~~**Hard reset:** Profit < +$20 from any stage → return to Bearish Accumulator.~~
+
+**↑ Hard reset — RETIRED,** in step with CATS §3.4 (decision #3 in
+`docs/reqs/session-lifecycle.md`). The struck rule is kept for the record; the engine
+does not implement it. The profit-threshold step-down above already tiles the whole
+profit range, so deep losses retreat to the Bearish Accumulator one link at a time —
+same endpoint, one mechanism instead of two.
 
 ---
 
@@ -593,7 +599,7 @@ BATS's Little Dolly. The entry vehicle does not dictate the Alpha vehicle.
 BATS, they have signaled bullish activity. Step down BATS, and consider CATS for the
 next shooter. The table has given you evidence about its current character.
 
-**Capital Preservation:** After a hard reset, return to whichever Accumulator matches
+**Capital Preservation:** Once the retreat chain lands you back in an Accumulator, take whichever one matches
 the *current* table energy — not the one that just lost. The Bearish Accumulator on
 a cold table. The CATS Accumulator on a warm one. The decision is always forward-looking.
 
