@@ -10,7 +10,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { fmtPnL, hasStageData, normalizeStageVisits, STAGE_COLORS, STAGE_LABELS, uniqueStages } from '../lib/stages';
+import { fmtPnL, hasStageData, normalizeStageVisits, uniqueStages } from '../lib/stages';
+import { useStageNaming, type StageNaming } from '../lib/strategy-meta';
 import { InfoTip } from './InfoTip';
 
 const VISIT_COLORS = [
@@ -20,6 +21,9 @@ const VISIT_COLORS = [
 
 interface Props {
   rolls: RollRecord[];
+  /** Canonical spec of the run, so stage names come from its ladder. */
+  strategySpec?: string;
+  tableMin?: number;
 }
 
 function buildChartData(visits: ReturnType<typeof normalizeStageVisits>): Record<string, number | undefined>[] {
@@ -35,10 +39,13 @@ function buildChartData(visits: ReturnType<typeof normalizeStageVisits>): Record
   });
 }
 
-function StageChart({ stageName, visits }: { stageName: string; visits: ReturnType<typeof normalizeStageVisits> }) {
+function StageChart(
+  { stageName, visits, naming }:
+  { stageName: string; visits: ReturnType<typeof normalizeStageVisits>; naming: StageNaming },
+) {
   const data = buildChartData(visits);
-  const label = STAGE_LABELS[stageName] ?? stageName;
-  const bandColor = STAGE_COLORS[stageName] ?? '#f5f5f5';
+  const label = naming.label(stageName);
+  const bandColor = naming.color(stageName);
 
   return (
     <div className="mb-6">
@@ -88,7 +95,8 @@ function StageChart({ stageName, visits }: { stageName: string; visits: ReturnTy
   );
 }
 
-export function StageOverlayChart({ rolls }: Props) {
+export function StageOverlayChart({ rolls, strategySpec, tableMin }: Props) {
+  const stageNaming = useStageNaming(strategySpec, tableMin);
   if (!hasStageData(rolls)) return null;
 
   const seenStages = uniqueStages(rolls);
@@ -105,7 +113,7 @@ export function StageOverlayChart({ rolls }: Props) {
       {seenStages.map(stageName => {
         const visits = normalizeStageVisits(rolls, stageName);
         return (
-          <StageChart key={stageName} stageName={stageName} visits={visits} />
+          <StageChart key={stageName} stageName={stageName} visits={visits} naming={stageNaming} />
         );
       })}
     </div>

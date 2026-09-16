@@ -1,3 +1,5 @@
+import type { RunManifest } from './manifest';
+
 // Shared type definitions for server/ and web/ consumers.
 // These mirror the engine types structurally; source of truth is src/engine/.
 // Using standalone definitions avoids importing engine source (which uses
@@ -40,6 +42,8 @@ export interface EngineResult {
   rollsPlayed: number;
   rolls: RollRecord[];
   seed?: number;
+  /** Run identity (session-lifecycle.md v4 §5). Present on server responses. */
+  manifest?: RunManifest;
 }
 
 export interface SummaryRecord {

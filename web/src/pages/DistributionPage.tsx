@@ -5,6 +5,7 @@ import { BandChart } from '../components/BandChart';
 import { OutcomeSummary } from '../components/OutcomeSummary';
 import { RuinCurve } from '../components/RuinCurve';
 import { InfoTip } from '../components/InfoTip';
+import { ManifestChip } from '../components/ManifestChip';
 import type { FullDistributionAggregates } from '../../../types/simulation';
 
 const SEED_PRESETS = [
@@ -42,7 +43,7 @@ export function DistributionPage() {
   const rolls = Number(searchParams.get('rolls') ?? 500);
   const bankroll = Number(searchParams.get('bankroll') ?? 300);
 
-  const { aggregates: streamAggregates, progress, done, error } = useDistribution({ strategy, seeds, rolls, bankroll });
+  const { aggregates: streamAggregates, progress, done, error, manifest, cached } = useDistribution({ strategy, seeds, rolls, bankroll });
 
   // When a file is loaded, use it instead of the stream
   const aggregates = loadedFile ? loadedFile.data : streamAggregates;
@@ -96,6 +97,7 @@ export function DistributionPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <h2 className="text-xl font-mono font-bold mb-1">Distribution Analysis</h2>
       <p className="text-sm text-slate-500 font-mono mb-3">See the range of outcomes across hundreds of sessions.</p>
+      {!isLoaded && <ManifestChip manifest={manifest} note={cached ? 'served from cache' : undefined} />}
       {isLoaded ? (
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 bg-blue-50 border border-blue-200 rounded px-3 py-1.5 text-sm font-mono text-blue-800">

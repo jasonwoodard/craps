@@ -176,7 +176,7 @@ export function SessionComparePage() {
               <div className="text-xs font-mono font-semibold text-blue-600 uppercase tracking-wide mb-1">
                 {strategies[0]} — Stage Breakdown
               </div>
-              <StageBreakdown rolls={resultA.log} />
+              <StageBreakdown rolls={resultA.log} strategySpec={strategies[0]} />
             </div>
           )}
           {!hasStageA && hasStageB && (
@@ -189,7 +189,7 @@ export function SessionComparePage() {
               <div className="text-xs font-mono font-semibold text-orange-500 uppercase tracking-wide mb-1">
                 {strategies[1]} — Stage Breakdown
               </div>
-              <StageBreakdown rolls={resultB.log} />
+              <StageBreakdown rolls={resultB.log} strategySpec={strategies[1]} />
             </div>
           )}
           {hasStageA && !hasStageB && (

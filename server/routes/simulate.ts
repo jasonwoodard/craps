@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { CrapsEngine } from '../../src/engine/craps-engine';
 import { BUILT_IN_STRATEGIES, createStrategy } from '../../src/cli/strategy-registry';
+import { buildManifest } from '../../src/cli/manifest';
+import type { RunManifest } from '../../types/manifest';
 
 export function simulateRoute(req: Request, res: Response): void {
   const { strategy, rolls, bankroll, seed } = req.body as {
@@ -47,5 +49,17 @@ export function simulateRoute(req: Request, res: Response): void {
   });
 
   const result = engine.run();
-  res.json({ ...result, seed: resolvedSeed });
+
+  // Run identity travels with the result: the manifest is the archive
+  // (session-lifecycle.md v4 §5), and the UI surfaces it on every view.
+  // tableMin is read off the canonical spec, so the toolbar's Table Min
+  // control reaches the manifest through the spec string it writes.
+  const manifest: RunManifest = buildManifest({
+    strategySpec: strategy,
+    bankroll,
+    rolls,
+    seeds: { seed: resolvedSeed },
+  });
+
+  res.json({ ...result, seed: resolvedSeed, manifest });
 }

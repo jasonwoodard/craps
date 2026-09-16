@@ -160,6 +160,29 @@
 .pill-option:hover    { background: var(--pill-fill-hover); }
 .pill-option--active  { color: var(--blue); }
 
+/* Gate hint beside an entry-stage option — derived from stage metadata. */
+.pill-option__hint {
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+}
+
+/* Free-entry field beneath a preset list (Table Min). */
+.pill-popover__field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--accent-border);
+}
+.pill-popover__field-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
 /* ─── Inline number/text input (renders inside the pill) ─── */
 .pill__inline-input {
   background: transparent;

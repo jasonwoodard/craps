@@ -17,6 +17,8 @@
   },
   "scripts": {
     "test": "jasmine-ts -r tsconfig-paths/register --config=spec/support/jasmine.json",
-    "server": "ts-node server/server.ts"
+    "server": "ts-node server/server.ts",
+    "test:web": "npm --prefix web run test",
+    "test:e2e": "npm --prefix web run test:e2e"
   }
 }

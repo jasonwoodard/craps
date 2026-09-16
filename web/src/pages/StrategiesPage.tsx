@@ -1,69 +1,66 @@
+import { Link } from 'react-router';
+
+interface StrategyCard {
+  name: string;
+  expansion: string;
+  blurb: string;
+  to: string;
+  draft?: boolean;
+}
+
+/** The two documented ladders get pages of their own. */
+const FEATURED: StrategyCard[] = [
+  {
+    name: 'CATS',
+    expansion: 'Craps Alpha-Transition Strategy',
+    blurb: 'Five stages, escalating on accumulated profit and retreating on its own rules. The ladder, the entry configurations, and what simulation shows.',
+    to: '/strategies/cats',
+  },
+  {
+    name: 'BATS',
+    expansion: 'Bearish Alpha-Transition Strategy',
+    blurb: 'The darkside mirror — Don\'t Pass, Don\'t Come, and lay odds on the same stage machine.',
+    to: '/strategies/bats',
+    draft: true,
+  },
+];
+
 export function StrategiesPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-xl font-mono font-bold mb-1">Strategies</h1>
       <p className="text-sm text-slate-500 font-mono mb-6">Understand what each strategy bets and how it escalates.</p>
 
-      <StrategySection
-        name="CATS"
-        tagline="Five-stage escalating strategy. Starts conservative and escalates as session profit grows."
-        houseEdge="Accumulator: Place 6/8 ~1.52% · Molly stages: come bets with odds ~0.5–0.8%"
-        stages={CATS_STAGES}
-      >
-        <p>
-          CATS (Craps Alpha-Transition Strategy) is a stage machine: it defines
-          five distinct betting modes and rules for moving between them based on session profit
-          and recent seven-out history. The strategy starts in its most conservative state and
-          escalates only when the session is winning, retreating automatically when it isn't.
-        </p>
-        <p>
-          The Accumulator stages use Place 6 and Place 8 bets — full at $18 each, then
-          regressed to $12 after the first hit. The Molly stages switch to pass line and come
-          bets with increasing odds as profit milestones are reached. Step-down rules mirror
-          step-up thresholds — two consecutive seven-outs at any Molly stage triggers a
-          retreat to the prior stage, protecting gains rather than pressing through cold dice.
-        </p>
-        <p>
-          CATS is the only strategy in the simulator with stage data. The Session page's Stage
-          Breakdown table, Stage Overlay charts, and Trend Indicators are all designed around
-          CATS's structure. Running CATS on Session gives the fullest picture of how the
-          strategy moves through its phases over the course of a real session.
-        </p>
-      </StrategySection>
+      <div className="grid gap-4 sm:grid-cols-2 mb-10">
+        {FEATURED.map(card => (
+          <Link
+            key={card.name}
+            to={card.to}
+            className="block rounded border border-slate-200 p-4 transition-colors hover:border-blue-400 hover:bg-blue-50/40"
+          >
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <h2 className="text-lg font-mono font-bold text-gray-900">{card.name}</h2>
+              {card.draft && (
+                <span className="rounded bg-amber-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-amber-800 uppercase tracking-wide">
+                  Draft
+                </span>
+              )}
+            </div>
+            <p className="text-xs font-mono text-slate-500">{card.expansion}</p>
+            <p className="mt-2 text-sm text-gray-700 leading-relaxed">{card.blurb}</p>
+            <p className="mt-3 font-mono text-xs text-blue-600">Read the full page →</p>
+          </Link>
+        ))}
+      </div>
 
-      <StrategySection
-        name="BATS"
-        tagline="Darkside five-stage strategy. Mirrors CATS but bets against the shooter using Don't Pass and Don't Come."
-        houseEdge="Accumulator: 0.546% · Little Dolly: ~0.341% · 3-Point Dolly: 0.134–0.182%"
-        stages={BATS_STAGES}
-      >
-        <p>
-          BATS (Bearish Alpha-Transition Strategy) is the darkside companion to CATS. Like CATS,
-          it is a five-stage machine that escalates as session profit grows and retreats when
-          conditions turn unfavorable. Unlike CATS, BATS bets against the shooter: Don't Pass
-          and Don't Come bets win on seven-outs, while natural wins (7/11 on come-out) are the
-          primary hazard.
-        </p>
-        <p>
-          Lay odds work in reverse of take odds: the player lays more to win less. A 5× lay on
-          a point of 4 means laying $100 to win $50 (2:1 ratio). This is mathematically equivalent
-          in edge terms — lay odds carry zero house edge — but the asymmetry changes the bankroll
-          dynamics significantly versus the passside equivalent.
-        </p>
-        <p>
-          The two unique step-down triggers distinguish BATS from CATS. Little Dolly retreats on
-          two consecutive come-out losses (natural wins hurt the don't side). Three-Point Dolly
-          retreats on two consecutive point-makes (a hot shooter is the enemy of darkside coverage).
-          Stages 4 and 5 add Lay bets on 4, 5, 9, and 10 to supplement Don't Come coverage, with
-          the Swap Rule ensuring Lay bets are removed when a Don't Come bet already covers that number.
-        </p>
-      </StrategySection>
+      <h2 className="text-sm font-mono font-semibold text-gray-500 uppercase tracking-wide mb-4">
+        Every other strategy
+      </h2>
 
       <StrategySection
         name="BATSAccumulatorOnly"
         tagline="Darkside accumulator in isolation. Don't Pass with 2× lay odds, then de-leverage to 1× on first 7-out."
         houseEdge="Don't Pass: 0.546% · Lay odds: 0%"
-        stages={BATS_ACCUMULATOR_STAGES}
       >
         <p>
           BATSAccumulatorOnly is the Accumulator component of BATS extracted as a standalone
@@ -436,32 +433,13 @@ interface StrategySectionProps {
   name: string;
   tagline: string;
   houseEdge: string;
-  stages?: { stage: string; entry: string; bets: string }[];
   children: React.ReactNode;
 }
 
-const CATS_STAGES = [
-  { stage: 'Accumulator Full', entry: 'Session start', bets: 'Place 6 + Place 8' },
-  { stage: 'Accumulator Regressed', entry: 'After first 6 or 8 hit', bets: 'Place 6 + Place 8 (regressed)' },
-  { stage: 'Little Molly', entry: '+$70 net', bets: 'Pass line + 1 come + 2× odds' },
-  { stage: 'Three Point Molly Tight', entry: '+$150 net', bets: 'Pass line + 2 come + tiered odds' },
-  { stage: 'Three Point Molly Loose', entry: '+$200 net w/ 6 or 8 covered', bets: 'Pass line + 2 come + 5× odds' },
-];
 
-const BATS_ACCUMULATOR_STAGES = [
-  { stage: 'Bearish Accumulator Full',       entry: 'Session start',  bets: "Don't Pass + 2× lay odds" },
-  { stage: 'Bearish Accumulator Regressed',  entry: 'First 7-out',    bets: "Don't Pass + 1× lay odds (terminal)" },
-];
 
-const BATS_STAGES = [
-  { stage: 'Bearish Accumulator', entry: 'Session start',   bets: "Don't Pass + 1× lay odds" },
-  { stage: 'Little Dolly',        entry: '+$120 net',        bets: "DP + 1 DC + 2× lay odds" },
-  { stage: 'Three-Point Dolly',   entry: '+$225 net',        bets: "DP + 2 DC + 5× lay odds" },
-  { stage: 'Expanded Dark Alpha', entry: '+$350 net',        bets: "Dolly + Lay 4/10 (Swap Rule)" },
-  { stage: 'Max Dark Alpha',      entry: '+$500 net',        bets: "Dolly + Lay 4/5/9/10 (Swap Rule)" },
-];
 
-function StrategySection({ name, tagline, houseEdge, stages, children }: StrategySectionProps) {
+function StrategySection({ name, tagline, houseEdge, children }: StrategySectionProps) {
   return (
     <section className="mb-10">
       <h2 className="text-lg font-mono font-bold text-gray-900 mb-1">{name}</h2>
@@ -473,35 +451,6 @@ function StrategySection({ name, tagline, houseEdge, stages, children }: Strateg
           {children}
         </div>
       </div>
-
-      {stages && (
-        <div className="mb-4">
-          <h3 className="text-xs font-mono font-semibold text-gray-500 uppercase tracking-wide mb-2">Stages</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono border border-gray-200 rounded">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-left">
-                  <th className="px-3 py-2 font-medium">Stage</th>
-                  <th className="px-3 py-2 font-medium">Entry condition</th>
-                  <th className="px-3 py-2 font-medium">Bets active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stages.map((s, i) => (
-                  <tr key={i} className="border-b border-gray-100 last:border-0">
-                    <td className="px-3 py-2 text-gray-800 font-medium">{s.stage}</td>
-                    <td className="px-3 py-2 text-gray-600">{s.entry}</td>
-                    <td className="px-3 py-2 text-gray-600">{s.bets}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-gray-500 font-mono mt-2">
-            Step-down rules mirror step-up thresholds — two consecutive 7-outs at any Molly stage triggers a retreat to the prior stage.
-          </p>
-        </div>
-      )}
 
       <div>
         <h3 className="text-xs font-mono font-semibold text-gray-500 uppercase tracking-wide mb-1">House Edge</h3>

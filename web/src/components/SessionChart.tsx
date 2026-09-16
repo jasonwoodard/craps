@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import type { RollRecord } from '@shared/simulation';
-import { computeStageSpans, hasStageData, STAGE_COLORS } from '../lib/stages';
+import { computeStageSpans, hasStageData } from '../lib/stages';
+import { useStageNaming } from '../lib/strategy-meta';
 import { HeatStrip } from './HeatStrip';
 import { InfoTip } from './InfoTip';
 import {
@@ -19,6 +20,9 @@ import {
 interface Props {
   rolls: RollRecord[];
   initialBankroll: number;
+  /** Canonical spec of the run, so stage tints come from its ladder. */
+  strategySpec?: string;
+  tableMin?: number;
 }
 
 interface ChartPoint {
@@ -29,7 +33,8 @@ interface ChartPoint {
   pointMade: boolean;
 }
 
-export function SessionChart({ rolls, initialBankroll }: Props) {
+export function SessionChart({ rolls, initialBankroll, strategySpec, tableMin }: Props) {
+  const stageNaming = useStageNaming(strategySpec, tableMin);
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartOffsets, setChartOffsets] = useState({ left: 0, right: 0 });
 
@@ -102,7 +107,7 @@ export function SessionChart({ rolls, initialBankroll }: Props) {
               yAxisId="bankroll"
               x1={span.startRoll}
               x2={span.endRoll}
-              fill={STAGE_COLORS[span.stageName] ?? '#f5f5f5'}
+              fill={stageNaming.color(span.stageName)}
               fillOpacity={0.15}
             />
           ))}

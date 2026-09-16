@@ -19,6 +19,11 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: { '@shared': path.resolve(__dirname, '../types') },
+    alias: {
+      '@shared': path.resolve(__dirname, '../types'),
+      // Single-source seam: web imports the engine's unit system and canonical
+      // spec codec directly rather than re-deriving either (webui-plan.md W1).
+      '@engine': path.resolve(__dirname, '../src'),
+    },
   },
 });

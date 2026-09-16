@@ -166,10 +166,15 @@ export interface StrategyMetadata {
  * Export a strategy's stage metadata so any UI can render an entry-stage
  * dropdown generically. Instantiates the factory (cheap, no table context)
  * and reads the stage machine's declared metadata.
+ *
+ * Gates are dollar amounts, so they depend on the table minimum: pass
+ * `{ tableMin }` to get the ladder as it stands at a $15 or $25 table.
+ * Options are ignored for strategies that do not accept spec options.
  */
-export function getStrategyMetadata(name: string): StrategyMetadata {
+export function getStrategyMetadata(name: string, options: StrategySpecOptions = {}): StrategyMetadata {
   const factory = STRATEGY_FACTORIES[name];
-  const instance = factory ? factory() : lookupStrategy(name);
+  const applicable = PARAMETERIZED.has(name) ? options : {};
+  const instance = factory ? factory(applicable) : lookupStrategy(name);
   const runtime = (instance as any)[STAGE_MACHINE_RUNTIME] as StageMachineRuntime | undefined;
   return {
     name,
